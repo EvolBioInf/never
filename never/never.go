@@ -47,10 +47,10 @@ func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
 }
 func echo(w http.ResponseWriter, r *http.Request) {
 	m := "<h1>Welcome to Never, the Neighbors Server</h1>"
-	m += "This site is under construction, and for now only "
+	m += "This site is under construction, and so far only "
 	m += "provides echoing of the incoming URL (<code>%s</code>) and "
 	m += "an imitation of <a href=\"https://neighbors.evolbio.mpg.de/"
-	m += "?t=Homo%20sapiens&s=1\"><code>taxi</code>.</a>"
+	m += "?t=Homo sapiens&s=1\"><code>taxi</code>.</a>"
 	m = fmt.Sprintf(m, r.URL.Path)
 	fmt.Fprintf(w, "%s\n", m)
 }
