@@ -1,0 +1,9 @@
+module github.com/evolbioinf/never
+
+go 1.22.2
+
+require (
+	github.com/evolbioinf/clio v0.0.0-20230620105705-02d07225d27e // indirect
+	github.com/evolbioinf/neighbors v0.0.0-20250405112112-ea77c524405a // indirect
+	github.com/mattn/go-sqlite3 v1.14.18 // indirect
+)
