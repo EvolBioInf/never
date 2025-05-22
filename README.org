@@ -1,4 +1,4 @@
-* [[https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT][=never=]]
+* [[https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT][never]]
 
 ** Description
 Neighbors Server
@@ -38,7 +38,7 @@ mode matching is run on the input string wrapped in SQL wild cards,
 http://localhost:8080/taxi/?t=Homo%20sapiens&s=1
 #+end_src
 
-** Make the Documentation
+** Make the [[https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT][Documentation]]
 Make `doc/neverDoc.pdf`.
 #+begin_src sh
 make doc
