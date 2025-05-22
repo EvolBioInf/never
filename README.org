@@ -1,28 +1,28 @@
-* [=never=](https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT)
+* [[https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT][=never=]]
 
 ** Description
 Neighbors Server
 
 ** Introduction
 [[https://github.com/evolbioinf/neighbors][Neighbors]] is a package for finding the genomes of one or more target
-organisms and their closest relatives, their *neighbors*. The
+organisms and their closest relatives, their /neighbors/. The
 Neighbors server, =never=, provides web access to the facilities of
 the Neighbors package.
 
 ** Author
 [[http://guanine.evolbio.mpg.de/][Bernhard Haubold]],
--haubold@evolbio.mpg.de-
+=haubold@evolbio.mpg.de=
 
 ** Make the Server
 Make the program =bin/never=
-#+begin_src 
+#+begin_src sh
 make
 #+end_src
 
 ** Run the Server
 Given a Neighbors datbase in =~/data/neidb=, the
 server can be run locally on port, say, 8080.
-#+begin_src 
+#+begin_src sh
 ./bin/never -o localhost -p 8080 -d ~/data/neidb
 #+end_src
 
@@ -31,16 +31,16 @@ description of how to make a Neighbors database.
 
 ** Query for Taxon IDs
 If =never= is running as show above, you can download the taxon IDs of
-taxa whose name matches *Homo sapiens* in substring mode. In substring
+taxa whose name matches /Homo sapiens/ in substring mode. In substring
 mode matching is run on the input string wrapped in SQL wild cards,
 =%=, and with blanks replaced by wild cards, so =Homo sapiens= becomes =%Homo%sapiens%=
-#+begin_src 
+#+begin_src sh
 http://localhost:8080/taxi/?t=Homo%20sapiens&s=1
 #+end_src
 
 ** Make the Documentation
 Make `doc/neverDoc.pdf`.
-#+begin_src 
+#+begin_src sh
 make doc
 #+end_src
 
