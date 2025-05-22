@@ -45,6 +45,15 @@ func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
 	util.Check(err)
 	fmt.Fprintf(w, "%s", string(b))
 }
+func echo(w http.ResponseWriter, r *http.Request) {
+	m := "<h1>Welcome to Never, the Neighbors Server</h1>"
+	m += "This site is under construction, and for now only "
+	m += "provides echoing of the incoming URL (<code>%s</code>) and "
+	m += "an imitation of <a href=\"https://neighbors.evolbio.mpg.de/"
+	m += "?t=Homo%20sapiens&s=1\"><code>taxi</code>.</a>"
+	m = fmt.Sprintf(m, r.URL.Path)
+	fmt.Fprintf(w, "%s\n", m)
+}
 func main() {
 	util.PrepLog("never")
 	flagV := flag.Bool("v", false, "version")
@@ -71,6 +80,7 @@ func main() {
 		log.Fatalf("%q doesn't look like a date",
 			string(date))
 	}
+	http.HandleFunc("/", echo)
 	var myDB MyDB
 	myDB.db = db
 	http.HandleFunc("/taxi/", myDB.taxi)

@@ -4,8 +4,7 @@ API to the facilities of the Neighbors package; hence the name
 \emph{Neighbors Sever}, or \ty{never}.
 
 Our outline of \ty{never} contains hooks for imports, types, methods,
-variables, functions, and the logic of the main
-function.\bpr{never}{pr:nev}
+functions, and the logic of the main function.\bpr{never}{pr:nev}
 #+end_export
 #+begin_src go <<never.go>>=
   package main
@@ -16,6 +15,7 @@ function.\bpr{never}{pr:nev}
 
   //<<Types, Pr. \ref{pr:nev}>>
   //<<Methods, Pr. \ref{pr:nev}>>
+  //<<Functions, Pr. \ref{pr:nev}>>
   func main() {
 	  //<<Main function, Pr. \ref{pr:nev}>>
   }
@@ -157,12 +157,44 @@ We import \ty{os} and \ty{bytes}, and \ty{log}.
 #+begin_export latex
 \section{Front End}
 We've finished writing the back end, so we turn to the front end. Here
-do two kinds of things, we emulate Neighbors programs and access
-functions of the package underlying Neighbors, \ty{tdb}.
+first provide a start page. Then we do two kinds of things, we emulate
+Neighbors programs and access functions of the package underlying
+Neighbors, \ty{tdb}.
 #+end_export
 #+begin_src go <<Construct front end, Pr. \ref{pr:nev}>>=
+  //<<Provide start page, Pr. \ref{pr:nev}>>
   //<<Emulate Neighbors programs, Pr. \ref{pr:nev}>>
   //<<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+\subsection{Start Page}
+At this early stage of development our start page is very simple. It
+is implemented in the function \ty{echo} and just consists of a
+welcome message and echos the URL path.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func echo(w http.ResponseWriter, r *http.Request) {
+	  m := "<h1>Welcome to Never, the Neighbors Server</h1>"
+	  m += "This site is under construction, and for now only "
+	  m += "provides echoing of the incoming URL (<code>%s</code>) and "
+	  m += "an imitation of <a href=\"https://neighbors.evolbio.mpg.de/"
+	  m += "?t=Homo%20sapiens&s=1\"><code>taxi</code>.</a>"
+	  m = fmt.Sprintf(m, r.URL.Path)
+	  fmt.Fprintf(w, "%s\n", m)
+  }
+#+end_src
+#+begin_export latex
+We import \ty{http} and \ty{fmt}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "net/http"
+  "fmt"
+#+end_src
+#+begin_export latex
+We provide our start page by registering \ty{echo} at the root URL.
+#+end_export
+#+begin_src go <<Provide start page, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/", echo)
 #+end_src
 #+begin_export latex
 \subsection{Emulate Neighbors Programs}
@@ -204,12 +236,6 @@ the database, and write the result to the HTTP writer.
 	  //<<Execute taxi query, Pr. \ref{pr:nev}>>
 	  //<<Print taxi result, Pr. \ref{pr:nev}>>
   }
-#+end_src
-#+begin_export latex
-We import \ty{http}.
-#+end_export
-#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
-  "net/http"
 #+end_src
 #+begin_export latex
 We extract the taxon name and whether or not we are matching in
@@ -274,11 +300,10 @@ response writer.
   fmt.Fprintf(w, "%s", string(b))
 #+end_src
 #+begin_export latex
-We import \ty{json} and \ty{fmt}.
+We import \ty{json}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "encoding/json"
-  "fmt"
 #+end_src
 #+begin_export latex
 All that remains to complete the emulation of the \ty{taxi} program,
