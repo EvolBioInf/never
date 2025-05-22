@@ -50,7 +50,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	m += "This site is under construction, and so far only "
 	m += "provides echoing of the incoming URL (<code>%s</code>) and "
 	m += "an imitation of <a href=\"https://neighbors.evolbio.mpg.de/"
-	m += "?t=Homo sapiens&s=1\"><code>taxi</code>.</a>"
+	m += "taxi?t=Homo sapiens&s=1\"><code>taxi</code>.</a>"
 	m = fmt.Sprintf(m, r.URL.Path)
 	fmt.Fprintf(w, "%s\n", m)
 }
