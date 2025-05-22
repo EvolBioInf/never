@@ -1,11 +1,11 @@
 #+begin_export latex
-  The program \ty{never} is a webserver that provides access a REST API
-  to the facilities of the Neighbors package; hence the name
-  \emph{Neighbors Sever}, or \ty{never}.
+The program \ty{never} is a webserver that provides access to a REST
+API to the facilities of the Neighbors package; hence the name
+\emph{Neighbors Sever}, or \ty{never}.
 
-  Our outline of \ty{never} contains hooks for imports, types, methods,
-  variables, functions, and the logic of the main
-  function.\bpr{never}{pr:nev}
+Our outline of \ty{never} contains hooks for imports, types, methods,
+variables, functions, and the logic of the main
+function.\bpr{never}{pr:nev}
 #+end_export
 #+begin_src go <<never.go>>=
   package main
@@ -36,11 +36,14 @@ We import \ty{util}.
   "github.com/evolbioinf/never/util"
 #+end_src
 #+begin_export latex
-  Our web server, like any web server, consists of two parts, a front
-  end and a back end. The front end consists of a set of HTML files seen
-  by the user via a browser. The back end consists of a command-line
-  program seen by the sysadmin who starts the server. The back end is
-  simpler than the front end, so we start with it.
+Our web server, like any web server, consists of two parts, a front
+end and a back end. The front end consists of the things seen by the
+user via a browser. This often consists of web pages, but may be as
+light weight as a URL extended by a query.
+
+The back end consists of a command-line program seen by the sysadmin
+who starts the server. The back end is simpler than the front end, so
+we start with it.
 #+end_export
 #+begin_src go <<Construct server, Pr. \ref{pr:nev}>>=
   //<<Construct back end, Pr. \ref{pr:nev}>>
@@ -100,25 +103,26 @@ which includes the version.
   }
 #+end_src
 #+begin_export latex
-  We open the database given by the user and exit if there was an error.
+In response to the database flag, we open the database. This
+precipitates a fatal error if the database does not exist.
 #+end_export
 #+begin_src go <<Respond to \ty{-d}, Pr. \ref{pr:nev}>>=
   db := tdb.OpenTaxonomyDB(*flagD)
 #+end_src
 #+begin_export latex
-  We import \ty{tdb} and \ty{log}.
+We import \ty{tdb}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "github.com/evolbioinf/neighbors/tdb"
-  "log"
 #+end_src
 #+begin_export latex
-  The usage consists of the actual usage message, an explanation of the
-  purpose of \ty{never}, and an example command.
+The usage consists of the actual usage message, an explanation of the
+purpose of \ty{never}, and an example command.
 #+end_export
 #+begin_src go <<Set usage, Pr. \ref{pr:nev}>>=
   u := "never [flag]..."
-  p := "Web server providing a REST API for the Neighbors package"
+  p := "The program never is a web server " +
+	  "providing a REST API for the Neighbors package."
   e := "never -o 10.254.1.21 -c Cert.pem -k privateKey.pem"
   clio.Usage(u, p, e)
 #+end_src
@@ -143,28 +147,30 @@ which includes the version.
   }
 #+end_src
 #+begin_export latex
-We import \ty{os} and \ty{bytes}.
+We import \ty{os} and \ty{bytes}, and \ty{log}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "os"
   "bytes"
+  "log"
 #+end_src
 #+begin_export latex
-  \section{Front End}
-  We've finished writing the back end, so we turn to the front end. Here
-  we emulate Neighbors programs and access \ty{tdb} functions.
+\section{Front End}
+We've finished writing the back end, so we turn to the front end. Here
+do two kinds of things, we emulate Neighbors programs and access
+functions of the package underlying Neighbors, \ty{tdb}.
 #+end_export
 #+begin_src go <<Construct front end, Pr. \ref{pr:nev}>>=
   //<<Emulate Neighbors programs, Pr. \ref{pr:nev}>>
   //<<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
-  \subsection{Emulate Neighbors Programs}
-  \subsubsection{Emulate \ty{taxi}}
-  The program \ty{taxi} takes as input the name of a taxon and a
-  matching mode. It writes as response for each matching taxon the taxon
-  ID, its parent's taxon ID, and its full scientific name. To store
-  these three items, we declare the \ty{struct} \ty{TaxiOut}.
+\subsection{Emulate Neighbors Programs}
+\subsubsection{Emulate \ty{taxi}}
+The program \ty{taxi} takes as input the name of a taxon and a
+matching mode. It writes as response for each matching taxon the taxon
+ID, its parent's taxon ID, and its scientific name. To store these
+three items, we declare the \ty{struct} \ty{TaxiOut}.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type TaxiOut struct {
@@ -175,8 +181,8 @@ We import \ty{os} and \ty{bytes}.
 #+end_src
 #+begin_export latex
 To obtain information from the Neighbors database, we create a type
-that wraps \ty{tdb.TaxonomyDB}, to which we will later add methods
-that wrap various queries.
+that wraps \ty{tdb.TaxonomyDB}, to which we add methods that wrap
+various queries.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type MyDB struct {
@@ -184,18 +190,16 @@ that wrap various queries.
   }
 #+end_src
 #+begin_export latex
-To obtain the three fields of \ty{TaxiOut} for all matching taxa, we
-add the method \ty{TaxiHandler} to \ty{MyDB}. \ty{TaxiHandler}
-is of type \ty{http.Handler}, which has the signature
+We add the method \ty{taxi} to \ty{MyDB}. The method \ty{taxi} is of
+type \ty{http.Handler}, which has the signature
 \begin{verbatim}
 type HandlerFunc func(ResponseWriter, *Request)
 \end{verbatim}
-Inside \ty{TaxiHandler}, we extract the query from the HTTP request,
-query the database, and write the result in JSON format to the HTTP
-writer.
+Inside \ty{taxi}, we extract the query from the HTTP request, query
+the database, and write the result to the HTTP writer.
 #+end_export
 #+begin_src go <<Methods, Pr. \ref{pr:nev}>>=
-  func (m MyDB) TaxiHandler(w http.ResponseWriter, r *http.Request) {
+  func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
 	  //<<Extract taxi query, Pr. \ref{pr:nev}>>
 	  //<<Execute taxi query, Pr. \ref{pr:nev}>>
 	  //<<Print taxi result, Pr. \ref{pr:nev}>>
@@ -209,9 +213,9 @@ We import \ty{http}.
 #+end_src
 #+begin_export latex
 We extract the taxon name and whether or not we are matching in
-substring mode. If we are matching in substring mode and the user
-actually supplied a name, we replace blanks in the name by wild cards
-and bracket the name by wild cards.
+substring mode. If we \emph{are} matching in substring mode, we
+replace blanks in the name by wild cards and also bracket the name by
+wild cards.
 #+end_export
 #+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
   name := r.URL.Query().Get("t")
@@ -229,9 +233,10 @@ We import \ty{strings}.
   "strings"
 #+end_src
 #+begin_export latex
-  The taxi query is executed in two phases. First, we get the matching
-  taxon IDs. Then we iterate over the taxon IDs and for each of them
-  construct and store the taxon output.
+The taxi query is executed in two phases. First, we get the matching
+taxon IDs. Then we iterate over the taxon IDs and for each one
+construct the taxon output and store it in our slice of \ty{TaxiOut}
+items.
 #+end_export
 #+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
   ids := m.db.Taxids(name)
@@ -261,8 +266,8 @@ We import \ty{strings}.
   out = append(out, tout)
 #+end_src
 #+begin_export latex
-  We convert the output to json format and write it to the response
-  writer.
+We convert the slice of taxi output to json format and write it to the
+response writer.
 #+end_export
 #+begin_src go <<Print taxi result, Pr. \ref{pr:nev}>>=
   b, err := json.Marshal(out)
@@ -277,17 +282,18 @@ We import \ty{json} and \ty{fmt}.
   "fmt"
 #+end_src
 #+begin_export latex
-All that remains to finally emulate the \ty{taxi} program, is to
-create the database wrapper and to register its method
-\ty{TaxiHandler} at the URL \ty{taxi}.
+All that remains to complete the emulation of the \ty{taxi} program,
+is to create the database wrapper and to register its method \ty{taxi}
+at the URL \ty{taxi}.
 #+end_export
 #+begin_src go <<Emulate Neighbors programs, Pr. \ref{pr:nev}>>=
   var myDB MyDB
   myDB.db = db
-  http.HandleFunc("/taxi/", myDB.TaxiHandler)
+  http.HandleFunc("/taxi/", myDB.taxi)
 #+end_src
 #+begin_export latex
-  \subsection{Access \ty{tdb} Functions}
+\subsection{Access \ty{tdb} Functions}
+\subsubsection{\ty{Accessions}}
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
   fmt.Println("TO DO: Handle calls to tdb functions")

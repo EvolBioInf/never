@@ -1,3 +1,4 @@
+bin/
 doc/*.aux
 doc/*.bbl
 doc/*.blg

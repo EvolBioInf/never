@@ -23,7 +23,7 @@ type MyDB struct {
 	db *tdb.TaxonomyDB
 }
 
-func (m MyDB) TaxiHandler(w http.ResponseWriter, r *http.Request) {
+func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("t")
 	sstr := r.URL.Query().Get("s")
 	fmt.Println(name, sstr)
@@ -56,7 +56,8 @@ func main() {
 	flagD := flag.String("d", "neidb", "database")
 	flagU := flag.String("u", "updated.txt", "last updated")
 	u := "never [flag]..."
-	p := "Web server providing a REST API for the Neighbors package"
+	p := "The program never is a web server " +
+		"providing a REST API for the Neighbors package."
 	e := "never -o 10.254.1.21 -c Cert.pem -k privateKey.pem"
 	clio.Usage(u, p, e)
 	flag.Parse()
@@ -73,7 +74,7 @@ func main() {
 	}
 	var myDB MyDB
 	myDB.db = db
-	http.HandleFunc("/taxi/", myDB.TaxiHandler)
+	http.HandleFunc("/taxi/", myDB.taxi)
 	fmt.Println("TO DO: Handle calls to tdb functions")
 	host := *flagO + ":" + *flagP
 	if *flagC != "" && *flagK != "" {

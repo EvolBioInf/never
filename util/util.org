@@ -1,9 +1,9 @@
 #+begin_export latex
-! Package \ty{uti} provides auxiliary functions for the \ty{never}
+! Package \ty{util} provides auxiliary functions for the \ty{never}
 ! package.
 
-Our outline of \ty{uti} has hooks for imports, variables, and
-functions.  \bpa{uti}{pa:uti}
+Our outline of \ty{util} has hooks for imports, variables, and
+functions.  \bpa{util}{pa:uti}
 #+end_export
 #+begin_src go <<util.go>>=
   package util
@@ -38,7 +38,8 @@ We import \ty{log}.
 ! \ty{PrepLog} takes as argument the program name and uses it as
 ! prefix for the log message.
 
-We also store the program name in the variable \ty{program}.
+We also store the program name in the variable \ty{program} to make it
+accessible from elsewhere in the package.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func PrepLog(progName string) {
@@ -47,8 +48,7 @@ We also store the program name in the variable \ty{program}.
   }
 #+end_src
 #+begin_export latex
-The variable \ty{program} is a package variable we can use anytime we
-need to refer to the name of the program.
+We declare the variable \ty{program}.
 #+end_export
 #+begin_src go <<Variables, Pa. \ref{pa:uti}>>=
   var program string
@@ -72,8 +72,8 @@ need to refer to the name of the program.
   }
 #+end_src
 #+begin_export latex
-  The date and the version are injected at compile time, so we declare
-  them as package variables.
+The date and the version are injected at compile time, so like
+\ty{program} we declare them as package variables.
 #+end_export
 #+begin_src go <<Variables, Pa. \ref{pa:uti}>>=
   var date, version string
