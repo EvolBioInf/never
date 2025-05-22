@@ -220,7 +220,6 @@ wild cards.
 #+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
   name := r.URL.Query().Get("t")
   sstr := r.URL.Query().Get("s")
-  fmt.Println(name, sstr)
   if sstr == "1" && len(name) > 0 {
 	  name = strings.ReplaceAll(name, " ", "%")
 	  name = "%" + name + "%"

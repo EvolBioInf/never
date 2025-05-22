@@ -26,7 +26,6 @@ type MyDB struct {
 func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("t")
 	sstr := r.URL.Query().Get("s")
-	fmt.Println(name, sstr)
 	if sstr == "1" && len(name) > 0 {
 		name = strings.ReplaceAll(name, " ", "%")
 		name = "%" + name + "%"
