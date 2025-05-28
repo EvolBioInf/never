@@ -85,6 +85,23 @@ at a time recorded in a file given via \ty{-u}.
   flagU := flag.String("u", "updated.txt", "last updated")
 #+end_src
 #+begin_export latex
+The usage consists of the actual usage message, an explanation of the
+purpose of \ty{never}, and an example command.
+#+end_export
+#+begin_src go <<Set usage, Pr. \ref{pr:nev}>>=
+  u := "never [flag]..."
+  p := "The program never is a web server " +
+	  "providing a REST API for the Neighbors package."
+  e := "never -o 10.254.1.21 -c Cert.pem -k privateKey.pem"
+  clio.Usage(u, p, e)
+#+end_src
+#+begin_export latex
+  We import \ty{clio}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "github.com/evolbioinf/clio"
+#+end_src
+#+begin_export latex
 We respond to the version flag, \ty{-v}, the host (\ty{-o}) and port
 (\ty{-p}) flags, the database flag, \ty{-d}, and the updated flag,
 \ty{-u}.
@@ -140,23 +157,6 @@ We import \ty{tdb}.
   "github.com/evolbioinf/neighbors/tdb"
 #+end_src
 #+begin_export latex
-The usage consists of the actual usage message, an explanation of the
-purpose of \ty{never}, and an example command.
-#+end_export
-#+begin_src go <<Set usage, Pr. \ref{pr:nev}>>=
-  u := "never [flag]..."
-  p := "The program never is a web server " +
-	  "providing a REST API for the Neighbors package."
-  e := "never -o 10.254.1.21 -c Cert.pem -k privateKey.pem"
-  clio.Usage(u, p, e)
-#+end_src
-#+begin_export latex
-  We import \ty{clio}.
-#+end_export
-#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
-  "github.com/evolbioinf/clio"
-#+end_src
-#+begin_export latex
   We respond to the updated flag \ty{-u} by checking the file supplied
   actually exists and contains the seven strings that make up the date
   generated with the Unix command \ty{date}. If not, we bail.
@@ -181,15 +181,32 @@ We import \ty{os} and \ty{bytes}, and \ty{log}.
 #+begin_export latex
 \section{Front End}
 We've finished writing the back end, so we turn to the front end. This
-consists of a set of HTML pages, which we divide into three
+consists of a set of HTML pages, which depend on style files we serve
+first of all. The HTML files themselves are divided into three
 categories. First, there is the start, or \emph{index} page, then
 there are pages to emulate Neighbors programs, and finally there are
 pages giving access to \ty{tdb} functions.
 #+end_export
 #+begin_src go <<Construct front end, Pr. \ref{pr:nev}>>=
+  //<<Serve style files, Pr. \ref{pr:nev}>>
   //<<Construct index page, Pr. \ref{pr:nev}>>
   //<<Emulate Neighbors programs, Pr. \ref{pr:nev}>>
   //<<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+\subsection{ Files}
+The style files are locate in the directory \ty{static}. We make them
+available by registering a file server to that directory.
+#+end_export
+#+begin_src go <<Serve style files, Pr. \ref{pr:nev}>>=
+  files := http.FileServer(http.Dir("static"))
+  http.Handle("/static/", http.StripPrefix("/static/", files))
+#+end_src
+#+begin_export latex
+We import \ty{http}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "net/http"
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
@@ -223,12 +240,6 @@ executing the template.
 		  return
 	  }
   }
-#+end_src
-#+begin_export latex
-We import \ty{http}.
-#+end_export
-#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
-  "net/http"
 #+end_src
 #+begin_export latex
 As page data we set the title, the list of functions, and the list of
@@ -347,21 +358,61 @@ We set the title.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "indexTitle"}}
-  <h1>Welcome to the Neighbors Server</h1>
+  <div class="w3-container">
+    <h1>Welcome to the Neighbors Server</h1>
+  </div>
   {{end}}
 #+end_src
 #+begin_export latex
-We describe our server.
+We introduce our server, describe the Neighbor method, and give some
+background to it.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "indexDescr"}}
   <div class="w3-container">
-    The Neighbors server is dedicated to the discovery of the genomes of
-    a set of target organisms and their closest relatives,
-    their <i>neighbors</i>. Such sets of target and neighbor genomes
-    make good starting material for developing diagnostic markers.
-  </div>
+    //<<Introduce the Neighbors server, Pr. \ref{pr:nev}>>
+    //<<Describe the Neighbors method, Pr. \ref{pr:nev}>>
+    //<<Give some background to Neighbors, Pr. \ref{pr:nev}>>
+   </div>
   {{end}}
+#+end_src
+#+begin_export latex
+We give a quick introduction to the Neighbors server.
+#+end_export
+#+begin_src html <<Introduce the Neighbors server, Pr. \ref{pr:nev}>>=
+  <p>
+    The Neighbors server gives access to the accessions of genome
+    sequences linked to
+    the <a href="https://www.ncbi.nlm.nih.gov/taxonomy">NCBI
+      taxonomy</a>.
+  </p>
+#+end_src
+#+begin_export latex
+We describe the Neighbors method of comparative marker discovery.
+#+end_export
+#+begin_src html <<Describe the Neighbors method, Pr. \ref{pr:nev}>>=
+  <p>
+    Starting from one or more target organisms, their genomes are looked
+    up. In addition, the genomes of the targets' closest relatives,
+    their <i>neighbors</i> are looked up. Such pairs of target and
+    neighbor genomes make good starting material for developing
+    diagnostic markers.
+  </p>
+#+end_src
+#+begin_export latex
+We quote a paper on marker discovery with Neighbors, refer to the
+public Neighbors repo, and cite our research group as author.
+#+end_export
+#+begin_src html <<Give some background to Neighbors, Pr. \ref{pr:nev}>>=
+  <p>
+    The server is based on
+    the <a href="https://github.com/evolbioinf/neighbors">Neighbors
+    package</a> and is developed in the Research Group Bioinformatics at
+    the Max-Planck-Institute for Evolutionary Biology in Plön. For
+    details on marker discovery with Neighbors and related software,
+    please consult
+    our <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+  </p>
 #+end_src
 #+begin_export latex
 We define the template for printing the functions, which calls a
@@ -369,11 +420,12 @@ template for printing a table.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "functions"}}
-  <h2>Functions</h2>
-  Hello Functions. Length: {{len .}}
-  <table class="w3-container">
-    {{template "table" .}}
-  </table>
+  <div class="w3-container">
+    <h2>Functions</h2>
+    <table class="w3-container">
+      {{template "table" .}}
+    </table>
+  </div>
   {{end}}
 #+end_src
 #+begin_export latex
@@ -382,10 +434,12 @@ calls the same template for printing a table.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "programs"}}
-  <h2>Programs</h2>
-  <table class="w3-container">
-    {{template "table" .}}
-  </table>
+  <div class="w3-container">
+    <h2>Programs</h2>
+    <table class="w3-container">
+      {{template "table" .}}
+    </table>
+  </div>
   {{end}}
 #+end_src
 #+begin_export latex
@@ -398,15 +452,15 @@ The table consists of a header and a body.
   {{end}}
 #+end_src
 #+begin_export latex
-The table consists of three columns, number, name, and URL. We write a
-header for each one.
+The table consists of four columns, number, name, query, and link. We
+write a header for each one.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "header"}}
   <tr>
     <th>#</th>
     <th>Name</th>
-    <th>URL</th>
+    <th>Query</th>
   </tr>
   {{end}}
 #+end_src
@@ -420,9 +474,7 @@ index, name, and link as sketched in Figure~\ref{fig:idx}.
   <tr>
     <td>{{inc $i}}</td>
     <td>{{.Name}}</td>
-    <td>
-      <a href="{{.Name}}{{.Query}}">link</a>
-    </td>
+    <td><a href="{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
   </tr>
   {{end}}
   {{end}}
@@ -606,7 +658,7 @@ We also alert the server to the existence of the \ty{taxi} program by
 adding the corresponding row to the table of programs.
 #+end_export
 #+begin_src go <<Add programs to table, Pr. \ref{pr:nev}>>=
-  query := "?t=Homo sapiens&e=1"
+  query := "?t=Homo+sapiens&e=1"
   row := TableRow{Name: "taxi", Query: query}
   programs = append(programs, row)
 #+end_src

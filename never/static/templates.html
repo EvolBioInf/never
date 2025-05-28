@@ -22,28 +22,51 @@
 {{template "programs" .Programs}}
 {{end}}
 {{define "indexTitle"}}
-<h1>Welcome to the Neighbors Server</h1>
+<div class="w3-container">
+  <h1>Welcome to the Neighbors Server</h1>
+</div>
 {{end}}
 {{define "indexDescr"}}
 <div class="w3-container">
-  The Neighbors server is dedicated to the discovery of the genomes of
-  a set of target organisms and their closest relatives,
-  their <i>neighbors</i>. Such sets of target and neighbor genomes
-  make good starting material for developing diagnostic markers.
-</div>
+  <p>
+    The Neighbors server gives access to the accessions of genome
+    sequences linked to
+    the <a href="https://www.ncbi.nlm.nih.gov/taxonomy">NCBI
+      taxonomy</a>.
+  </p>
+  <p>
+    Starting from one or more target organisms, their genomes are looked
+    up. In addition, the genomes of the targets' closest relatives,
+    their <i>neighbors</i> are looked up. Such pairs of target and
+    neighbor genomes make good starting material for developing
+    diagnostic markers.
+  </p>
+  <p>
+    The server is based on
+    the <a href="https://github.com/evolbioinf/neighbors">Neighbors
+    package</a> and is developed in the Research Group Bioinformatics at
+    the Max-Planck-Institute for Evolutionary Biology in Plön. For
+    details on marker discovery with Neighbors and related software,
+    please consult
+    our <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+  </p>
+ </div>
 {{end}}
 {{define "functions"}}
-<h2>Functions</h2>
-Hello Functions. Length: {{len .}}
-<table class="w3-container">
-  {{template "table" .}}
-</table>
+<div class="w3-container">
+  <h2>Functions</h2>
+  <table class="w3-container">
+    {{template "table" .}}
+  </table>
+</div>
 {{end}}
 {{define "programs"}}
-<h2>Programs</h2>
-<table class="w3-container">
-  {{template "table" .}}
-</table>
+<div class="w3-container">
+  <h2>Programs</h2>
+  <table class="w3-container">
+    {{template "table" .}}
+  </table>
+</div>
 {{end}}
 {{define "table"}}
 {{template "header"}}
@@ -53,7 +76,7 @@ Hello Functions. Length: {{len .}}
 <tr>
   <th>#</th>
   <th>Name</th>
-  <th>URL</th>
+  <th>Query</th>
 </tr>
 {{end}}
 {{define "body"}}
@@ -61,9 +84,7 @@ Hello Functions. Length: {{len .}}
 <tr>
   <td>{{inc $i}}</td>
   <td>{{.Name}}</td>
-  <td>
-    <a href="{{.Name}}{{.Query}}">link</a>
-  </td>
+  <td><a href="{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
 </tr>
 {{end}}
 {{end}}

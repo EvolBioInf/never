@@ -50,7 +50,7 @@ func index(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 }
 func init() {
-	query := "?t=Homo sapiens&e=1"
+	query := "?t=Homo+sapiens&e=1"
 	row := TableRow{Name: "taxi", Query: query}
 	programs = append(programs, row)
 	query = "?t=9606"
@@ -138,6 +138,8 @@ func main() {
 		log.Fatalf("%q doesn't look like a date",
 			string(date))
 	}
+	files := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", files))
 	http.HandleFunc("/", makeHandler(index))
 	http.HandleFunc("/taxi/", makeHandler(taxi))
 	http.HandleFunc("/accessions/", makeHandler(accessions))
