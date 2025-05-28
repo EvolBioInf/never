@@ -506,15 +506,18 @@ function using a dedicated function, \ty{makeHandler}.
 
 The function \ty{makeHandler} takes as argument an ordinary function
 with three arguments, writer, reader, and data. It generates a new
-variable for holding the page data and returns a handler function that
-calls the ordinary function passed with the reader, the writer, and
-the new page data as arguments.
+variable for holding the page data and returns a handler
+function. Inside that handler function we set the writer such that it
+allows access from all domains. Then we call the ordinary function
+passed with the reader, the adjusted writer, and the new page data as
+arguments.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	  ,*PageData)) http.HandlerFunc {
 	  p := new(PageData)
 	  return func(w http.ResponseWriter, r *http.Request) {
+		  w.Header().Set("Access-Control-Allow-Origin", "*")
 		  fn(w, r, p)
 	  }
   }

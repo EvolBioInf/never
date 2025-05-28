@@ -84,6 +84,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	*PageData)) http.HandlerFunc {
 	p := new(PageData)
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		fn(w, r, p)
 	}
 }
