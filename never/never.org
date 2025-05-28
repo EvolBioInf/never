@@ -232,17 +232,12 @@ We import \ty{http}.
 #+end_src
 #+begin_export latex
 As page data we set the title, the list of functions, and the list of
-programs. At this point, the queries of the functions and programs are
-just that. To convert them into the full URLs necessary for generating
-the hyperlinks sketched in Figure~\ref{fig:idx}, we first construct
-the base URL and then use it to set the query URLs.
+programs.
 #+end_export
 #+begin_src go <<Set index page data, Pr. \ref{pr:nev}>>=
   p.Title = "Neighbors"
   p.Functions = functions
   p.Programs = programs
-  //<<Construct base URL, Pr. \ref{pr:nev}>>
-  //<<Set query URLs, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
 We declare the fields \ty{Title}, \ty{Functions}, and \ty{Programs} in
@@ -271,32 +266,6 @@ and programs.
   func init() {
 	  //<<Add programs to table, Pr. \ref{pr:nev}>>
 	  //<<Add functions to table, Pr. \ref{pr:nev}>>
-  }
-#+end_src
-#+begin_export latex
-The base URL consists of the net protocol, the host, and the
-port. Host and port are given, but the protocol is either http if we
-are running locally, or https otherwise.
-#+end_export
-#+begin_src go <<Construct base URL, Pr. \ref{pr:nev}>>=
-  protocol := "https"
-  if host == "localhost" {
-	  protocol = "http"
-  }
-  url := protocol + "://" + host + ":" + port
-#+end_src
-#+begin_export latex
-We iterate over the functions and the programs and set their query
-URLs.
-#+end_export
-#+begin_src go <<Set query URLs, Pr. \ref{pr:nev}>>=
-  for i, fu := range p.Functions {
-	  q := url + "/" + fu.Name + "?" + fu.Query
-	  p.Functions[i].Query = q
-  }
-  for i, pr := range programs {
-	  q := url + "/" + pr.Name + "?" + pr.Query
-	  p.Programs[i].Query = q
   }
 #+end_src
 #+begin_export latex
@@ -452,7 +421,7 @@ index, name, and link as sketched in Figure~\ref{fig:idx}.
     <td>{{inc $i}}</td>
     <td>{{.Name}}</td>
     <td>
-      <a href="{{.Query}}">link</a>
+      <a href="{{.Name}}{{.Query}}">link</a>
     </td>
   </tr>
   {{end}}
@@ -637,7 +606,7 @@ We also alert the server to the existence of the \ty{taxi} program by
 adding the corresponding row to the table of programs.
 #+end_export
 #+begin_src go <<Add programs to table, Pr. \ref{pr:nev}>>=
-  query := "t=Homo sapiens&e=1"
+  query := "?t=Homo sapiens&e=1"
   row := TableRow{Name: "taxi", Query: query}
   programs = append(programs, row)
 #+end_src
@@ -711,7 +680,7 @@ function and register it.
 We also add \ty{accessions} to our table of functions.
 #+end_export
 #+begin_src go <<Add functions to table, Pr. \ref{pr:nev}>>=
-  query = "t=9606"
+  query = "?t=9606"
   row = TableRow{Name: "accessions",
 	  Query: query}
   functions = append(functions, row)

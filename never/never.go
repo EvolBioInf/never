@@ -43,19 +43,6 @@ func index(w http.ResponseWriter, r *http.Request, p *PageData) {
 	p.Title = "Neighbors"
 	p.Functions = functions
 	p.Programs = programs
-	protocol := "https"
-	if host == "localhost" {
-		protocol = "http"
-	}
-	url := protocol + "://" + host + ":" + port
-	for i, fu := range p.Functions {
-		q := url + "/" + fu.Name + "?" + fu.Query
-		p.Functions[i].Query = q
-	}
-	for i, pr := range programs {
-		q := url + "/" + pr.Name + "?" + pr.Query
-		p.Programs[i].Query = q
-	}
 	err := templates.ExecuteTemplate(w, "index", p)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,10 +50,10 @@ func index(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 }
 func init() {
-	query := "t=Homo sapiens&e=1"
+	query := "?t=Homo sapiens&e=1"
 	row := TableRow{Name: "taxi", Query: query}
 	programs = append(programs, row)
-	query = "t=9606"
+	query = "?t=9606"
 	row = TableRow{Name: "accessions",
 		Query: query}
 	functions = append(functions, row)
