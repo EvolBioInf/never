@@ -1,0 +1,69 @@
+{{define "index"}}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {{template "head" .}}
+  </head>
+  <body>
+    {{template "indexBody" .}}
+  </body>
+</html>
+{{end}}
+{{define "head"}}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<link rel="stylesheet" href="./static/w3.css"/>
+<title>{{.Title}}</title>
+{{end}}
+{{define "indexBody"}}
+{{template "indexTitle"}}
+{{template "indexDescr"}}
+{{template "functions" .Functions}}
+{{template "programs" .Programs}}
+{{end}}
+{{define "indexTitle"}}
+<h1>Welcome to the Neighbors Server</h1>
+{{end}}
+{{define "indexDescr"}}
+<div class="w3-container">
+  The Neighbors server is dedicated to the discovery of the genomes of
+  a set of target organisms and their closest relatives,
+  their <i>neighbors</i>. Such sets of target and neighbor genomes
+  make good starting material for developing diagnostic markers.
+</div>
+{{end}}
+{{define "functions"}}
+<h2>Functions</h2>
+Hello Functions. Length: {{len .}}
+<table class="w3-container">
+  {{template "table" .}}
+</table>
+{{end}}
+{{define "programs"}}
+<h2>Programs</h2>
+<table class="w3-container">
+  {{template "table" .}}
+</table>
+{{end}}
+{{define "table"}}
+{{template "header"}}
+{{template "body" .}}
+{{end}}
+{{define "header"}}
+<tr>
+  <th>#</th>
+  <th>Name</th>
+  <th>URL</th>
+</tr>
+{{end}}
+{{define "body"}}
+{{range $i, $e := .}}
+<tr>
+  <td>{{inc $i}}</td>
+  <td>{{.Name}}</td>
+  <td>
+    <a href="{{.Query}}">link</a>
+  </td>
+</tr>
+{{end}}
+{{end}}

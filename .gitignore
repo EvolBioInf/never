@@ -13,5 +13,7 @@ doc/util.tex
 doc/version.txt
 
 never/never
+never/startLocal.sh
+never/template.doc
 
 web/

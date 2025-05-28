@@ -1,12 +1,16 @@
 nw = $(shell which noweb)
 
-all: never
+all: never static/templates.html
 
 never: never.go
 	go build never.go
 never.go: never.org
 	if [ "$(nw)" != "" ]; then\
 		bash ../scripts/org2nw never.org | notangle -Rnever.go | gofmt > never.go;\
+	fi
+static/templates.html: never.org
+	if [ "$(nw)" != "" ]; then\
+		bash ../scripts/org2nw never.org | notangle -Rtemplates.html > static/templates.html;\
 	fi
 tangle: never.go never_test.go
 .PHONY: test
@@ -18,4 +22,4 @@ never_test.go: never.org
 	fi
 
 clean:
-	rm -f *.go
+	rm -f *.go static/templates.html

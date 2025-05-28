@@ -8,33 +8,97 @@ import (
 	"github.com/evolbioinf/clio"
 	"github.com/evolbioinf/neighbors/tdb"
 	"github.com/evolbioinf/never/util"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
+type PageData struct {
+	Title, URL string
+	Functions  []TableRow
+	Programs   []TableRow
+}
+type TableRow struct {
+	Name, Query string
+}
 type TaxiOut struct {
 	Id     int    `json:"id"`
 	Parent int    `json:"parent"`
 	Name   string `json:"name"`
 }
-type MyDB struct {
-	db *tdb.TaxonomyDB
+type AccessionsOut struct {
+	Accession string `json:"accession"`
 }
 
-func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
+var host, port string
+var neidb *tdb.TaxonomyDB
+var functions, programs []TableRow
+var templates = template.New("templates")
+var templateFuncs = make(template.FuncMap)
+
+func index(w http.ResponseWriter, r *http.Request, p *PageData) {
+	p.Title = "Neighbors"
+	p.Functions = functions
+	p.Programs = programs
+	protocol := "https"
+	if host == "localhost" {
+		protocol = "http"
+	}
+	url := protocol + "://" + host + ":" + port
+	for i, fu := range p.Functions {
+		q := url + "/" + fu.Name + "?" + fu.Query
+		p.Functions[i].Query = q
+	}
+	for i, pr := range programs {
+		q := url + "/" + pr.Name + "?" + pr.Query
+		p.Programs[i].Query = q
+	}
+	err := templates.ExecuteTemplate(w, "index", p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+func init() {
+	query := "t=Homo sapiens&e=1"
+	row := TableRow{Name: "taxi", Query: query}
+	programs = append(programs, row)
+	query = "t=9606"
+	row = TableRow{Name: "accessions",
+		Query: query}
+	functions = append(functions, row)
+}
+func inc(i int) int {
+	return i + 1
+}
+func init() {
+	templateFuncs["inc"] = inc
+	templates = templates.Funcs(templateFuncs)
+	path := "./static/templates.html"
+	templates = template.Must(templates.ParseFiles(path))
+}
+func makeHandler(fn func(http.ResponseWriter, *http.Request,
+	*PageData)) http.HandlerFunc {
+	p := new(PageData)
+	return func(w http.ResponseWriter, r *http.Request) {
+		fn(w, r, p)
+	}
+}
+func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	name := r.URL.Query().Get("t")
-	sstr := r.URL.Query().Get("s")
-	if sstr == "1" && len(name) > 0 {
+	sstr := r.URL.Query().Get("e")
+	if sstr != "1" && len(name) > 0 {
 		name = strings.ReplaceAll(name, " ", "%")
 		name = "%" + name + "%"
 	}
-	ids := m.db.Taxids(name)
+	ids := neidb.Taxids(name)
 	out := []TaxiOut{}
 	for _, id := range ids {
-		sciName := m.db.Name(id)
-		parent := m.db.Parent(id)
+		sciName := neidb.Name(id)
+		parent := neidb.Parent(id)
 		tout := TaxiOut{
 			Id:     id,
 			Parent: parent,
@@ -45,20 +109,24 @@ func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
 	util.Check(err)
 	fmt.Fprintf(w, "%s", string(b))
 }
-func echo(w http.ResponseWriter, r *http.Request) {
-	m := "<h1>Welcome to Never, the Neighbors Server</h1>"
-	m += "This site is under construction, and so far only "
-	m += "provides echoing of the incoming URL (<code>%s</code>) and "
-	m += "an imitation of <a href=\"https://neighbors.evolbio.mpg.de/"
-	m += "taxi?t=Homo sapiens&s=1\"><code>taxi</code>.</a>"
-	m = fmt.Sprintf(m, r.URL.Path)
-	fmt.Fprintf(w, "%s\n", m)
+func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
+	t := r.URL.Query().Get("t")
+	n, err := strconv.Atoi(t)
+	util.Check(err)
+	out := []AccessionsOut{}
+	accs := neidb.Accessions(n)
+	for _, acc := range accs {
+		o := AccessionsOut{acc}
+		out = append(out, o)
+	}
+	b, err := json.Marshal(out)
+	fmt.Fprintf(w, "%s", string(b))
 }
 func main() {
 	util.PrepLog("never")
 	flagV := flag.Bool("v", false, "version")
 	flagO := flag.String("o", "localhost", "host")
-	flagP := flag.String("p", "80", "port")
+	flagP := flag.String("p", "443", "port")
 	flagC := flag.String("c", "", "certificate")
 	flagK := flag.String("k", "", "private key")
 	flagD := flag.String("d", "neidb", "database")
@@ -72,7 +140,9 @@ func main() {
 	if *flagV {
 		util.PrintInfo()
 	}
-	db := tdb.OpenTaxonomyDB(*flagD)
+	host = *flagO
+	port = *flagP
+	neidb = tdb.OpenTaxonomyDB(*flagD)
 	date, err := os.ReadFile(*flagU)
 	util.Check(err)
 	tmpFields := bytes.Fields(date)
@@ -80,11 +150,9 @@ func main() {
 		log.Fatalf("%q doesn't look like a date",
 			string(date))
 	}
-	http.HandleFunc("/", echo)
-	var myDB MyDB
-	myDB.db = db
-	http.HandleFunc("/taxi/", myDB.taxi)
-	fmt.Println("TO DO: Handle calls to tdb functions")
+	http.HandleFunc("/", makeHandler(index))
+	http.HandleFunc("/taxi/", makeHandler(taxi))
+	http.HandleFunc("/accessions/", makeHandler(accessions))
 	host := *flagO + ":" + *flagP
 	if *flagC != "" && *flagK != "" {
 		log.Fatal(http.ListenAndServeTLS(host, *flagC,

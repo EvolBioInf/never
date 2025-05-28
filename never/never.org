@@ -1,10 +1,11 @@
 #+begin_export latex
-The program \ty{never} is a webserver that provides access to a REST
-API to the facilities of the Neighbors package; hence the name
-\emph{Neighbors Sever}, or \ty{never}.
+The program \ty{never} is a webserver that provides access to the
+facilities of the Neighbors package; hence the name \emph{Neighbors
+Sever}, or \ty{never}.
 
-Our outline of \ty{never} contains hooks for imports, types, methods,
-functions, and the logic of the main function.\bpr{never}{pr:nev}
+Our outline of \ty{never} contains hooks for imports, types,
+variables, functions, and the logic of the main
+function.\bpr{never}{pr:nev}
 #+end_export
 #+begin_src go <<never.go>>=
   package main
@@ -12,17 +13,16 @@ functions, and the logic of the main function.\bpr{never}{pr:nev}
   import (
 	  //<<Imports, Pr. \ref{pr:nev}>>
   )
-
   //<<Types, Pr. \ref{pr:nev}>>
-  //<<Methods, Pr. \ref{pr:nev}>>
+  //<<Variables, Pr. \ref{pr:nev}>>
   //<<Functions, Pr. \ref{pr:nev}>>
   func main() {
 	  //<<Main function, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-\epr In the main function we prepare logging, before we construct and
-start the server.
+\epr In the main function we prepare logging, before we construct the
+server and start it.
 #+end_export
 #+begin_src go <<Main function, Pr. \ref{pr:nev}>>=
   util.PrepLog("never")
@@ -42,8 +42,8 @@ user via a browser. This often consists of web pages, but may be as
 light weight as a URL extended by a query.
 
 The back end consists of a command-line program seen by the sysadmin
-who starts the server. The back end is simpler than the front end, so
-we start with it.
+who starts the server. The back end is easier to write than the front
+end, so we start with it.
 #+end_export
 #+begin_src go <<Construct server, Pr. \ref{pr:nev}>>=
   //<<Construct back end, Pr. \ref{pr:nev}>>
@@ -67,29 +67,31 @@ we start with it.
   "flag"
 #+end_src
 #+begin_export latex
-  The server has a version flag (\ty{-v}). It runs on a host (\ty{-o}),
-  where it listens at port (\ty{-p}). In addition, it may require a pair
-  of public (\ty{-c}) and private keys (\ty{-k}) to run. A public key is
-  also known as a \emph{certificate}, hence the \ty{-c} flag. The
-  program \ty{never} accesses a database (\ty{-d}), either via one of
-  the Neighbors program or directly. This database has been last updated
-  at a time recorded in a file given via \ty{-u}.
+The server has a version flag (\ty{-v}). It runs on a host (\ty{-o}),
+where it listens at a port (\ty{-p}). In addition, it may require a
+pair of public (\ty{-c}) and private keys (\ty{-k}) to run. A public
+key is also known as a \emph{certificate}, hence the \ty{-c} flag. The
+program \ty{never} accesses a database (\ty{-d}), either via one of
+the Neighbors program or directly. This database has been last updated
+at a time recorded in a file given via \ty{-u}.
 #+end_export
 #+begin_src go <<Declare flags, Pr. \ref{pr:nev}>>=
   flagV := flag.Bool("v", false, "version")
   flagO := flag.String("o", "localhost", "host")
-  flagP := flag.String("p", "80", "port")
+  flagP := flag.String("p", "443", "port")
   flagC := flag.String("c", "", "certificate")
   flagK := flag.String("k", "", "private key")
   flagD := flag.String("d", "neidb", "database")
   flagU := flag.String("u", "updated.txt", "last updated")
 #+end_src
 #+begin_export latex
-  We respond to the version flag, \ty{-v}, the database flag,
-  \ty{-d}, and the updated flag, \ty{-u}.
+We respond to the version flag, \ty{-v}, the host (\ty{-o}) and port
+(\ty{-p}) flags, the database flag, \ty{-d}, and the updated flag,
+\ty{-u}.
 #+end_export
 #+begin_src go <<Respond to flags, Pr. \ref{pr:nev}>>=
   //<<Respond to \ty{-v}, Pr. \ref{pr:nev}>>
+  //<<Respond to \ty{-o} and \ty{-p}, Pr. \ref{pr:nev}>>
   //<<Respond to \ty{-d}, Pr. \ref{pr:nev}>>
   //<<Respond to \ty{-u}, Pr. \ref{pr:nev}>>
 #+end_src
@@ -103,11 +105,33 @@ which includes the version.
   }
 #+end_src
 #+begin_export latex
+We make host and port global variables for easy access from within the
+HTTP handler functions we write later on. So we declare them as string
+variables.
+#+end_export
+#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
+  var host, port string
+#+end_src
+#+begin_export latex
+And we assign the host and port flags to their global counterparts.
+#+end_export
+#+begin_src go <<Respond to \ty{-o} and \ty{-p}, Pr. \ref{pr:nev}>>=
+  host = *flagO
+  port = *flagP
+#+end_src
+#+begin_export latex
 In response to the database flag, we open the database. This
 precipitates a fatal error if the database does not exist.
 #+end_export
 #+begin_src go <<Respond to \ty{-d}, Pr. \ref{pr:nev}>>=
-  db := tdb.OpenTaxonomyDB(*flagD)
+  neidb = tdb.OpenTaxonomyDB(*flagD)
+#+end_src
+#+begin_export latex
+We declare the variable \ty{neidb} global to make it easily accessible
+from the various http handlers we shall write.
+#+end_export
+#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
+  var neidb *tdb.TaxonomyDB
 #+end_src
 #+begin_export latex
 We import \ty{tdb}.
@@ -156,45 +180,351 @@ We import \ty{os} and \ty{bytes}, and \ty{log}.
 #+end_src
 #+begin_export latex
 \section{Front End}
-We've finished writing the back end, so we turn to the front end. Here
-first provide a start page. Then we do two kinds of things, we emulate
-Neighbors programs and access functions of the package underlying
-Neighbors, \ty{tdb}.
+We've finished writing the back end, so we turn to the front end. This
+consists of a set of HTML pages, which we divide into three
+categories. First, there is the start, or \emph{index} page, then
+there are pages to emulate Neighbors programs, and finally there are
+pages giving access to \ty{tdb} functions.
 #+end_export
 #+begin_src go <<Construct front end, Pr. \ref{pr:nev}>>=
-  //<<Provide start page, Pr. \ref{pr:nev}>>
+  //<<Construct index page, Pr. \ref{pr:nev}>>
   //<<Emulate Neighbors programs, Pr. \ref{pr:nev}>>
   //<<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
-At this early stage of development our start page is very simple. It
-is implemented in the function \ty{echo} and just consists of a
-welcome message and echos the URL path.
+HTML pages are written in response to two data sources. The first data
+source is the HTTP request sent by the client. We can think of this as
+``external'' data. The second data source is ``internal'' data, for
+example the page title. The HTTP request is covered by the type
+\verb+http.Request+, but the page data is too varied for a standard
+type, so we declare the struct \ty{PageData} and add fields to it as
+we go along.
 #+end_export
-#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func echo(w http.ResponseWriter, r *http.Request) {
-	  m := "<h1>Welcome to Never, the Neighbors Server</h1>"
-	  m += "This site is under construction, and so far only "
-	  m += "provides echoing of the incoming URL (<code>%s</code>) and "
-	  m += "an imitation of <a href=\"https://neighbors.evolbio.mpg.de/"
-	  m += "taxi?t=Homo sapiens&s=1\"><code>taxi</code>.</a>"
-	  m = fmt.Sprintf(m, r.URL.Path)
-	  fmt.Fprintf(w, "%s\n", m)
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type PageData struct {
+	  //<<\ty{PageData} fields, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We import \ty{http} and \ty{fmt}.
+We construct the start, or \emph{index}, page using the function
+\ty{index}. It takes three arguments, a writer for sending data down
+the HTTP channel, a reader for obtaining data from the HTTP channel,
+and internal data. We set the page's data and costruct it it by executing a
+HTML template we still need to write. We check the error returned from
+executing the template.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func index(w http.ResponseWriter, r *http.Request, p *PageData) {
+	  //<<Set index page data, Pr. \ref{pr:nev}>>
+	  err := templates.ExecuteTemplate(w, "index", p)
+	  if err != nil {
+		  http.Error(w, err.Error(), http.StatusInternalServerError)
+		  return
+	  }
+  }
+#+end_src
+#+begin_export latex
+We import \ty{http}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "net/http"
-  "fmt"
 #+end_src
 #+begin_export latex
-We provide our start page by registering \ty{echo} at the root URL.
+As page data we set the title, the list of functions, and the list of
+programs. At this point, the queries of the functions and programs are
+just that. To convert them into the full URLs necessary for generating
+the hyperlinks sketched in Figure~\ref{fig:idx}, we first construct
+the base URL and then use it to set the query URLs.
 #+end_export
-#+begin_src go <<Provide start page, Pr. \ref{pr:nev}>>=
-  http.HandleFunc("/", echo)
+#+begin_src go <<Set index page data, Pr. \ref{pr:nev}>>=
+  p.Title = "Neighbors"
+  p.Functions = functions
+  p.Programs = programs
+  //<<Construct base URL, Pr. \ref{pr:nev}>>
+  //<<Set query URLs, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+We declare the fields \ty{Title}, \ty{Functions}, and \ty{Programs} in
+\ty{PageData}. \ty{Title} is a string, \ty{Functions} and
+\ty{Programs} are slices of table rows.
+#+end_export
+#+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
+  Title, URL string
+  Functions []TableRow
+  Programs []TableRow
+#+end_src
+#+begin_export latex
+The variables \ty{functions} and \ty{programs} are global slices of
+table rows.
+#+end_export
+#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
+  var functions, programs []TableRow
+#+end_src
+#+begin_export latex
+We need to fill the tables of functions and programs \emph{before} the
+index page is constructed for the first time. So we declare an
+\ty{init} function with hooks for adding rows to the tables functions
+and programs.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func init() {
+	  //<<Add programs to table, Pr. \ref{pr:nev}>>
+	  //<<Add functions to table, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+The base URL consists of the net protocol, the host, and the
+port. Host and port are given, but the protocol is either http if we
+are running locally, or https otherwise.
+#+end_export
+#+begin_src go <<Construct base URL, Pr. \ref{pr:nev}>>=
+  protocol := "https"
+  if host == "localhost" {
+	  protocol = "http"
+  }
+  url := protocol + "://" + host + ":" + port
+#+end_src
+#+begin_export latex
+We iterate over the functions and the programs and set their query
+URLs.
+#+end_export
+#+begin_src go <<Set query URLs, Pr. \ref{pr:nev}>>=
+  for i, fu := range p.Functions {
+	  q := url + "/" + fu.Name + "?" + fu.Query
+	  p.Functions[i].Query = q
+  }
+  for i, pr := range programs {
+	  q := url + "/" + pr.Name + "?" + pr.Query
+	  p.Programs[i].Query = q
+  }
+#+end_src
+#+begin_export latex
+We also declare and initialize the variable \ty{templates}, which
+holds the templates from which we generate HTML pages.
+#+end_export
+#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
+  var templates = template.New("templates")
+#+end_src
+#+begin_export latex
+We import \ty{template}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "html/template"
+#+end_src
+#+begin_export latex
+Figure~\ref{fig:idx} is a sketch of the index page. It consists two
+main parts, the head and the body, separated by the horizontal
+line. The body consists of a title, a description, and tables of the
+functions and programs accessible via the server. Each row in these
+tables consists of a number, a name, and an example query presented as
+a hyperlink.
+\begin{figure}
+  \input{../never/index}
+\caption{Sketch of the index page of \ty{never}.}\label{fig:idx}
+\end{figure}
+To store a table row, we declare it as a \ty{struct} holding a name
+and a query.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type TableRow struct {
+	  Name, Query string
+  }
+#+end_src
+#+begin_export latex
+We write all templates to the file \ty{templates.html}. In our first
+template \ty{index}, we declare sub-templates for a generic head and
+an index-specific body.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "index"}}
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      {{template "head" .}}
+    </head>
+    <body>
+      {{template "indexBody" .}}
+    </body>
+  </html>
+  {{end}}
+#+end_src
+#+begin_export latex
+In the head template we set the character set, the page layout, and
+the location of the style file. Then we set the page title.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "head"}}
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <link rel="stylesheet" href="./static/w3.css"/>
+  <title>{{.Title}}</title>
+  {{end}}
+#+end_src
+#+begin_export latex
+In the body template we declare templates for the title, the
+description and the lists of functions and programs.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "indexBody"}}
+  {{template "indexTitle"}}
+  {{template "indexDescr"}}
+  {{template "functions" .Functions}}
+  {{template "programs" .Programs}}
+  {{end}}
+#+end_src
+#+begin_export latex
+We set the title.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "indexTitle"}}
+  <h1>Welcome to the Neighbors Server</h1>
+  {{end}}
+#+end_src
+#+begin_export latex
+We describe our server.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "indexDescr"}}
+  <div class="w3-container">
+    The Neighbors server is dedicated to the discovery of the genomes of
+    a set of target organisms and their closest relatives,
+    their <i>neighbors</i>. Such sets of target and neighbor genomes
+    make good starting material for developing diagnostic markers.
+  </div>
+  {{end}}
+#+end_src
+#+begin_export latex
+We define the template for printing the functions, which calls a
+template for printing a table.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "functions"}}
+  <h2>Functions</h2>
+  Hello Functions. Length: {{len .}}
+  <table class="w3-container">
+    {{template "table" .}}
+  </table>
+  {{end}}
+#+end_src
+#+begin_export latex
+Similarly, we define the template for printing the progrmas, which
+calls the same template for printing a table.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "programs"}}
+  <h2>Programs</h2>
+  <table class="w3-container">
+    {{template "table" .}}
+  </table>
+  {{end}}
+#+end_src
+#+begin_export latex
+The table consists of a header and a body.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "table"}}
+  {{template "header"}}
+  {{template "body" .}}
+  {{end}}
+#+end_src
+#+begin_export latex
+The table consists of three columns, number, name, and URL. We write a
+header for each one.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "header"}}
+  <tr>
+    <th>#</th>
+    <th>Name</th>
+    <th>URL</th>
+  </tr>
+  {{end}}
+#+end_src
+#+begin_export latex
+To write the body of the table, we iterate over its rows and write the
+index, name, and link as sketched in Figure~\ref{fig:idx}.
+#+end_export
+#+begin_src html <<templates.html>>=
+  {{define "body"}}
+  {{range $i, $e := .}}
+  <tr>
+    <td>{{inc $i}}</td>
+    <td>{{.Name}}</td>
+    <td>
+      <a href="{{.Query}}">link</a>
+    </td>
+  </tr>
+  {{end}}
+  {{end}}
+#+end_src
+#+begin_export latex
+The function \ty{inc} increments its argument.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func inc(i int) int {
+	  return i + 1
+  }
+#+end_src
+#+begin_export latex
+In order to associate \ty{inc} with our templates, we create a
+function map.
+#+end_export
+#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
+  var templateFuncs = make(template.FuncMap)
+#+end_src
+#+begin_export latex
+This function map needs to be filled with the associated functions and
+added to the our collection of templates \emph{before} we use any of
+them. To ensure this, we declare an \ty{init} function, in which we
+add the template functions to their map and then add the map to the
+templates. Having added the functions to the templates, we can carry
+ou the initial parsing of the templates. We have written these to the
+file \ty{templates.html}, which we keep in the directory \ty{static}.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func init() {
+	  //<<Add template functions, Pr. \ref{pr:nev}>>
+	  templates = templates.Funcs(templateFuncs)
+	  path := "./static/templates.html"
+	  templates = template.Must(templates.ParseFiles(path))
+  }
+#+end_src
+#+begin_export latex
+We add the template function \ty{inc}.
+#+end_export
+#+begin_src go <<Add template functions, Pr. \ref{pr:nev}>>=
+  templateFuncs["inc"] = inc
+#+end_src
+#+begin_export latex
+We have now written the index page, but still need to register it as
+the handler for a given pattern. However, we can only register
+functions of type \ty{HandlerFunc}. These have two arguments, a
+response writer and a request, while \ty{index} has three arguments,
+writer, request, and page data. So we convert \ty{index} to a handler
+function using a dedicated function, \ty{makeHandler}.
+
+The function \ty{makeHandler} takes as argument an ordinary function
+with three arguments, writer, reader, and data. It generates a new
+variable for holding the page data and returns a handler function that
+calls the ordinary function passed with the reader, the writer, and
+the new page data as arguments.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func makeHandler(fn func(http.ResponseWriter, *http.Request,
+	  ,*PageData)) http.HandlerFunc {
+	  p := new(PageData)
+	  return func(w http.ResponseWriter, r *http.Request) {
+		  fn(w, r, p)
+	  }
+  }
+#+end_src
+#+begin_export latex
+We register \ty{index} as the function that handles calls to the root
+of our web site.
+#+end_export
+#+begin_src go <<Construct index page, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/", makeHandler(index))
 #+end_src
 #+begin_export latex
 \subsection{Emulate Neighbors Programs}
@@ -212,41 +542,27 @@ three items, we declare the \ty{struct} \ty{TaxiOut}.
   }
 #+end_src
 #+begin_export latex
-To obtain information from the Neighbors database, we create a type
-that wraps \ty{tdb.TaxonomyDB}, to which we add methods that wrap
-various queries.
-#+end_export
-#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
-  type MyDB struct {
-	  db *tdb.TaxonomyDB
-  }
-#+end_src
-#+begin_export latex
-We add the method \ty{taxi} to \ty{MyDB}. The method \ty{taxi} is of
-type \ty{http.Handler}, which has the signature
-\begin{verbatim}
-type HandlerFunc func(ResponseWriter, *Request)
-\end{verbatim}
+We write the function \ty{taxi} on the same pattern as \ty{index}.
 Inside \ty{taxi}, we extract the query from the HTTP request, query
 the database, and write the result to the HTTP writer.
 #+end_export
-#+begin_src go <<Methods, Pr. \ref{pr:nev}>>=
-  func (m MyDB) taxi(w http.ResponseWriter, r *http.Request) {
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  //<<Extract taxi query, Pr. \ref{pr:nev}>>
 	  //<<Execute taxi query, Pr. \ref{pr:nev}>>
 	  //<<Print taxi result, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We extract the taxon name and whether or not we are matching in
-substring mode. If we \emph{are} matching in substring mode, we
-replace blanks in the name by wild cards and also bracket the name by
-wild cards.
+We extract the taxon name and whether or not we are matching in exact
+mode. If we are \emph{not} matching in substring mode, we replace
+blanks in the name by wild cards and also bracket the name by wild
+cards.
 #+end_export
 #+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
   name := r.URL.Query().Get("t")
-  sstr := r.URL.Query().Get("s")
-  if sstr == "1" && len(name) > 0 {
+  sstr := r.URL.Query().Get("e")
+  if sstr != "1" && len(name) > 0 {
 	  name = strings.ReplaceAll(name, " ", "%")
 	  name = "%" + name + "%"
   }
@@ -264,7 +580,7 @@ construct the taxon output and store it in our slice of \ty{TaxiOut}
 items.
 #+end_export
 #+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
-  ids := m.db.Taxids(name)
+  ids := neidb.Taxids(name)
   out := []TaxiOut{}
   for _, id := range ids {
 	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
@@ -276,8 +592,8 @@ items.
   corresponding taxon output.
 #+end_export
 #+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
-  sciName := m.db.Name(id)
-  parent := m.db.Parent(id)
+  sciName := neidb.Name(id)
+  parent := neidb.Parent(id)
   tout := TaxiOut{
 	  Id: id,
 	  Parent: parent,
@@ -291,7 +607,7 @@ items.
   out = append(out, tout)
 #+end_src
 #+begin_export latex
-We convert the slice of taxi output to json format and write it to the
+We convert the slice of taxi output to JSON format and write it to the
 response writer.
 #+end_export
 #+begin_src go <<Print taxi result, Pr. \ref{pr:nev}>>=
@@ -300,32 +616,105 @@ response writer.
   fmt.Fprintf(w, "%s", string(b))
 #+end_src
 #+begin_export latex
-We import \ty{json}.
+We import \ty{json} and \ty{fmt}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "encoding/json"
+  "fmt"
 #+end_src
 #+begin_export latex
-All that remains to complete the emulation of the \ty{taxi} program,
-is to create the database wrapper and to register its method \ty{taxi}
-at the URL \ty{taxi}.
+We can now emulate of the \ty{taxi} program by registering the
+function \ty{taxi} it to the URL \verb+/taxi/+.
 #+end_export
 #+begin_src go <<Emulate Neighbors programs, Pr. \ref{pr:nev}>>=
-  var myDB MyDB
-  myDB.db = db
-  http.HandleFunc("/taxi/", myDB.taxi)
+  http.HandleFunc("/taxi/", makeHandler(taxi))
+#+end_src
+#+begin_export latex
+We also alert the server to the existence of the \ty{taxi} program by
+adding the corresponding row to the table of programs.
+#+end_export
+#+begin_src go <<Add programs to table, Pr. \ref{pr:nev}>>=
+  query := "t=Homo sapiens&e=1"
+  row := TableRow{Name: "taxi", Query: query}
+  programs = append(programs, row)
 #+end_src
 #+begin_export latex
 \subsection{Access \ty{tdb} Functions}
 \subsubsection{\ty{Accessions}}
+The function \ty{Accessions} takes as argument a taxon ID and returns
+the corresponding genome accessions as a slice of strings. We store
+its output in the struct \ty{AccessionsOut}, which wraps a single
+accession.
 #+end_export
-#+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
-  fmt.Println("TO DO: Handle calls to tdb functions")
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type AccessionsOut struct {
+	  Accession string `json:"accession"`
+  }
 #+end_src
 #+begin_export latex
-  We import \ty{fmt}.
+We implement the query in the function \ty{accessions}. Inside of
+\ty{accessions}, we get the taxon ID and from them the accessions,
+before we print the accessions.
 #+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
+	  //<<Get taxon ID, Pr. \ref{pr:nev}>>
+	  //<<Get accessions, Pr. \ref{pr:nev}>>
+	  //<<Print accessions, Pr. \ref{pr:nev}>>
+  }
+#+end_src
 #+begin_export latex
+We extract the taxon ID from the qauery and convert it to the integer
+required by \ty{tdb.Accessions}.
+#+end_export
+#+begin_src go <<Get taxon ID, Pr. \ref{pr:nev}>>=
+  t := r.URL.Query().Get("t")
+  n, err := strconv.Atoi(t)
+  util.Check(err)
+#+end_src
+#+begin_export latex
+We import \ty{strconv}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "strconv"
+#+end_src
+#+begin_export latex
+We get the accessions and store them in a slice of accession items.
+#+end_export
+#+begin_src go <<Get accessions, Pr. \ref{pr:nev}>>=
+  out := []AccessionsOut{}
+  accs := neidb.Accessions(n)
+  for _, acc := range accs {
+	  o := AccessionsOut{acc}
+	  out = append(out, o)
+  }
+#+end_src
+#+begin_export latex
+We convert our slice of accession items to JSON and print it as our
+response.
+#+end_export
+#+begin_src go <<Print accessions, Pr. \ref{pr:nev}>>=
+  b, err := json.Marshal(out)
+  fmt.Fprintf(w, "%s", string(b))
+#+end_src
+#+begin_export latex
+We are done writing \ty{accessions}. So we convert it to a handler
+function and register it.
+#+end_export
+#+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/accessions/", makeHandler(accessions))
+#+end_src
+#+begin_export latex
+We also add \ty{accessions} to our table of functions.
+#+end_export
+#+begin_src go <<Add functions to table, Pr. \ref{pr:nev}>>=
+  query = "t=9606"
+  row = TableRow{Name: "accessions",
+	  Query: query}
+  functions = append(functions, row)
+#+end_src
+#+begin_export latex
+\subsection{Start Server}
 We have built the server, now we can start it. If the user supplied a
 pair of encryption keys, we start it as a HTTPS server, otherwise its
 a HTTP server.

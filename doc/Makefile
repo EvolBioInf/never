@@ -1,6 +1,6 @@
 text = neverDoc
 SRC1 = never.tex util.tex
-SRC2 = header.tex intro.tex neverDoc.tex
+SRC2 = header.tex intro.tex neverDoc.tex ../never/index.tex
 
 date = $(shell git log | grep -m 1 Date | sed -r 's/Date: +[A-Z][a-z]+ ([A-Z][a-z]+) ([0-9]+) [^ ]+ ([0-9]+) .+/\2_\1_\3/')
 version = $(shell git describe)
