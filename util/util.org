@@ -34,6 +34,25 @@ We import \ty{log}.
   "log"
 #+end_src
 #+begin_export latex
+\section{\ty{CheckHTTP}}
+! \ty{CheckHTTP} takes as arguments a HTTP respose writer and an
+! eror. It logs a HTTP error if the input error it isn't \ty{nil}.
+#+end_export
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func CheckHTTP(w http.ResponseWriter, err error) {
+	  if err != nil {
+		  http.Error(w, err.Error(),
+			  http.StatusInternalServerError)
+	  }
+  }
+#+end_src
+#+begin_export latex
+We import \ty{http}.
+#+end_export
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "net/http"
+#+end_src
+#+begin_export latex
 \section{\ty{PrepLog}}
 ! \ty{PrepLog} takes as argument the program name and uses it as
 ! prefix for the log message.
@@ -85,3 +104,4 @@ The date and the version are injected at compile time, so like
   "github.com/evolbioinf/clio"
   "os"
 #+end_src
+

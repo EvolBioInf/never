@@ -1,9 +1,10 @@
-// Package uti provides auxiliary functions for the never  package.
+// Package util provides auxiliary functions for the never  package.
 package util
 
 import (
 	"github.com/evolbioinf/clio"
 	"log"
+	"net/http"
 	"os"
 )
 
@@ -14,6 +15,14 @@ var date, version string
 func Check(err error) {
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+// CheckHTTP takes as arguments a HTTP respose writer and an  eror. It logs a HTTP error if the input error it isn't nil.
+func CheckHTTP(w http.ResponseWriter, err error) {
+	if err != nil {
+		http.Error(w, err.Error(),
+			http.StatusInternalServerError)
 	}
 }
 

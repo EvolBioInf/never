@@ -13,56 +13,70 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <link rel="stylesheet" href="./static/w3.css"/>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <title>{{.Title}}</title>
 {{end}}
 {{define "indexBody"}}
 {{template "indexTitle"}}
-{{template "indexDescr"}}
-{{template "functions" .Functions}}
-{{template "programs" .Programs}}
+{{template "indexDescr" .}}
+{{template "services" .Services}}
 {{end}}
 {{define "indexTitle"}}
 <div class="w3-container">
-  <h1>Welcome to the Neighbors Server</h1>
+  <h1>Welcome to the Neighbors REST API</h1>
 </div>
 {{end}}
 {{define "indexDescr"}}
 <div class="w3-container">
   <p>
-    The Neighbors server gives access to the accessions of genome
-    sequences linked to
-    the <a href="https://www.ncbi.nlm.nih.gov/taxonomy">NCBI
-      taxonomy</a>.
+    The Neighbors REST API gives access to the accessions of genome
+    sequences.
   </p>
   <p>
-    Starting from one or more target organisms, their genomes are looked
-    up. In addition, the genomes of the targets' closest relatives,
-    their <i>neighbors</i> are looked up. Such pairs of target and
-    neighbor genomes make good starting material for developing
-    diagnostic markers.
+    Starting from one or more target organisms, their genomes can be
+    looked up. In addition, the genomes of the targets' closest
+    relatives, their <i>neighbors</i> can be looked up. Such pairs of
+    samples of target and neighbor genomes make good starting material
+    for developing diagnostic markers.
   </p>
   <p>
-    The server is based on
-    the <a href="https://github.com/evolbioinf/neighbors">Neighbors
-    package</a> and is developed in the Research Group Bioinformatics at
-    the Max-Planck-Institute for Evolutionary Biology in Plön. For
-    details on marker discovery with Neighbors and related software,
-    please consult
+    We use
+    the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">taxonomy</a>
+    and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome
+    data</a> supplied by
+    the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a custom
+    database.
+    Our REST API for querying this database is developed by
+    the <a href="https://evolbioinf.github.io/">Research Group
+    Bioinformatics</a> at
+    the <a href="https://evolbio.mpg.de">Max-Planck-Institute for
+    Evolutionary Biology</a> using
+    our <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
+    package.
+    For details on marker discovery with Neighbors and related software,
+    please read
     our <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
   </p>
+  <p>
+    <table>
+      <tr>
+          <td>Number of taxa</td>
+          <td>{{.Ntaxa}}</td>
+      </tr>
+      <tr>
+          <td>Number of genomes</td>
+          <td>{{.Ngenomes}}</td>
+      </tr>
+    </table>
+  </p>
+  <p>
+            The database was last updated on {{.Date}}.
+  </p>    
  </div>
 {{end}}
-{{define "functions"}}
+{{define "services"}}
 <div class="w3-container">
-  <h2>Functions</h2>
-  <table class="w3-container">
-    {{template "table" .}}
-  </table>
-</div>
-{{end}}
-{{define "programs"}}
-<div class="w3-container">
-  <h2>Programs</h2>
+  <h2>Services</h2>
   <table class="w3-container">
     {{template "table" .}}
   </table>
