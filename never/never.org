@@ -254,24 +254,31 @@ executing the template.
 #+begin_export latex
 As page data we set the title and the list of services offered. This
 list is potentially long, so we sort it. We also set the number of
-genomes and taxa, and when the database was last updated.
+genomes and taxa, and when the database was last updated. The numbers
+of genomes and taxa are of the order of three million, so we make them
+easier to read by inserting commas.
 #+end_export
 #+begin_src go <<Set index page data, Pr. \ref{pr:nev}>>=
   p.Title = "Neighbors"
   p.Services = services
   //<<Sort services, Pr. \ref{pr:nev}>>
-  p.Ntaxa = neidb.NumTaxa()
-  p.Ngenomes = neidb.NumGenomes()
+  p.Ntaxa = humanize.Comma(int64(neidb.NumTaxa()))
+  p.Ngenomes = humanize.Comma(int64(neidb.NumGenomes()))
   //<<Set database time stamp, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+We import \ty{humanize}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "github.com/dustin/go-humanize"
 #+end_src
 #+begin_export latex
 We declare the fields \ty{Title}, \ty{Services}, \ty{Ngenomes},
 \ty{Ntaxa}, and \ty{Date} in \ty{PageData}.
 #+end_export
 #+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
-  Title, URL, Date string
+  Title, URL, Date, Ngenomes, Ntaxa string
   Services []Service
-  Ngenomes, Ntaxa int
 #+end_src
 #+begin_export latex
 The variable \ty{services} is a global slice of services.

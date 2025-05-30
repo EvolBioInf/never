@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/evolbioinf/clio"
 	"github.com/evolbioinf/neighbors/tdb"
 	"github.com/evolbioinf/never/util"
@@ -18,9 +19,8 @@ import (
 )
 
 type PageData struct {
-	Title, URL, Date string
-	Services         []Service
-	Ngenomes, Ntaxa  int
+	Title, URL, Date, Ngenomes, Ntaxa string
+	Services                          []Service
 }
 type Service struct {
 	Name, Query string
@@ -61,8 +61,8 @@ func index(w http.ResponseWriter, r *http.Request, p *PageData) {
 	slices.SortFunc(p.Services, func(a, b Service) int {
 		return strings.Compare(a.Name, b.Name)
 	})
-	p.Ntaxa = neidb.NumTaxa()
-	p.Ngenomes = neidb.NumGenomes()
+	p.Ntaxa = humanize.Comma(int64(neidb.NumTaxa()))
+	p.Ngenomes = humanize.Comma(int64(neidb.NumGenomes()))
 	date, err := os.ReadFile(dateFile)
 	util.CheckHTTP(w, err)
 	fields := strings.Fields(string(date))
