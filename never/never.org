@@ -440,7 +440,7 @@ We give a quick introduction to the Neighbors server.
 #+begin_src html <<Introduce the Neighbors server, Pr. \ref{pr:nev}>>=
   <p>
     The Neighbors REST API gives access to the accessions of genome
-    sequences.
+    sequences via the taxonomy of sequenced life.
   </p>
 #+end_src
 #+begin_export latex
