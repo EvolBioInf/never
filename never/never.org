@@ -739,7 +739,7 @@ response writer.
 #+begin_src go <<Print taxi result, Pr. \ref{pr:nev}>>=
   b, err := json.Marshal(out)
   util.Check(err)
-  fmt.Fprintf(w, "%s", string(b))
+  fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 #+begin_export latex
 We import \ty{json}.
@@ -831,7 +831,7 @@ response.
 #+begin_src go <<Print output, Pr. \ref{pr:nev}>>=
   b, err := json.Marshal(out)
   util.CheckHTTP(w, err)
-  fmt.Fprintf(w, "%s", string(b))
+  fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 #+begin_export latex
 We are done writing \ty{accessions}. So we convert it to a handler

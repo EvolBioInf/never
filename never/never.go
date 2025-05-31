@@ -160,7 +160,7 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.Check(err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxid := getTaxa(w, r)[0]
@@ -173,7 +173,7 @@ func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func getTaxa(w http.ResponseWriter, r *http.Request) []int {
 	taxa := []int{}
@@ -197,7 +197,7 @@ func names(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
@@ -210,7 +210,7 @@ func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxon := getTaxa(w, r)[0]
@@ -219,7 +219,7 @@ func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
 	out := Taxid{parent}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func children(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxon := getTaxa(w, r)[0]
@@ -232,7 +232,7 @@ func children(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxon := getTaxa(w, r)[0]
@@ -245,7 +245,7 @@ func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
 	name := r.URL.Query().Get("t")
@@ -258,7 +258,7 @@ func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
@@ -267,7 +267,7 @@ func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	out := Taxid{mrca}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
 	accessions := getAccessions(w, r)
@@ -280,7 +280,7 @@ func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
-	fmt.Fprintf(w, "%s", string(b))
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func getAccessions(w http.ResponseWriter, r *http.Request) []string {
 	accessions := []string{}
