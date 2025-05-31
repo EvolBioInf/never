@@ -62,8 +62,12 @@ func index(w http.ResponseWriter, r *http.Request, p *PageData) {
 	slices.SortFunc(p.Services, func(a, b Service) int {
 		return strings.Compare(a.Name, b.Name)
 	})
-	p.Ntaxa = humanize.Comma(int64(neidb.NumTaxa()))
-	p.Ngenomes = humanize.Comma(int64(neidb.NumGenomes()))
+	nt, err := neidb.NumTaxa()
+	util.CheckHTTP(w, err)
+	p.Ntaxa = humanize.Comma(int64(nt))
+	ng, err := neidb.NumGenomes()
+	util.CheckHTTP(w, err)
+	p.Ngenomes = humanize.Comma(int64(ng))
 	date, err := os.ReadFile(dateFile)
 	util.CheckHTTP(w, err)
 	fields := strings.Fields(string(date))
@@ -140,11 +144,14 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 		name = strings.ReplaceAll(name, " ", "%")
 		name = "%" + name + "%"
 	}
-	ids := neidb.Taxids(name)
+	ids, err := neidb.Taxids(name)
+	util.CheckHTTP(w, err)
 	out := []TaxiOut{}
 	for _, id := range ids {
-		sciName := neidb.Name(id)
-		parent := neidb.Parent(id)
+		sciName, err := neidb.Name(id)
+		util.CheckHTTP(w, err)
+		parent, err := neidb.Parent(id)
+		util.CheckHTTP(w, err)
 		tout := TaxiOut{
 			Taxid:  id,
 			Parent: parent,
@@ -158,7 +165,8 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxid := getTaxa(w, r)[0]
 	out := []Accession{}
-	accs := neidb.Accessions(taxid)
+	accs, err := neidb.Accessions(taxid)
+	util.CheckHTTP(w, err)
 	for _, acc := range accs {
 		o := Accession{acc}
 		out = append(out, o)
@@ -182,7 +190,8 @@ func names(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
 	out := []Name{}
 	for i, taxon := range taxa {
-		name := neidb.Name(taxon)
+		name, err := neidb.Name(taxon)
+		util.CheckHTTP(w, err)
 		o := Name{Taxid: taxa[i], Name: name}
 		out = append(out, o)
 	}
@@ -194,7 +203,8 @@ func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
 	out := []Rank{}
 	for i, taxon := range taxa {
-		rank := neidb.Rank(taxon)
+		rank, err := neidb.Rank(taxon)
+		util.CheckHTTP(w, err)
 		o := Rank{Taxid: taxa[i], Rank: rank}
 		out = append(out, o)
 	}
@@ -204,7 +214,8 @@ func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxon := getTaxa(w, r)[0]
-	parent := neidb.Parent(taxon)
+	parent, err := neidb.Parent(taxon)
+	util.CheckHTTP(w, err)
 	out := Taxid{parent}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
@@ -213,7 +224,8 @@ func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
 func children(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxon := getTaxa(w, r)[0]
 	out := []Taxid{}
-	children := neidb.Children(taxon)
+	children, err := neidb.Children(taxon)
+	util.CheckHTTP(w, err)
 	for _, child := range children {
 		o := Taxid{child}
 		out = append(out, o)
@@ -224,7 +236,8 @@ func children(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxon := getTaxa(w, r)[0]
-	taxids := neidb.Subtree(taxon)
+	taxids, err := neidb.Subtree(taxon)
+	util.CheckHTTP(w, err)
 	out := []Taxid{}
 	for _, taxid := range taxids {
 		o := Taxid{taxid}
@@ -237,7 +250,8 @@ func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
 func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
 	name := r.URL.Query().Get("t")
 	out := []Taxid{}
-	taxids := neidb.Taxids(name)
+	taxids, err := neidb.Taxids(name)
+	util.CheckHTTP(w, err)
 	for _, taxid := range taxids {
 		o := Taxid{taxid}
 		out = append(out, o)
@@ -248,7 +262,8 @@ func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
-	mrca := neidb.MRCA(taxa)
+	mrca, err := neidb.MRCA(taxa)
+	util.CheckHTTP(w, err)
 	out := Taxid{mrca}
 	b, err := json.Marshal(out)
 	util.CheckHTTP(w, err)
@@ -258,7 +273,8 @@ func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
 	accessions := getAccessions(w, r)
 	out := []Level{}
 	for _, accession := range accessions {
-		level := neidb.Level(accession)
+		level, err := neidb.Level(accession)
+		util.CheckHTTP(w, err)
 		o := Level{Accession: accession, Level: level}
 		out = append(out, o)
 	}

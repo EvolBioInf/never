@@ -262,8 +262,12 @@ easier to read by inserting commas.
   p.Title = "Neighbors"
   p.Services = services
   //<<Sort services, Pr. \ref{pr:nev}>>
-  p.Ntaxa = humanize.Comma(int64(neidb.NumTaxa()))
-  p.Ngenomes = humanize.Comma(int64(neidb.NumGenomes()))
+  nt, err := neidb.NumTaxa()
+  util.CheckHTTP(w, err)
+  p.Ntaxa = humanize.Comma(int64(nt))
+  ng, err := neidb.NumGenomes()
+  util.CheckHTTP(w, err)
+  p.Ngenomes = humanize.Comma(int64(ng))
   //<<Set database time stamp, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
@@ -699,7 +703,8 @@ construct the taxon output and store it in our slice of \ty{TaxiOut}
 items.
 #+end_export
 #+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
-  ids := neidb.Taxids(name)
+  ids, err := neidb.Taxids(name)
+  util.CheckHTTP(w, err)
   out := []TaxiOut{}
   for _, id := range ids {
 	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
@@ -711,8 +716,10 @@ items.
   corresponding taxon output.
 #+end_export
 #+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
-  sciName := neidb.Name(id)
-  parent := neidb.Parent(id)
+  sciName, err := neidb.Name(id)
+  util.CheckHTTP(w, err)
+  parent, err := neidb.Parent(id)
+  util.CheckHTTP(w, err)
   tout := TaxiOut{
 	  Taxid: id,
 	  Parent: parent,
@@ -810,7 +817,8 @@ We get the accessions and store them in a slice of accessions.
 #+end_export
 #+begin_src go <<Get accessions, Pr. \ref{pr:nev}>>=
   out := []Accession{}
-  accs := neidb.Accessions(taxid)
+  accs, err := neidb.Accessions(taxid)
+  util.CheckHTTP(w, err)
   for _, acc := range accs {
 	  o := Accession{acc}
 	  out = append(out, o)
@@ -863,7 +871,8 @@ output.
 	  taxa := getTaxa(w, r)
 	  out := []Name{}
 	  for i, taxon := range taxa {
-		  name := neidb.Name(taxon)
+		  name, err := neidb.Name(taxon)
+		  util.CheckHTTP(w, err)
 		  o := Name{Taxid: taxa[i], Name: name}
 		  out = append(out, o)
 	  }
@@ -906,7 +915,8 @@ corresponding ranks, and print the output.
 	  taxa := getTaxa(w, r)
 	  out := []Rank{}
 	  for i, taxon := range taxa {
-		  rank := neidb.Rank(taxon)
+		  rank, err := neidb.Rank(taxon)
+		  util.CheckHTTP(w, err)
 		  o := Rank{Taxid: taxa[i], Rank: rank}
 		  out = append(out, o)
 	  }
@@ -945,7 +955,8 @@ and print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxon := getTaxa(w, r)[0]
-	  parent := neidb.Parent(taxon)
+	  parent, err := neidb.Parent(taxon)
+	  util.CheckHTTP(w, err)
 	  out := Taxid{parent}
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
@@ -975,7 +986,8 @@ corresponding children, before we print the output.
   func children(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxon := getTaxa(w, r)[0]
 	  out := []Taxid{}
-	  children := neidb.Children(taxon)
+	  children, err := neidb.Children(taxon)
+	  util.CheckHTTP(w, err)
 	  for _, child := range children {
 		  o := Taxid{child}
 		  out = append(out, o)
@@ -1006,7 +1018,8 @@ the corresponding subtree, and print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxon := getTaxa(w, r)[0]
-	  taxids := neidb.Subtree(taxon)
+	  taxids, err := neidb.Subtree(taxon)
+	  util.CheckHTTP(w, err)
 	  out := []Taxid{}
 	  for _, taxid := range taxids {
 		  o := Taxid{taxid}
@@ -1040,7 +1053,8 @@ taxon IDs before we print the output.
   func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
-	  taxids := neidb.Taxids(name)
+	  taxids, err := neidb.Taxids(name)
+	  util.CheckHTTP(w, err)
 	  for _, taxid := range taxids {
 		  o := Taxid{taxid}
 		  out = append(out, o)
@@ -1079,7 +1093,8 @@ print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxa := getTaxa(w, r)
-	  mrca := neidb.MRCA(taxa)
+	  mrca, err := neidb.MRCA(taxa)
+	  util.CheckHTTP(w, err)
 	  out := Taxid{mrca}
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
@@ -1120,7 +1135,8 @@ level and print the output.
 	  accessions := getAccessions(w, r)
 	  out := []Level{}
 	  for _, accession := range accessions {
-		  level := neidb.Level(accession)
+		  level, err := neidb.Level(accession)
+		  util.CheckHTTP(w, err)
 		  o := Level{Accession: accession, Level: level}
 		  out = append(out, o)
 	  }
