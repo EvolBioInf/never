@@ -45,7 +45,8 @@ type Taxid struct {
 	Taxid int `json:"taxid"`
 }
 type Level struct {
-	Level string `json:"level"`
+	Accession string `json:"accession"`
+	Level     string `json:"level"`
 }
 
 var host, port string
@@ -179,9 +180,9 @@ func getTaxa(w http.ResponseWriter, r *http.Request) []int {
 }
 func names(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
-	names := neidb.Names(taxa)
 	out := []Name{}
-	for i, name := range names {
+	for i, taxon := range taxa {
+		name := neidb.Name(taxon)
 		o := Name{Taxid: taxa[i], Name: name}
 		out = append(out, o)
 	}
@@ -191,9 +192,9 @@ func names(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 	taxa := getTaxa(w, r)
-	ranks := neidb.Ranks(taxa)
 	out := []Rank{}
-	for i, rank := range ranks {
+	for i, taxon := range taxa {
+		rank := neidb.Rank(taxon)
 		o := Rank{Taxid: taxa[i], Rank: rank}
 		out = append(out, o)
 	}
@@ -255,10 +256,10 @@ func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
 	accessions := getAccessions(w, r)
-	levels := neidb.Levels(accessions)
 	out := []Level{}
-	for _, level := range levels {
-		o := Level{level}
+	for _, accession := range accessions {
+		level := neidb.Level(accession)
+		o := Level{Accession: accession, Level: level}
 		out = append(out, o)
 	}
 	b, err := json.Marshal(out)

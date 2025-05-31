@@ -861,9 +861,9 @@ output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func names(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxa := getTaxa(w, r)
-	  names := neidb.Names(taxa)
 	  out := []Name{}
-	  for i, name := range names {
+	  for i, taxon := range taxa {
+		  name := neidb.Name(taxon)
 		  o := Name{Taxid: taxa[i], Name: name}
 		  out = append(out, o)
 	  }
@@ -904,9 +904,9 @@ corresponding ranks, and print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxa := getTaxa(w, r)
-	  ranks := neidb.Ranks(taxa)
 	  out := []Rank{}
-	  for i, rank := range ranks {
+	  for i, taxon := range taxa {
+		  rank := neidb.Rank(taxon)
 		  o := Rank{Taxid: taxa[i], Rank: rank}
 		  out = append(out, o)
 	  }
@@ -1103,10 +1103,11 @@ We also add \ty{mrca} to our list of services.
 \subsubsection{\ty{levels}}
 The service \ty{levels} takes a s argument a list of genome accessions
 and returns their assembly levels. We store the assembly level in a
-struct that wraps a single level.
+struct that wraps an accession/level pair.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Level struct {
+	  Accession string `json:"accession"`
 	  Level string `json:"level"`
   }
 #+end_src
@@ -1117,10 +1118,10 @@ level and print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  accessions := getAccessions(w, r)
-	  levels := neidb.Levels(accessions)
 	  out := []Level{}
-	  for _, level := range levels {
-		  o := Level{level}
+	  for _, accession := range accessions {
+		  level := neidb.Level(accession)
+		  o := Level{Accession: accession, Level: level}
 		  out = append(out, o)
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
