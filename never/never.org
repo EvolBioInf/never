@@ -450,8 +450,8 @@ We give a quick introduction to the Neighbors server.
 #+end_export
 #+begin_src html <<Introduce the Neighbors server, Pr. \ref{pr:nev}>>=
   <p>
-    The Neighbors REST API gives access to the accessions of genome
-    sequences via the taxonomy of sequenced life.
+    The Neighbors REST API gives access to genome sequences via the
+    taxonomy of sequenced life.
   </p>
 #+end_src
 #+begin_export latex
@@ -459,11 +459,11 @@ We describe the Neighbors method of comparative marker discovery.
 #+end_export
 #+begin_src html <<Describe the Neighbors method, Pr. \ref{pr:nev}>>=
   <p>
-    Starting from one or more target organisms, their genomes can be
-    looked up. In addition, the genomes of the targets' closest
-    relatives, their <i>neighbors</i> can be looked up. Such pairs of
-    samples of target and neighbor genomes make good starting material
-    for developing diagnostic markers.
+    Starting from one or more target organisms, the accessions of their
+    genomes can be looked up. In addition, the genome accessions of the
+    targets' closest relatives, their <i>neighbors</i>, can be looked
+    up. Such pairs of samples of target and neighbor genomes make good
+    starting material for developing diagnostic markers.
   </p>
 #+end_src
 #+begin_export latex
@@ -504,8 +504,8 @@ Our server is a group effort, as is the underlying Neighbors package.
 We quote our second Fur paper.
 #+end_export
 #+begin_src html <<Quote our Fur paper, Pr. \ref{pr:nev}>>=
-  For details on marker discovery with Neighbors and related software,
-  please read
+  For more details on genetic marker discovery from whole genome
+  sequences with Neighbors and related software, please read
   our <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
 #+end_src
 #+begin_export latex
