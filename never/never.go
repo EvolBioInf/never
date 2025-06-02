@@ -162,7 +162,7 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 			Name:   sciName}
 		out = append(out, tout)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -176,7 +176,7 @@ func accessions(w http.ResponseWriter, r *http.Request,
 		o := Accession{acc}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -201,7 +201,7 @@ func names(w http.ResponseWriter, r *http.Request,
 		o := Name{Taxid: taxa[i], Name: name}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -215,7 +215,7 @@ func ranks(w http.ResponseWriter, r *http.Request,
 		o := Rank{Taxid: taxa[i], Rank: rank}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -225,7 +225,7 @@ func parent(w http.ResponseWriter, r *http.Request,
 	parent, err := neidb.Parent(taxon)
 	util.CheckHTTP(w, err)
 	out := Taxid{parent}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -239,7 +239,7 @@ func children(w http.ResponseWriter, r *http.Request,
 		o := Taxid{child}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -253,7 +253,7 @@ func subtree(w http.ResponseWriter, r *http.Request,
 		o := Taxid{taxid}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -267,7 +267,7 @@ func taxids(w http.ResponseWriter, r *http.Request,
 		o := Taxid{taxid}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -276,7 +276,7 @@ func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	mrca, err := neidb.MRCA(taxa)
 	util.CheckHTTP(w, err)
 	out := Taxid{mrca}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
@@ -290,7 +290,7 @@ func levels(w http.ResponseWriter, r *http.Request,
 		o := Level{Accession: accession, Level: level}
 		out = append(out, o)
 	}
-	b, err := json.Marshal(out)
+	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }

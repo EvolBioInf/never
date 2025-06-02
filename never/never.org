@@ -743,7 +743,7 @@ We convert the slice of taxi output to JSON format and write it to the
 response writer.
 #+end_export
 #+begin_src go <<Print taxi result, Pr. \ref{pr:nev}>>=
-  b, err := json.Marshal(out)
+  b, err := json.MarshalIndent(out, "", "    ")
   util.Check(err)
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
@@ -836,7 +836,7 @@ We convert our slice of accession items to JSON and print it as our
 response.
 #+end_export
 #+begin_src go <<Print output, Pr. \ref{pr:nev}>>=
-  b, err := json.Marshal(out)
+  b, err := json.MarshalIndent(out, "", "    ")
   util.CheckHTTP(w, err)
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
