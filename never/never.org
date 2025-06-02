@@ -92,7 +92,7 @@ purpose of \ty{never}, and an example command.
   u := "never [flag]..."
   p := "The program never is a web server " +
 	  "providing a REST API for the Neighbors package."
-  e := "never -o 10.254.1.21 -c Cert.pem -k privateKey.pem"
+  e := "never -o 10.254.1.21 -c Cert_bundle.pem -k privateKey.pem"
   clio.Usage(u, p, e)
 #+end_src
 #+begin_export latex
