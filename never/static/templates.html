@@ -11,9 +11,9 @@
 {{end}}
 {{define "head"}}
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport"
+        content="width=device-width,initial-scale=1.0"/>
 <link rel="stylesheet" href="./static/w3.css"/>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <title>{{.Title}}</title>
 {{end}}
 {{define "indexBody"}}
@@ -29,33 +29,35 @@
 {{define "indexDescr"}}
 <div class="w3-container">
   <p>
-    The Neighbors REST API gives access to the accessions of genome
-    sequences via the taxonomy of sequenced life.
+    The Neighbors REST API gives access to genome sequences via
+    the taxonomy of sequenced life.
   </p>
   <p>
-    Starting from one or more target organisms, their genomes can be
-    looked up. In addition, the genomes of the targets' closest
-    relatives, their <i>neighbors</i> can be looked up. Such pairs of
-    samples of target and neighbor genomes make good starting material
-    for developing diagnostic markers.
+    Starting from one or more target organisms, the accessions of
+    their genomes can be looked up. In addition, the genome
+    accessions of the targets' closest relatives, their
+    <i>neighbors</i>, can be looked up. Such pairs of samples of
+    target and neighbor genomes make good starting material for
+    developing diagnostic markers.
   </p>
   <p>
-    We use
-    the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">taxonomy</a>
-    and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome
-    data</a> supplied by
-    the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a custom
-    database.
+    We use the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">
+    taxonomy</a>
+    and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">
+    genome data</a> supplied by
+    the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a
+    custom database.
     Our REST API for querying this database is developed by
     the <a href="https://evolbioinf.github.io/">Research Group
     Bioinformatics</a> at
     the <a href="https://evolbio.mpg.de">Max-Planck-Institute for
     Evolutionary Biology</a> using
-    our <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
-    package.
-    For details on marker discovery with Neighbors and related software,
-    please read
-    our <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+    our <a href="https://github.com/evolbioinf/neighbors">
+      Neighbors</a> package.
+    For more details on genetic marker discovery from whole genome
+    sequences with Neighbors and related software, please read
+    our <a href="https://doi.org/10.1093/bioadv/vbae113">
+      publication</a>.
   </p>
   <p>
     <table>

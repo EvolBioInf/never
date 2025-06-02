@@ -1,4 +1,4 @@
-// Package util provides auxiliary functions for the never  package.
+// Package util provides auxiliary functions for the never package.
 package util
 
 import (
@@ -11,14 +11,14 @@ import (
 var program string
 var date, version string
 
-// Check takes an error as argument and logs a fatal error if the  error isn't nil.
+// Check takes an error as argument and logs a fatal error if the error isn't nil.
 func Check(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-// CheckHTTP takes as arguments a HTTP respose writer and an  eror. It logs a HTTP error if the input error it isn't nil.
+// CheckHTTP takes as arguments a HTTP respose writer and an eror. It logs an HTTP error if the input error it isn't nil.
 func CheckHTTP(w http.ResponseWriter, err error) {
 	if err != nil {
 		http.Error(w, err.Error(),

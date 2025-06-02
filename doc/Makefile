@@ -12,7 +12,7 @@ $(text).pdf: $(text).tex $(SRC1) $(SRC2)
 	echo $(date) | tr '_' ' ' > date.txt
 	echo $(version) | tr '-' ' ' | awk '{printf "%s", $$1; if ($$2) printf "-%s", $$2; printf "\n"}' > version.txt
 	latex $(text).tex
-#	bibtex $(text)
+	bibtex $(text)
 	latex $(text).tex
 	latex $(text).tex
 	dvips $(text) -o -q

@@ -1,6 +1,6 @@
 #+begin_export latex
-! Package \ty{util} provides auxiliary functions for the \ty{never}
-! package.
+!Package \ty{util} provides auxiliary functions for the \ty{never}
+!package.
 
 Our outline of \ty{util} has hooks for imports, variables, and
 functions.  \bpa{util}{pa:uti}
@@ -15,10 +15,10 @@ functions.  \bpa{util}{pa:uti}
   //<<Functions, Pa. \ref{pa:uti}>>
 #+end_src
 #+begin_export latex
-  \epa
-  \section{\ty{Check}}
-  ! \ty{Check} takes an error as argument and logs a fatal error if the
-  ! error isn't \ty{nil}.
+\epa
+\section{\ty{Check}}
+!\ty{Check} takes an error as argument and logs a fatal error if the
+!error isn't \ty{nil}.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func Check(err error) {
@@ -35,8 +35,8 @@ We import \ty{log}.
 #+end_src
 #+begin_export latex
 \section{\ty{CheckHTTP}}
-! \ty{CheckHTTP} takes as arguments a HTTP respose writer and an
-! eror. It logs a HTTP error if the input error it isn't \ty{nil}.
+!\ty{CheckHTTP} takes as arguments a HTTP respose writer and an
+!eror. It logs an HTTP error if the input error it isn't \ty{nil}.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func CheckHTTP(w http.ResponseWriter, err error) {

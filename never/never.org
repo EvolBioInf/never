@@ -43,7 +43,7 @@ light weight as a URL extended by a query.
 
 The back end consists of a command-line program seen by the sysadmin
 who starts the server. The back end is easier to write than the front
-end, so we start with it.
+end, so we begin with it.
 #+end_export
 #+begin_src go <<Construct server, Pr. \ref{pr:nev}>>=
   //<<Construct back end, Pr. \ref{pr:nev}>>
@@ -123,14 +123,13 @@ which includes the version.
 #+end_src
 #+begin_export latex
 We make host and port global variables for easy access from within the
-HTTP handler functions we write later on. So we declare them as string
-variables.
+HTTP handler functions we write later on.
 #+end_export
 #+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
   var host, port string
 #+end_src
 #+begin_export latex
-And we assign the host and port flags to their global counterparts.
+We assign the host and port flags to their global counterparts.
 #+end_export
 #+begin_src go <<Respond to \ty{-o} and \ty{-p}, Pr. \ref{pr:nev}>>=
   host = *flagO
@@ -144,8 +143,8 @@ precipitates a fatal error if the database does not exist.
   neidb = tdb.OpenTaxonomyDB(*flagD)
 #+end_src
 #+begin_export latex
-We declare the variable \ty{neidb} global to make it easily accessible
-from the various http handlers we shall write.
+We declare the variable \ty{neidb} global to make the database easily
+accessible from the various http handlers we shall write.
 #+end_export
 #+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
   var neidb *tdb.TaxonomyDB
@@ -175,7 +174,7 @@ called.
   dateFile = *flagU
 #+end_src
 #+begin_export latex
-We import \ty{os} and \ty{bytes}, and \ty{log}.
+We import \ty{os}, \ty{bytes}, and \ty{log}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "os"
@@ -204,7 +203,7 @@ pages giving access to \ty{tdb} functions.
   //<<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
-\subsection{ Files}
+\subsection{Files}
 The style files are locate in the directory \ty{static}. We make them
 available by registering a file server to that directory.
 #+end_export
@@ -237,18 +236,16 @@ we go along.
 We construct the start, or \emph{index}, page using the function
 \ty{index}. It takes three arguments, a writer for sending data down
 the HTTP channel, a reader for obtaining data from the HTTP channel,
-and internal data. We set the page's data and costruct it it by executing a
-HTML template we still need to write. We check the error returned from
-executing the template.
+and internal data. We set the page's data and costruct it it by
+executing an HTML template we still need to write. We check the error
+returned from executing the template.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func index(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func index(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  //<<Set index page data, Pr. \ref{pr:nev}>>
 	  err = templates.ExecuteTemplate(w, "index", p)
-	  if err != nil {
-		  http.Error(w, err.Error(), http.StatusInternalServerError)
-		  return
-	  }
+	  util.CheckHTTP(w, err)
   }
 #+end_src
 #+begin_export latex
@@ -277,8 +274,10 @@ We import \ty{humanize}.
   "github.com/dustin/go-humanize"
 #+end_src
 #+begin_export latex
-We declare the fields \ty{Title}, \ty{Services}, \ty{Ngenomes},
-\ty{Ntaxa}, and \ty{Date} in \ty{PageData}.
+We declare the fields \ty{Title}, \ty{Date}, \ty{Ngenomes},
+\ty{Ntaxa}, and \ty{Services} in \ty{PageData}. The numbers of taxa
+and genomes are nominally integers, but we'd like to insert commans
+into them, so we declare these numbers as strings.
 #+end_export
 #+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
   Title, URL, Date, Ngenomes, Ntaxa string
@@ -291,17 +290,21 @@ The variable \ty{services} is a global slice of services.
   var services []Service
 #+end_src
 #+begin_export latex
-We need to fill the table of services \emph{before} the index page is
+We need to fill this slice of services \emph{before} the index page is
 constructed for the first time. So we declare an \ty{init} function
-with a hook for adding services.
+with variables for holding a service and a query, and a hook for
+adding services.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func init() {
+	  var service Service
+	  var query string
 	  //<<Add services, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We sort the services by their name.
+Before exectuing the index template, we sort the services by their
+name.
 #+end_export
 #+begin_src go <<Sort services, Pr. \ref{pr:nev}>>=
   slices.SortFunc(p.Services, func(a, b Service) int {
@@ -347,7 +350,7 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
 We also declare and initialize the variable \ty{templates}, which
-holds the templates from which we generate HTML pages.
+holds the templates from which we generate the HTML pages.
 #+end_export
 #+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
   var templates = template.New("templates")
@@ -361,10 +364,9 @@ We import \ty{template}.
 #+begin_export latex
 Figure~\ref{fig:idx} is a sketch of the index page. It consists two
 main parts, the head and the body, separated by the horizontal
-line. The body consists of a title, a description, and tables of the
-functions and programs accessible via the server. Each row in these
-tables consists of a number, a name, and an example query presented as
-a hyperlink.
+line. The body consists of a title, a description, and a table of the
+services accessible via the server. Each row in that table consists of
+a number, a name, and an example query presented as a hyperlink.
 \begin{figure}
   \input{../never/index}
 \caption{Sketch of the index page of \ty{never}.}\label{fig:idx}
@@ -379,7 +381,7 @@ and a query.
 #+end_src
 #+begin_export latex
 We write all templates to the file \ty{templates.html}. In our first
-template \ty{index}, we declare sub-templates for a generic head and
+template, \ty{index}, we call two sub-templates for a generic head and
 an index-specific body.
 #+end_export
 #+begin_src html <<templates.html>>=
@@ -402,15 +404,15 @@ the location of the style file. Then we set the page title.
 #+begin_src html <<templates.html>>=
   {{define "head"}}
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport"
+	content="width=device-width,initial-scale=1.0"/>
   <link rel="stylesheet" href="./static/w3.css"/>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <title>{{.Title}}</title>
   {{end}}
 #+end_src
 #+begin_export latex
-In the body template we declare templates for the title, the
-description and the lists of services.
+In the body template we call threed sub-templates for the title, the
+description and the list of services.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "indexBody"}}
@@ -432,7 +434,7 @@ We set the title.
 #+begin_export latex
 We introduce our server, describe the Neighbor method, and give some
 background to it. We also quote the number of taxa and genomes in the
-database and when it was last updated.
+database, and when it was last updated.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "indexDescr"}}
@@ -450,8 +452,8 @@ We give a quick introduction to the Neighbors server.
 #+end_export
 #+begin_src html <<Introduce the Neighbors server, Pr. \ref{pr:nev}>>=
   <p>
-    The Neighbors REST API gives access to genome sequences via the
-    taxonomy of sequenced life.
+    The Neighbors REST API gives access to genome sequences via
+    the taxonomy of sequenced life.
   </p>
 #+end_src
 #+begin_export latex
@@ -459,34 +461,35 @@ We describe the Neighbors method of comparative marker discovery.
 #+end_export
 #+begin_src html <<Describe the Neighbors method, Pr. \ref{pr:nev}>>=
   <p>
-    Starting from one or more target organisms, the accessions of their
-    genomes can be looked up. In addition, the genome accessions of the
-    targets' closest relatives, their <i>neighbors</i>, can be looked
-    up. Such pairs of samples of target and neighbor genomes make good
-    starting material for developing diagnostic markers.
+    Starting from one or more target organisms, the accessions of
+    their genomes can be looked up. In addition, the genome
+    accessions of the targets' closest relatives, their
+    <i>neighbors</i>, can be looked up. Such pairs of samples of
+    target and neighbor genomes make good starting material for
+    developing diagnostic markers.
   </p>
 #+end_src
 #+begin_export latex
 As background, we list our data sources, credit the authors of the
-server, and quote the Fur paper.
+server, and quote the pertient paper.
 #+end_export
 #+begin_src html <<Give some background to Neighbors, Pr. \ref{pr:nev}>>=
   <p>
     //<<List data sources, Pr. \ref{pr:nev}>>
     //<<Give credit for server, Pr. \ref{pr:nev}>>
-    //<<Quote our Fur paper, Pr. \ref{pr:nev}>>
+    //<<Quote paper, Pr. \ref{pr:nev}>>
   </p>
 #+end_src
 #+begin_export latex
-We list the NCBI as source of our raw data.
+We list the NCBI as the source of our raw data.
 #+end_export
 #+begin_src html <<List data sources, Pr. \ref{pr:nev}>>=
-  We use
-  the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">taxonomy</a>
-  and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome
-  data</a> supplied by
-  the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a custom
-  database.
+  We use the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">
+  taxonomy</a>
+  and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">
+  genome data</a> supplied by
+  the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a
+  custom database.
 #+end_src
 #+begin_export latex
 Our server is a group effort, as is the underlying Neighbors package.
@@ -497,16 +500,17 @@ Our server is a group effort, as is the underlying Neighbors package.
   Bioinformatics</a> at
   the <a href="https://evolbio.mpg.de">Max-Planck-Institute for
   Evolutionary Biology</a> using
-  our <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
-  package.
+  our <a href="https://github.com/evolbioinf/neighbors">
+    Neighbors</a> package.
 #+end_src
 #+begin_export latex
-We quote our second Fur paper.
+We quote our paper on marker discovery in the large~\cite{vie24:mar}.
 #+end_export
-#+begin_src html <<Quote our Fur paper, Pr. \ref{pr:nev}>>=
+#+begin_src html <<Quote paper, Pr. \ref{pr:nev}>>=
   For more details on genetic marker discovery from whole genome
   sequences with Neighbors and related software, please read
-  our <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+  our <a href="https://doi.org/10.1093/bioadv/vbae113">
+    publication</a>.
 #+end_src
 #+begin_export latex
 We get the number of taxa and genomes in a table.
@@ -557,8 +561,7 @@ The table consists of a header and a body.
   {{end}}
 #+end_src
 #+begin_export latex
-The table consists of four columns, number, name, query, and link. We
-write a header for each one.
+In the header we label the three columns enumerator, name, and query.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "header"}}
@@ -571,7 +574,9 @@ write a header for each one.
 #+end_src
 #+begin_export latex
 To write the body of the table, we iterate over its rows and write the
-index, name, and link as sketched in Figure~\ref{fig:idx}.
+enumerator, name, and query as sketched in Figure~\ref{fig:idx}. The
+enumerator is calculated by incrementing the current index with the
+function \ty{inc}.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "body"}}
@@ -600,13 +605,14 @@ function map.
   var templateFuncs = make(template.FuncMap)
 #+end_src
 #+begin_export latex
-This function map needs to be filled with the associated functions and
-added to the our collection of templates \emph{before} we use any of
-them. To ensure this, we declare an \ty{init} function, in which we
-add the template functions to their map and then add the map to the
-templates. Having added the functions to the templates, we can carry
-ou the initial parsing of the templates. We have written these to the
-file \ty{templates.html}, which we keep in the directory \ty{static}.
+Like the slice of services, the function map needs to be filled with
+the associated functions and added to the our collection of templates
+before we use any of them. To ensure this, we declare an \ty{init}
+function, in which we add the template functions to their map and then
+add the map to the templates. Having added the functions to the
+templates, we can carry out the initial parsing of the templates. We
+have written these to the file \ty{templates.html}, which we keep in
+the directory \ty{static}.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func init() {
@@ -630,7 +636,7 @@ response writer and a request, while \ty{index} has three arguments,
 writer, request, and page data. So we convert \ty{index} to a handler
 function using a dedicated function, \ty{makeHandler}.
 
-The function \ty{makeHandler} takes as argument an ordinary function
+Our function \ty{makeHandler} takes as argument an ordinary function
 with three arguments, writer, reader, and data. It generates a new
 variable for holding the page data and returns a handler
 function. Inside that handler function we set the writer such that it
@@ -643,7 +649,8 @@ arguments.
 	  ,*PageData)) http.HandlerFunc {
 	  p := new(PageData)
 	  return func(w http.ResponseWriter, r *http.Request) {
-		  w.Header().Set("Access-Control-Allow-Origin", "*")
+		  w.Header().Set("Access-Control-Allow-Origin",
+			  "*")
 		  fn(w, r, p)
 	  }
   }
@@ -684,9 +691,8 @@ database, and write the result to the HTTP writer.
 #+end_src
 #+begin_export latex
 We extract the taxon name and whether or not we are matching in exact
-mode. If we are \emph{not} matching in substring mode, we replace
-blanks in the name by wild cards and also bracket the name by wild
-cards.
+mode. If we are \emph{not} matching in exact mode, we replace blanks
+in the name by wild cards and also bracket the name by wild cards.
 #+end_export
 #+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
   name := r.URL.Query().Get("t")
@@ -759,8 +765,8 @@ service \ty{taxi} to the URL \verb+/taxi/+.
 We also add the \ty{taxi} service to our list of services.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
-  query := "?t=Homo+sapiens&e=1"
-  service := Service{Name: "taxi", Query: query}
+  query = "?t=Homo+sapiens&e=1"
+  service = Service{Name: "taxi", Query: query}
   services = append(services, service)
 #+end_src
 #+begin_export latex
@@ -782,7 +788,8 @@ We implement the service in the function \ty{accessions}. Inside of
 before we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func accessions(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  taxid := getTaxa(w, r)[0]
 	  //<<Get accessions, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
@@ -852,8 +859,8 @@ We also add \ty{accessions} to our list of services.
 #+begin_export latex
 \subsubsection{\ty{names}}
 The service \ty{names} takes a as argument a list of taxon IDs and
-returns the corresponding scientific names. We store its output in the
-struct \ty{Name}, which wraps a taxid/name pair.
+returns their scientific names. We store its output in the struct
+\ty{Name}, which wraps a taxid/name pair.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Name struct {
@@ -867,7 +874,8 @@ we get the taxon IDs and the corresponding names, before we print the
 output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func names(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func names(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  taxa := getTaxa(w, r)
 	  out := []Name{}
 	  for i, taxon := range taxa {
@@ -889,9 +897,9 @@ We convert \ty{names} to a handler function and register it.
 We also add \ty{names} to our list of services.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
-  queries := query + ",9605"
+  query = "?t=9606,9605"
   service = Service{Name: "names",
-	  Query: queries}
+	  Query: query}
   services = append(services, service)
 #+end_src
 #+begin_export latex
@@ -907,11 +915,12 @@ type \ty{Rank}, which wraps a taxid/rank pair.
   }
 #+end_src
 #+begin_export latex
-In the function \ty{ranks} we get the taxon IDs, query store the
+In the function \ty{ranks} we get the taxon IDs, query and store the
 corresponding ranks, and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func ranks(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  taxa := getTaxa(w, r)
 	  out := []Rank{}
 	  for i, taxon := range taxa {
@@ -933,8 +942,9 @@ We convert \ty{ranks} to a handler function and register it.
 We also add \ty{ranks} to our list of services.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "t=9606,9605"
   service = Service{Name: "ranks",
-	  Query: queries}
+	  Query: query}
   services = append(services, service)
 #+end_src
 #+begin_export latex
@@ -953,7 +963,8 @@ In the function \ty{parent} we get the taxon ID, look up the parent,
 and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func parent(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  taxon := getTaxa(w, r)[0]
 	  parent, err := neidb.Parent(taxon)
 	  util.CheckHTTP(w, err)
@@ -971,6 +982,7 @@ We register \ty{parent}.
 We also add \ty{parent} to our list of services.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "?t=9606"
   service = Service{Name: "parent",
 	  Query: query}
   services = append(services, service)
@@ -983,7 +995,8 @@ function \ty{children}, where we get the taxon ID and the
 corresponding children, before we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func children(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func children(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  taxon := getTaxa(w, r)[0]
 	  out := []Taxid{}
 	  children, err := neidb.Children(taxon)
@@ -1005,6 +1018,7 @@ We register \ty{children}.
 We also add \ty{children} to our list of services.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "?t=9606"
   service = Service{Name: "children",
 	  Query: query}
   services = append(services, service)
@@ -1016,7 +1030,8 @@ root. In the function \ty{subtree} we get the taxon ID, get and store
 the corresponding subtree, and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func subtree(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  taxon := getTaxa(w, r)[0]
 	  taxids, err := neidb.Subtree(taxon)
 	  util.CheckHTTP(w, err)
@@ -1038,6 +1053,7 @@ We register \ty{subtree}.
 We also add \ty{subtree} to our list of services.
 #+end_export
 #+begin_src go <<Add functions to table, Pr. \ref{pr:nev}>>=
+  query = "?t=9606"
   service = Service{Name: "subtree",
 	  Query: query}
   services = append(services, service)
@@ -1050,7 +1066,8 @@ the corresponding taxon IDs. We implement the query in the function
 taxon IDs before we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func taxids(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
 	  taxids, err := neidb.Taxids(name)
@@ -1079,16 +1096,11 @@ We also add \ty{taxids} to the list of services.
 #+end_src
 
 #+begin_export latex
-\subsubsection{\ty{MRCA}}
-The function \ty{MRCA} taks as argument a slice of taxon IDs and
-returns their most recent comon ancestor. We store the output in a
-strcutre that wraps a single 
-#+end_export
-#+begin_export latex
-We implement the query for
-the most recent common ancestor in the function \ty{mrca}, in which we
-get the taxon IDs and their most recent common ancestor, before we
-print the output.
+\subsubsection{\ty{mrca}}
+The service \ty{mrca} taks as argument a slice of taxon IDs and
+returns their most recent comon ancestor. We implement the service in
+the function \ty{mrca}, where we get the taxon IDs, caluclate their
+most recent common ancestor, and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
@@ -1116,8 +1128,8 @@ We also add \ty{mrca} to our list of services.
 #+end_src
 #+begin_export latex
 \subsubsection{\ty{levels}}
-The service \ty{levels} takes a s argument a list of genome accessions
-and returns their assembly levels. We store the assembly level in a
+The service \ty{levels} takes as argument a list of genome accessions
+and returns their assembly levels. We store an assembly level in a
 struct that wraps an accession/level pair.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
@@ -1127,11 +1139,12 @@ struct that wraps an accession/level pair.
   }
 #+end_src
 #+begin_export latex
-In our implementation \ty{level} we extract the accession, get its
-level and print the output.
+In our implementation of \ty{level} we extract the accession, get its
+level, and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
+  func levels(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
 	  accessions := getAccessions(w, r)
 	  out := []Level{}
 	  for _, accession := range accessions {
@@ -1144,10 +1157,11 @@ level and print the output.
   }
 #+end_src
 #+begin_export latex
-CONT
+We get the slice of accessions from the HTTP request.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func getAccessions(w http.ResponseWriter, r *http.Request) []string {
+  func getAccessions(w http.ResponseWriter,
+	  r *http.Request) []string {
 	  accessions := []string{}
 	  a := r.URL.Query().Get("a")
 	  accs := strings.Split(a, ",")
@@ -1175,8 +1189,8 @@ We also add \ty{levels} to our list of services.
 #+begin_export latex
 \subsection{Start Server}
 We have built the server, now we can start it. If the user supplied a
-pair of encryption keys, we start it as a HTTPS server, otherwise its
-a HTTP server.
+pair of encryption keys, we start it as an HTTPS server, otherwise its
+an HTTP server.
 #+end_export
 #+begin_src go <<Start server, Pr. \ref{pr:nev}>>=
   host := *flagO + ":" + *flagP

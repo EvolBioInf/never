@@ -56,7 +56,8 @@ var services []Service
 var templates = template.New("templates")
 var templateFuncs = make(template.FuncMap)
 
-func index(w http.ResponseWriter, r *http.Request, p *PageData) {
+func index(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	p.Title = "Neighbors"
 	p.Services = services
 	slices.SortFunc(p.Services, func(a, b Service) int {
@@ -80,29 +81,31 @@ func index(w http.ResponseWriter, r *http.Request, p *PageData) {
 		fields[5])
 
 	err = templates.ExecuteTemplate(w, "index", p)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	util.CheckHTTP(w, err)
 }
 func init() {
-	query := "?t=Homo+sapiens&e=1"
-	service := Service{Name: "taxi", Query: query}
+	var service Service
+	var query string
+	query = "?t=Homo+sapiens&e=1"
+	service = Service{Name: "taxi", Query: query}
 	services = append(services, service)
 	query = "?t=9606"
 	service = Service{Name: "accessions",
 		Query: query}
 	services = append(services, service)
-	queries := query + ",9605"
+	query = "?t=9606,9605"
 	service = Service{Name: "names",
-		Query: queries}
+		Query: query}
 	services = append(services, service)
+	query = "t=9606,9605"
 	service = Service{Name: "ranks",
-		Query: queries}
+		Query: query}
 	services = append(services, service)
+	query = "?t=9606"
 	service = Service{Name: "parent",
 		Query: query}
 	services = append(services, service)
+	query = "?t=9606"
 	service = Service{Name: "children",
 		Query: query}
 	services = append(services, service)
@@ -133,7 +136,8 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	*PageData)) http.HandlerFunc {
 	p := new(PageData)
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin",
+			"*")
 		fn(w, r, p)
 	}
 }
@@ -162,7 +166,8 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func accessions(w http.ResponseWriter, r *http.Request, p *PageData) {
+func accessions(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	taxid := getTaxa(w, r)[0]
 	out := []Accession{}
 	accs, err := neidb.Accessions(taxid)
@@ -186,7 +191,8 @@ func getTaxa(w http.ResponseWriter, r *http.Request) []int {
 	}
 	return taxa
 }
-func names(w http.ResponseWriter, r *http.Request, p *PageData) {
+func names(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	taxa := getTaxa(w, r)
 	out := []Name{}
 	for i, taxon := range taxa {
@@ -199,7 +205,8 @@ func names(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
+func ranks(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	taxa := getTaxa(w, r)
 	out := []Rank{}
 	for i, taxon := range taxa {
@@ -212,7 +219,8 @@ func ranks(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
+func parent(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	taxon := getTaxa(w, r)[0]
 	parent, err := neidb.Parent(taxon)
 	util.CheckHTTP(w, err)
@@ -221,7 +229,8 @@ func parent(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func children(w http.ResponseWriter, r *http.Request, p *PageData) {
+func children(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	taxon := getTaxa(w, r)[0]
 	out := []Taxid{}
 	children, err := neidb.Children(taxon)
@@ -234,7 +243,8 @@ func children(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
+func subtree(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	taxon := getTaxa(w, r)[0]
 	taxids, err := neidb.Subtree(taxon)
 	util.CheckHTTP(w, err)
@@ -247,7 +257,8 @@ func subtree(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func taxids(w http.ResponseWriter, r *http.Request, p *PageData) {
+func taxids(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	name := r.URL.Query().Get("t")
 	out := []Taxid{}
 	taxids, err := neidb.Taxids(name)
@@ -269,7 +280,8 @@ func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
+func levels(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
 	accessions := getAccessions(w, r)
 	out := []Level{}
 	for _, accession := range accessions {
@@ -282,7 +294,8 @@ func levels(w http.ResponseWriter, r *http.Request, p *PageData) {
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func getAccessions(w http.ResponseWriter, r *http.Request) []string {
+func getAccessions(w http.ResponseWriter,
+	r *http.Request) []string {
 	accessions := []string{}
 	a := r.URL.Query().Get("a")
 	accs := strings.Split(a, ",")
