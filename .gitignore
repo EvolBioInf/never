@@ -10,6 +10,7 @@ doc/*.toc
 doc/date.txt
 doc/fetch.tex
 doc/never.tex
+doc/testNever.tex
 doc/util.tex
 doc/version.txt
 

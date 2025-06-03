@@ -44,6 +44,10 @@ type Rank struct {
 type Taxid struct {
 	Taxid int `json:"taxid"`
 }
+type Node struct {
+	Taxid  int `json:"taxid"`
+	Parent int `json:"parent"`
+}
 type Level struct {
 	Accession string `json:"accession"`
 	Level     string `json:"level"`
@@ -107,6 +111,10 @@ func init() {
 	services = append(services, service)
 	query = "?t=9606"
 	service = Service{Name: "children",
+		Query: query}
+	services = append(services, service)
+	query = "?t=9606"
+	service = Service{Name: "subtree",
 		Query: query}
 	services = append(services, service)
 	query = "?t=Homo+sapiens"
@@ -248,9 +256,11 @@ func subtree(w http.ResponseWriter, r *http.Request,
 	taxon := getTaxa(w, r)[0]
 	taxids, err := neidb.Subtree(taxon)
 	util.CheckHTTP(w, err)
-	out := []Taxid{}
+	out := []Node{}
 	for _, taxid := range taxids {
-		o := Taxid{taxid}
+		p, err := neidb.Parent(taxid)
+		util.CheckHTTP(w, err)
+		o := Node{Taxid: taxid, Parent: p}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
@@ -316,7 +326,7 @@ func main() {
 	u := "never [flag]..."
 	p := "The program never is a web server " +
 		"providing a REST API for the Neighbors package."
-	e := "never -o 10.254.1.21 -c Cert.pem -k privateKey.pem"
+	e := "never -o 10.254.1.21 -c Cert_bundle.pem -k privateKey.pem"
 	clio.Usage(u, p, e)
 	flag.Parse()
 	if *flagV {

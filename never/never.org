@@ -1027,20 +1027,44 @@ We also add \ty{children} to our list of services.
 \subsubsection{\ty{subtree}}
 The service \ty{subtree} returns all taxa in a subtree, including the
 root. In the function \ty{subtree} we get the taxon ID, get and store
-the corresponding subtree, and print the output.
+the corresponding subtree, and print the output. A subtree consists of
+nodes, which are structs to hold a taxon ID and a parent ID.
 #+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type Node struct {
+	  Taxid int `json:"taxid"`
+	  Parent int `json:"parent"`
+  }
+#+end_src
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func subtree(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  taxon := getTaxa(w, r)[0]
-	  taxids, err := neidb.Subtree(taxon)
-	  util.CheckHTTP(w, err)
-	  out := []Taxid{}
-	  for _, taxid := range taxids {
-		  o := Taxid{taxid}
-		  out = append(out, o)
-	  }
+	  //<<Get taxa in subtree, Pr. \ref{pr:nev}>>
+	  //<<Construct nodes in subtree, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We extract the taxon $t$ from the query and obtain the taxa in the
+subtree rooted on $t$.
+#+end_export
+#+begin_src go <<Get taxa in subtree, Pr. \ref{pr:nev}>>=
+  taxon := getTaxa(w, r)[0]
+  taxids, err := neidb.Subtree(taxon)
+  util.CheckHTTP(w, err)
+#+end_src
+#+begin_export latex
+We iterate over the taxa in the subtree and look up the parent for
+each one. From the current taxon and its parent we construct a node,
+which we store in our slice of output values.
+#+end_export
+#+begin_src go <<Construct nodes in subtree, Pr. \ref{pr:nev}>>=
+  out := []Node{}
+  for _, taxid := range taxids {
+	  p, err := neidb.Parent(taxid)
+	  util.CheckHTTP(w, err)
+	  o := Node{Taxid: taxid, Parent: p}
+	  out = append(out, o)
   }
 #+end_src
 #+begin_export latex
@@ -1052,7 +1076,7 @@ We register \ty{subtree}.
 #+begin_export latex
 We also add \ty{subtree} to our list of services.
 #+end_export
-#+begin_src go <<Add functions to table, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
   query = "?t=9606"
   service = Service{Name: "subtree",
 	  Query: query}
@@ -1201,3 +1225,6 @@ an HTTP server.
 	  log.Fatal(http.ListenAndServe(host, nil))
   }
 #+end_src
+#+begin_export latex
+We are done writing \ty{never}, time to test it.
+#+end_export

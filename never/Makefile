@@ -16,9 +16,9 @@ tangle: never.go never_test.go
 .PHONY: test
 test: never_test.go never.go
 	go test -v
-never_test.go: never.org
+never_test.go: testNever.org
 	if [ "$(nw)" != "" ]; then\
-		awk -f ../scripts/preTangle.awk never.org | bash ../scripts/org2nw | notangle -Rnver_test.go | gofmt > never_test.go;\
+		awk -f ../scripts/preTangle.awk testNever.org | bash ../scripts/org2nw | notangle -Rnver_test.go | gofmt > never_test.go;\
 	fi
 
 clean:
