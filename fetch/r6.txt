@@ -1,0 +1,14 @@
+[
+    {
+        "taxid": 9606,
+        "name": "Homo sapiens"
+    },
+    {
+        "taxid": 741158,
+        "name": "Homo sapiens subsp. 'Denisova'"
+    },
+    {
+        "taxid": 63221,
+        "name": "Homo sapiens neanderthalensis"
+    }
+]

@@ -1,0 +1,317 @@
+#+begin_export latex
+The program \ty{fetch} echoes the content found at one or more URLs
+given by the user. The program is modeled on the little demo program
+\ty{fetch} in the Go book~\cite[p. 16f]{don16:go}. Its main purpose is
+to test \ty{never}.
+\section{Implementation}
+Our outline of \ty{fetch} has hooks for imports and the logic of the
+main function.  \bpr{fetch}{pr:fet}
+#+end_export
+#+begin_src go <<fetch.go>>=
+  package main
+
+  import (
+	  //<<Imports, Pr. \ref{pr:fet}>>
+  )
+
+  func main() {
+	  //<<Main function, Pr. \ref{pr:fet}>>
+  }
+#+end_src
+#+begin_export latex
+\epr
+In the main function we prepare the log facility, set the usage,
+declare the flags, parse the flags, and query the URLs.
+#+end_export
+#+begin_src go <<Main function, Pr. \ref{pr:fet}>>=
+  util.PrepLog("fetch")
+  //<<Set usage, Pr. \ref{pr:fet}>>
+  //<<Declare flags, Pr. \ref{pr:fet}>>
+  //<<Parse flags, Pr. \ref{pr:fet}>>
+  //<<Query URLs, Pr. \ref{pr:fet}>>
+#+end_src
+#+begin_export latex
+We import \ty{util}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
+  "github.com/evolbioinf/never/util"
+#+end_src
+#+begin_export latex
+The usage consists of three parts, the actual usage message, an
+explanation of the purpose of \ty{fetch}, and an example command.
+#+end_export
+#+begin_src go <<Set usage, Pr. \ref{pr:fet}>>=
+  u := "fetch [-v] url..."
+  p := "Fetch content from one or more URLs."
+  e := "fetch https://neighbors.evolbio.mpg.de/names/?t=9606"
+  clio.Usage(u, p, e)
+#+end_src
+#+begin_export latex
+We import \ty{clio}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
+  "github.com/evolbioinf/clio"
+#+end_src
+#+begin_export latex
+We declare only a single flag, \ty{-v}, to print the version.
+#+end_export
+#+begin_src go <<Declare flags, Pr. \ref{pr:fet}>>=
+  flagV := flag.Bool("v", false, "version")
+#+end_src
+#+begin_export latex
+We import \ty{flag}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
+  "flag"
+#+end_src
+#+begin_export latex
+We parse the flags and respond to \ty{-v} by printing the program
+information, which includes the version.
+#+end_export
+#+begin_src go <<Parse flags, Pr. \ref{pr:fet}>>=
+  flag.Parse()
+  if *flagV {
+	  util.PrintInfo()
+  }
+#+end_src
+#+begin_export latex
+The remaining tokens on the command line are interpreted as URLs. If
+there are none, we bail with a friendly message. Otherwise, we iterate
+over the URLs and query each one.
+#+end_export
+#+begin_src go <<Query URLs, Pr. \ref{pr:fet}>>=
+  urls := flag.Args()
+  if len(urls) == 0 {
+	  fmt.Fprintf(os.Stderr, "%s\n",
+		  "plase provide at least one URL")
+	  os.Exit(1)
+  }
+  for _, url := range urls {
+	  //<<Query URL, Pr. \ref{pr:fet}>>
+  }
+#+end_src
+#+begin_export latex
+We import \ty{fmt} and \ty{os}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
+  "fmt"
+  "os"
+#+end_src
+#+begin_export latex
+We query a URL by getting its HTTP response and printing it.
+#+end_export
+#+begin_src go <<Query URL, Pr. \ref{pr:fet}>>=
+  //<<Get HTTP response, Pr. \ref{pr:fet}>>
+  //<<Print response, Pr. \ref{pr:fet}>>
+#+end_src
+#+begin_export latex
+We get the HTTP response, read its body, and close it again.
+#+end_export
+#+begin_src go <<Get HTTP response, Pr. \ref{pr:fet}>>=
+  res, err := http.Get(url)
+  util.Check(err)
+  body, err := io.ReadAll(res.Body)
+  res.Body.Close()
+  util.Check(err)
+#+end_src
+#+begin_export latex
+We import \ty{http} and \ty{io}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
+  "net/http"
+  "io"
+#+end_src
+#+begin_export latex
+We print the response to the standard output stream.
+#+end_export
+#+begin_src go <<Print response, Pr. \ref{pr:fet}>>=
+  fmt.Printf("%s", body)
+#+end_src
+#+begin_export latex
+We import \ty{fmt}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
+  "fmt"
+#+end_src
+#+begin_export latex
+We are finished writing \ty{fetch}, time to test it.
+
+\section{Testing}
+The outline of our testing code has hooks for imports and the testing
+logic.
+#+end_export
+#+begin_src go <<fetch_test.go>>=
+  package main
+
+  import (
+	  //<<Testing imports, Pr. \ref{pr:fet}>>
+  )
+
+  func TestFetch(t *testing.T) {
+	  //<<Testing, Pr. \ref{pr:fet}>>
+  }
+#+end_src
+#+begin_export latex
+We import \ty{testing}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:fet}>>=
+  "testing"
+#+end_src
+#+begin_export latex
+We construct a set of tests and run them.
+#+end_export
+#+begin_src go <<Testing, Pr. \ref{pr:fet}>>=
+  tests := []*exec.Cmd{}
+  //<<Construct tests, Pr. \ref{pr:fet}>>
+  for i, test := range tests {
+	  //<<Run test, Pr. \ref{pr:fet}>>
+  }
+#+end_src
+#+begin_export latex
+We import \ty{exec}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:fet}>>=
+  "os/exec"
+#+end_src
+#+begin_export latex
+We use \ty{neighbors.evolbio.mpg.de} as our test domain. We begin by
+querying its index page.
+#+end_export
+#+begin_src go <<Construct tests, Pr. \ref{pr:fet}>>=
+  url := "https://neighbors.evolbio.mpg.de"
+  test := exec.Command("./fetch", url)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+At this point we have established whether or not \ty{fetch} is
+working. But just for good measure, let's also query the other nine
+services provided by the Neighbors server at the time of writing. We
+can classify these services by query, which may consist of a single
+taxon ID, multiple taxon IDs, a single name, or multiple accessions.
+#+end_export
+#+begin_src go <<Construct tests, Pr. \ref{pr:fet}>>=
+  //<<Query single taxid, Pr. \ref{pr:fet}>>
+  //<<Query multiple taxids, Pr. \ref{pr:fet}>>
+  //<<Query single name, Pr. \ref{pr:fet}>>
+  //<<Query multiple accessions, Pr. \ref{pr:fet}>>
+#+end_src
+#+begin_export latex
+A query starts with a question mark followed by
+pairs of keys and values separated by ampersands, for example,
+\begin{verbatim}
+?k1=v1&k2=v2
+\end{verbatim}
+The services \ty{accessions}, \ty{children}, and \ty{parent} each
+query a single taxon ID. Our first query is the taxon ID of \emph{Homo
+sapiens}, 9606, which is passed as the value of key \ty{t}. The
+extended URLs we need for testing follow the pattern
+\begin{verbatim}
+url/service/?query
+\end{verbatim}
+We use a template to construct these extended URLs for testing
+\ty{accessions}, \ty{children}, and \ty{parent}.
+#+end_export
+#+begin_src go <<Query single taxid, Pr. \ref{pr:fet}>>=
+  query := "t=9606"
+  tmpl := "%s/%s/?%s"
+  //<<Test \ty{accessions}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{children}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{parent}, Pr. \ref{pr:fet}>>
+#+end_src
+#+begin_export latex
+We test the service \ty{accessions}.
+#+end_export
+#+begin_src go <<Test \ty{accessions}, Pr. \ref{pr:fet}>>=
+  eURL := fmt.Sprintf(tmpl, url, "accessions", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We import \ty{fmt}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:fet}>>=
+  "fmt"
+#+end_src
+#+begin_export latex
+We test the service \ty{children}.
+#+end_export
+#+begin_src go <<Test \ty{children}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "children", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test the service \ty{parent}.
+#+end_export
+#+begin_src go <<Test \ty{parent}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "parent", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We set the query to two taxa, 9606 for \emph{Homo sapiens} as before,
+741158 for human subspecies Denisova, and 63221 for human subspecies
+neanderthalensis. Then we call the three services \ty{mrca},
+\ty{names}, and \ty{ranks} with these three taxa.
+#+end_export
+#+begin_src go <<Query multiple taxids, Pr. \ref{pr:fet}>>=
+  query = "t=9606,741158,63221"
+  eURL = fmt.Sprintf(tmpl, url, "mrca", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+  eURL = fmt.Sprintf(tmpl, url, "names", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+  eURL = fmt.Sprintf(tmpl, url, "ranks", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We set our query to the single taxon \emph{Homo sapiens} and run the
+services \ty{taxi} and \ty{taxids}.
+#+end_export
+#+begin_src go <<Query single name, Pr. \ref{pr:fet}>>=
+  query = "t=Homo sapiens"
+  eURL = fmt.Sprintf(tmpl, url, "taxi", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+  eURL = fmt.Sprintf(tmpl, url, "taxids", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We set our query to two accessions and run the \ty{levels} service.
+#+end_export
+#+begin_src go <<Query multiple accessions, Pr. \ref{pr:fet}>>=
+  query = "a=GCF_000001405.40,GCA_000002115.2"
+  eURL = fmt.Sprintf(tmpl, url, "levels", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We have now constructed all our tests. When we run one of them, we
+compare what we get to what we want, which we is stored in files
+\ty{r1.txt}, \ty{r2.txt}, and so on.
+#+end_export
+#+begin_src go <<Run test, Pr. \ref{pr:fet}>>=
+  get, err := test.Output()
+  if err != nil {
+	  t.Error(err)
+  }
+  name := fmt.Sprintf("r%d.txt", i+1)
+  want, err := os.ReadFile(name)
+  if err != nil {
+	  t.Error(err)
+  }
+  if !bytes.Equal(get, want) {
+	  t.Errorf("get:\n%s\nwant:\n%s\n", get, want)
+  }
+#+end_src
+#+begin_export latex
+We import \ty{os} and \ty{bytes}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:fet}>>=
+  "os"
+  "bytes"
+#+end_src
+

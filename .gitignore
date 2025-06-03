@@ -8,9 +8,13 @@ doc/*.pdf
 doc/*.ps
 doc/*.toc
 doc/date.txt
+doc/fetch.tex
 doc/never.tex
 doc/util.tex
 doc/version.txt
+
+fetch/fetch
+fetch/makeRes.sh
 
 never/never
 never/startLocal.sh

@@ -1,0 +1,14 @@
+[
+    {
+        "taxid": 9606,
+        "rank": "species"
+    },
+    {
+        "taxid": 741158,
+        "rank": "subspecies"
+    },
+    {
+        "taxid": 63221,
+        "rank": "subspecies"
+    }
+]

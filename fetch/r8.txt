@@ -1,0 +1,57 @@
+[
+    {
+        "taxid": 2045059,
+        "parent": 1002697,
+        "name": "Homo sapiens x Rattus norvegicus fusion cell line"
+    },
+    {
+        "taxid": 741158,
+        "parent": 9606,
+        "name": "Homo sapiens subsp. 'Denisova'"
+    },
+    {
+        "taxid": 2883641,
+        "parent": 2883640,
+        "name": "Homo sapiens x Pan troglodytes tetraploid cell line"
+    },
+    {
+        "taxid": 1849111,
+        "parent": 1002697,
+        "name": "Homo sapiens x Cricetulus griseus hybrid cell line"
+    },
+    {
+        "taxid": 1131344,
+        "parent": 1002697,
+        "name": "Homo sapiens x Mus musculus hybrid cell line"
+    },
+    {
+        "taxid": 9606,
+        "parent": 9605,
+        "name": "Homo sapiens"
+    },
+    {
+        "taxid": 1573476,
+        "parent": 1002697,
+        "name": "Homo sapiens/Rattus norvegicus xenograft"
+    },
+    {
+        "taxid": 63221,
+        "parent": 9606,
+        "name": "Homo sapiens neanderthalensis"
+    },
+    {
+        "taxid": 2665953,
+        "parent": 2665952,
+        "name": "Homo sapiens environmental sample"
+    },
+    {
+        "taxid": 1035824,
+        "parent": 2603576,
+        "name": "Trichuris sp. ex Homo sapiens JP-2011"
+    },
+    {
+        "taxid": 1383439,
+        "parent": 1002697,
+        "name": "Homo sapiens/Mus musculus xenograft"
+    }
+]

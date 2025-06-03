@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+<meta charset="UTF-8"/>
+<meta name="viewport"
+        content="width=device-width,initial-scale=1.0"/>
+<link rel="stylesheet" href="./static/w3.css"/>
+<title>Neighbors</title>
+
+  </head>
+  <body>
+    
+
+<div class="w3-container">
+  <h1>Welcome to the Neighbors REST API</h1>
+</div>
+
+
+<div class="w3-container">
+  <p>
+    The Neighbors REST API gives access to genome sequences via
+    the taxonomy of sequenced life.
+  </p>
+  <p>
+    Starting from one or more target organisms, the accessions of
+    their genomes can be looked up. In addition, the genome
+    accessions of the targets' closest relatives, their
+    <i>neighbors</i>, can be looked up. Such pairs of samples of
+    target and neighbor genomes make good starting material for
+    developing diagnostic markers.
+  </p>
+  <p>
+    We use the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">
+    taxonomy</a>
+    and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">
+    genome data</a> supplied by
+    the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a
+    custom database.
+    Our REST API for querying this database is developed by
+    the <a href="https://evolbioinf.github.io/">Research Group
+    Bioinformatics</a> at
+    the <a href="https://evolbio.mpg.de">Max-Planck-Institute for
+    Evolutionary Biology</a> using
+    our <a href="https://github.com/evolbioinf/neighbors">
+      Neighbors</a> package.
+    For more details on genetic marker discovery from whole genome
+    sequences with Neighbors and related software, please read
+    our <a href="https://doi.org/10.1093/bioadv/vbae113">
+      publication</a>.
+  </p>
+  <p>
+    <table>
+      <tr>
+          <td>Number of taxa</td>
+          <td>2,669,351</td>
+      </tr>
+      <tr>
+          <td>Number of genomes</td>
+          <td>3,017,607</td>
+      </tr>
+    </table>
+  </p>
+  <p>
+            The database was last updated on Jun 3 2025 at 02:00:01 AM CEST.
+  </p>    
+ </div>
+
+
+<div class="w3-container">
+  <h2>Services</h2>
+  <table class="w3-container">
+    
+
+<tr>
+  <th>#</th>
+  <th>Name</th>
+  <th>Query</th>
+</tr>
+
+
+
+<tr>
+  <td>1</td>
+  <td>accessions</td>
+  <td><a href="accessions?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>2</td>
+  <td>children</td>
+  <td><a href="children?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>3</td>
+  <td>levels</td>
+  <td><a href="levels?a=GCF_000001405.40,GCA_000002115.2"><code>?a=GCF_000001405.40,GCA_000002115.2</code></td>
+</tr>
+
+<tr>
+  <td>4</td>
+  <td>mrca</td>
+  <td><a href="mrca?t=9606,741158,63221"><code>?t=9606,741158,63221</code></td>
+</tr>
+
+<tr>
+  <td>5</td>
+  <td>names</td>
+  <td><a href="names?t=9606,9605"><code>?t=9606,9605</code></td>
+</tr>
+
+<tr>
+  <td>6</td>
+  <td>parent</td>
+  <td><a href="parent?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>7</td>
+  <td>ranks</td>
+  <td><a href="rankst=9606,9605"><code>t=9606,9605</code></td>
+</tr>
+
+<tr>
+  <td>8</td>
+  <td>taxi</td>
+  <td><a href="taxi?t=Homo&#43;sapiens&amp;e=1"><code>?t=Homo&#43;sapiens&amp;e=1</code></td>
+</tr>
+
+<tr>
+  <td>9</td>
+  <td>taxids</td>
+  <td><a href="taxids?t=Homo&#43;sapiens"><code>?t=Homo&#43;sapiens</code></td>
+</tr>
+
+
+
+  </table>
+</div>
+
+
+  </body>
+</html>
