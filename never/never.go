@@ -258,7 +258,10 @@ func subtree(w http.ResponseWriter, r *http.Request,
 	util.CheckHTTP(w, err)
 	out := []Node{}
 	for _, taxid := range taxids {
-		p, err := neidb.Parent(taxid)
+		p := taxon
+		if taxid != taxon {
+			p, err = neidb.Parent(taxid)
+		}
 		util.CheckHTTP(w, err)
 		o := Node{Taxid: taxid, Parent: p}
 		out = append(out, o)

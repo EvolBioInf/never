@@ -1055,13 +1055,17 @@ subtree rooted on $t$.
 #+end_src
 #+begin_export latex
 We iterate over the taxa in the subtree and look up the parent for
-each one. From the current taxon and its parent we construct a node,
-which we store in our slice of output values.
+each one, except for the root, whose parent is itself. From the
+current taxon and its parent we construct a node, which we store in
+our slice of output values.
 #+end_export
 #+begin_src go <<Construct nodes in subtree, Pr. \ref{pr:nev}>>=
   out := []Node{}
   for _, taxid := range taxids {
-	  p, err := neidb.Parent(taxid)
+	  p := taxon
+	  if taxid != taxon {
+		  p, err = neidb.Parent(taxid)
+	  }
 	  util.CheckHTTP(w, err)
 	  o := Node{Taxid: taxid, Parent: p}
 	  out = append(out, o)
