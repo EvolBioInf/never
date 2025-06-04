@@ -15,6 +15,7 @@ doc/util.tex
 doc/version.txt
 
 fetch/fetch
+fetch/inspectRes.sh
 fetch/makeRes.sh
 
 never/never

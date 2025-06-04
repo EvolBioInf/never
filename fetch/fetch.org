@@ -184,10 +184,10 @@ querying its index page.
 #+end_src
 #+begin_export latex
 At this point we have established whether or not \ty{fetch} is
-working. But just for good measure, let's also query the other nine
-services provided by the Neighbors server at the time of writing. We
-can classify these services by query, which may consist of a single
-taxon ID, multiple taxon IDs, a single name, or multiple accessions.
+working. But just for good measure, let's also query the other ten
+services provided by \ty{never} at the time of writing. We can
+classify these services by query, which may consist of a single taxon
+ID, multiple taxon IDs, a single name, or multiple accessions.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:fet}>>=
   //<<Query single taxid, Pr. \ref{pr:fet}>>
@@ -209,7 +209,7 @@ extended URLs we need for testing follow the pattern
 url/service/?query
 \end{verbatim}
 We use a template to construct these extended URLs for testing
-\ty{accessions}, \ty{children}, and \ty{parent}.
+\ty{accessions}, \ty{children}, \ty{parent}, and \ty{subtree}.
 #+end_export
 #+begin_src go <<Query single taxid, Pr. \ref{pr:fet}>>=
   query := "t=9606"
@@ -217,6 +217,7 @@ We use a template to construct these extended URLs for testing
   //<<Test \ty{accessions}, Pr. \ref{pr:fet}>>
   //<<Test \ty{children}, Pr. \ref{pr:fet}>>
   //<<Test \ty{parent}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{subtree}, Pr. \ref{pr:fet}>>
 #+end_src
 #+begin_export latex
 We test the service \ty{accessions}.
@@ -245,6 +246,14 @@ We test the service \ty{parent}.
 #+end_export
 #+begin_src go <<Test \ty{parent}, Pr. \ref{pr:fet}>>=
   eURL = fmt.Sprintf(tmpl, url, "parent", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test the service \ty{subtree}.
+#+end_export
+#+begin_src go <<Test \ty{subtree}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "subtree", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
 #+end_src

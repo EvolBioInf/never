@@ -1,14 +1,14 @@
 [
     {
         "taxid": 9606,
-        "rank": "species"
+        "name": "Homo sapiens"
     },
     {
         "taxid": 741158,
-        "rank": "subspecies"
+        "name": "Homo sapiens subsp. 'Denisova'"
     },
     {
         "taxid": 63221,
-        "rank": "subspecies"
+        "name": "Homo sapiens neanderthalensis"
     }
 ]

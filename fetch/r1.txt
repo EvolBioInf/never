@@ -54,16 +54,16 @@
     <table>
       <tr>
           <td>Number of taxa</td>
-          <td>2,669,351</td>
+          <td>2,671,100</td>
       </tr>
       <tr>
           <td>Number of genomes</td>
-          <td>3,017,607</td>
+          <td>3,018,597</td>
       </tr>
     </table>
   </p>
   <p>
-            The database was last updated on Jun 3 2025 at 02:00:01 AM CEST.
+            The database was last updated on Jun 4 2025 at 02:00:01 AM CEST.
   </p>    
  </div>
 
@@ -125,12 +125,18 @@
 
 <tr>
   <td>8</td>
+  <td>subtree</td>
+  <td><a href="subtree?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>9</td>
   <td>taxi</td>
   <td><a href="taxi?t=Homo&#43;sapiens&amp;e=1"><code>?t=Homo&#43;sapiens&amp;e=1</code></td>
 </tr>
 
 <tr>
-  <td>9</td>
+  <td>10</td>
   <td>taxids</td>
   <td><a href="taxids?t=Homo&#43;sapiens"><code>?t=Homo&#43;sapiens</code></td>
 </tr>
