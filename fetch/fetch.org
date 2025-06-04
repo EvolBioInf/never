@@ -136,7 +136,7 @@ We import \ty{fmt}.
 #+begin_export latex
 We are finished writing \ty{fetch}, time to test it.
 
-\section{Testing}
+\section{Testing}\label{sec:testFetch}
 The outline of our testing code has hooks for imports and the testing
 logic.
 #+end_export
