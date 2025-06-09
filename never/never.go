@@ -90,7 +90,7 @@ func index(w http.ResponseWriter, r *http.Request,
 func init() {
 	var service Service
 	var query string
-	query = "?t=Homo+sapiens&e=1"
+	query = "?t=E&n=10&p=2"
 	service = Service{Name: "taxi", Query: query}
 	services = append(services, service)
 	query = "?t=9606"
@@ -152,11 +152,19 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	name := r.URL.Query().Get("t")
 	sstr := r.URL.Query().Get("e")
+	page := r.URL.Query().Get("p")
+	size := r.URL.Query().Get("n")
 	if sstr != "1" && len(name) > 0 {
-		name = strings.ReplaceAll(name, " ", "%")
+		name = strings.ReplaceAll(name, " ", "% %")
 		name = "%" + name + "%"
 	}
-	ids, err := neidb.Taxids(name)
+	var limit, offset int
+	limit, err := strconv.Atoi(size)
+	util.CheckHTTP(w, err)
+	pageNum, err := strconv.Atoi(page)
+	util.CheckHTTP(w, err)
+	offset = (pageNum - 1) * limit
+	ids, err := neidb.Taxids(name, limit, offset)
 	util.CheckHTTP(w, err)
 	out := []TaxiOut{}
 	for _, id := range ids {
@@ -171,7 +179,7 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 		out = append(out, tout)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.Check(err)
+	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func accessions(w http.ResponseWriter, r *http.Request,
@@ -206,8 +214,10 @@ func names(w http.ResponseWriter, r *http.Request,
 	for i, taxon := range taxa {
 		name, err := neidb.Name(taxon)
 		util.CheckHTTP(w, err)
-		o := Name{Taxid: taxa[i], Name: name}
-		out = append(out, o)
+		if err != nil {
+			o := Name{Taxid: taxa[i], Name: name}
+			out = append(out, o)
+		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
@@ -274,7 +284,7 @@ func taxids(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
 	name := r.URL.Query().Get("t")
 	out := []Taxid{}
-	taxids, err := neidb.Taxids(name)
+	taxids, err := neidb.Taxids(name, -1, 0)
 	util.CheckHTTP(w, err)
 	for _, taxid := range taxids {
 		o := Taxid{taxid}

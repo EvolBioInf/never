@@ -665,10 +665,11 @@ of our web site.
 #+begin_export latex
 \subsection{Emulate Neighbors Programs}
 \subsubsection{\ty{taxi}}
-The service \ty{taxi} takes as input the name of a taxon and a
-matching mode. It writes as response for each matching taxon the taxon
-ID, its parent's taxon ID, and its scientific name. To store these
-three items, we declare the \ty{struct} \ty{TaxiOut}.
+The service \ty{taxi} takes as input the name of a taxon, a matching
+mode, a page number, and a page size. It writes as response for each
+matching taxon the taxon ID, its parent's taxon ID, and its scientific
+name. To store these three items, we declare the \ty{struct}
+\ty{TaxiOut}.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type TaxiOut struct {
@@ -690,32 +691,62 @@ database, and write the result to the HTTP writer.
   }
 #+end_src
 #+begin_export latex
-We extract the taxon name and whether or not we are matching in exact
-mode. If we are \emph{not} matching in exact mode, we replace blanks
-in the name by wild cards and also bracket the name by wild cards.
+We extract the taxon name, whether or not we are matching in exact
+mode, the page, and the page size. If we are \emph{not} matching in
+exact mode, we bracket the name and the blanks it contains by wild
+cards.
 #+end_export
 #+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
   name := r.URL.Query().Get("t")
   sstr := r.URL.Query().Get("e")
+  page := r.URL.Query().Get("p")
+  size := r.URL.Query().Get("n")
   if sstr != "1" && len(name) > 0 {
-	  name = strings.ReplaceAll(name, " ", "%")
+	  name = strings.ReplaceAll(name, " ", "% %")
 	  name = "%" + name + "%"
   }
 #+end_src
 #+begin_export latex
-The taxi query is executed in two phases. First, we get the matching
-taxon IDs. Then we iterate over the taxon IDs and for each one
-construct the taxon output and store it in our slice of \ty{TaxiOut}
-items.
+The taxi query requires limit and offset as integers instead of the
+given page and page size as strings. So we calculate these two
+quantities before we execute the query in two phases. First, we get
+the matching taxon IDs. Then we iterate over the taxon IDs and for
+each one construct the taxon output and store it in our slice of
+\ty{TaxiOut} items.
 #+end_export
 #+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
-  ids, err := neidb.Taxids(name)
+  var limit, offset int
+  //<<Convert page size to limit, Pr. \ref{pr:nev}>>
+  //<<Calculate offset, Pr. \ref{pr:nev}>>
+  ids, err := neidb.Taxids(name, limit, offset)
   util.CheckHTTP(w, err)
   out := []TaxiOut{}
   for _, id := range ids {
 	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
 	  //<<Store taxon output, Pr. \ref{pr:nev}>>
   }
+#+end_src
+#+begin_export latex
+We convert the string holding the page size to the desired integer
+limit on the number of results returned.
+#+end_export
+#+begin_src go <<Convert page size to limit, Pr. \ref{pr:nev}>>=
+  limit, err := strconv.Atoi(size)
+  util.CheckHTTP(w, err)
+#+end_src
+#+begin_export latex
+We import \ty{strconv}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "strconv"
+#+end_src
+#+begin_export latex
+The offset is the pages number minus 1 times the page size.
+#+end_export
+#+begin_src go <<Calculate offset, Pr. \ref{pr:nev}>>=
+  pageNum, err := strconv.Atoi(page)
+  util.CheckHTTP(w, err)
+  offset = (pageNum-1) * limit
 #+end_src
 #+begin_export latex
   We get the taxon's scientific name and parent. Then we construct the
@@ -744,7 +775,7 @@ response writer.
 #+end_export
 #+begin_src go <<Print taxi result, Pr. \ref{pr:nev}>>=
   b, err := json.MarshalIndent(out, "", "    ")
-  util.Check(err)
+  util.CheckHTTP(w, err)
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 #+begin_export latex
@@ -755,17 +786,19 @@ We import \ty{json}.
   "fmt"
 #+end_src
 #+begin_export latex
-We can now emulate of the \ty{taxi} program by registering the
-service \ty{taxi} to the URL \verb+/taxi/+.
+We can now emulate the \ty{taxi} program by registering the service
+\ty{taxi} to the URL \verb+/taxi/+.
 #+end_export
 #+begin_src go <<Emulate Neighbors programs, Pr. \ref{pr:nev}>>=
   http.HandleFunc("/taxi/", makeHandler(taxi))
 #+end_src
 #+begin_export latex
-We also add the \ty{taxi} service to our list of services.
+We also add the \ty{taxi} service to our list of services. Our example
+query simulates a user typing \emph{E} for \emph{Escherichia coli} and
+getting a second page of no more than 10 results.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
-  query = "?t=Homo+sapiens&e=1"
+  query = "?t=E&n=10&p=2"
   service = Service{Name: "taxi", Query: query}
   services = append(services, service)
 #+end_src
@@ -812,12 +845,6 @@ of key \ty{t}.
 	  }
 	  return taxa
   }
-#+end_src
-#+begin_export latex
-We import \ty{strconv}.
-#+end_export
-#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
-  "strconv"
 #+end_src
 #+begin_export latex
 We get the accessions and store them in a slice of accessions.
@@ -870,7 +897,7 @@ returns their scientific names. We store its output in the struct
 #+end_src
 #+begin_export latex
 The query is implemented in the service \ty{names}. Inside \ty{names},
-we get the taxon IDs and the corresponding names, before we print the
+we iterate over the taxon IDs and find their names before we print the
 output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
@@ -879,12 +906,20 @@ output.
 	  taxa := getTaxa(w, r)
 	  out := []Name{}
 	  for i, taxon := range taxa {
-		  name, err := neidb.Name(taxon)
-		  util.CheckHTTP(w, err)
-		  o := Name{Taxid: taxa[i], Name: name}
-		  out = append(out, o)
+		  //<<Find name, Pr. \ref{pr:nev}>>
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We look up the taxon's name and store it.
+#+end_export
+#+begin_src go <<Find name, Pr. \ref{pr:nev}>>=
+  name, err := neidb.Name(taxon)
+  util.CheckHTTP(w, err)
+  if err != nil {
+	  o := Name{Taxid: taxa[i], Name: name}
+	  out = append(out, o)
   }
 #+end_src
 #+begin_export latex
@@ -1098,7 +1133,7 @@ taxon IDs before we print the output.
 	  p *PageData) {
 	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
-	  taxids, err := neidb.Taxids(name)
+	  taxids, err := neidb.Taxids(name, -1, 0)
 	  util.CheckHTTP(w, err)
 	  for _, taxid := range taxids {
 		  o := Taxid{taxid}
