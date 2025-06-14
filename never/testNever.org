@@ -1,4 +1,80 @@
 #+begin_export latex
 \section{Testing}
-
+Our outline for testing \ty{never} contains hooks for imports and the
+testing logic.
 #+end_export
+#+begin_src go <<never_test.go>>=
+  package main
+
+  import (
+	  //<<Testing imports, Pr. \ref{pr:nev}>>
+  )
+
+  func TestNever(t *testing.T) {
+	  //<<Testing, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We import \ty{testing}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:nev}>>=
+  "testing"
+#+end_src
+#+begin_export latex
+We construct a set of tests and run each one.
+#+end_export
+#+begin_src go <<Testing, Pr. \ref{pr:nev}>>=
+  tests := []*exec.Com{}
+  //<<Construct tests, Pr. \ref{pr:nev}>>
+  for _, test := range tests {
+	  //<<Run test, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We our program \ty{fetch} to query our server. The server is running
+on the local host and listens at port 8080. In our first test we fetch
+the data from the root of that server.
+#+end_export
+#+begin_src go <<Construct tests, Pr. \ref{pr:nev}>>=
+  prog := "../bin/fetch"
+  url := "http://localhost:8080"
+  test := exec.Command(prog, url)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We prepare the remaining queries of \ty{never} and then use the same
+logic as in the tests for \ty{fetch} in
+Section~\ref{sec:testFetch}. So we classify the services tested by
+query, which may consist of a single taxon ID, multiple taxon IDs, a
+single name, or multiple accessions.
+#+end_export
+#+begin_src go <<Construct tests, Pr. \ref{pr:nev}>>=
+  //<<Prepare queries, Pr. \ref{pr:nev}>>
+  //<<Query single taxid, Pr. \ref{pr:nev}>>
+  //<<Query multiple taxids, Pr. \ref{pr:nev}>>
+  //<<Query single name, Pr. \ref{pr:nev}>>
+  //<<Query multiple accessions, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+A query is called by passing a URL to \ty{fetch} that is extended by
+the name of the service and a query,
+\begin{verbatim}
+url/service/?query
+\end{verbatim}
+We implement this pattern in a template to construct the extended
+URLs.
+#+end_export
+#+begin_src go <<Prepare queries, Pr. \ref{pr:nev}>>=
+  tmpl := "%s/%s/?%s"
+#+end_src
+
+#+begin_export latex
+There are four services with single taxon IDs as arguments,
+\ty{accessions}, \ty{children}, \ty{parent}, and \ty{subtree}.
+#+end_export
+
+<<Run test, Pr. \ref{pr:nev}>>
+
+
+
+<<Testing imports, Pr. \ref{pr:nev}>>
