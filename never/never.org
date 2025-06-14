@@ -251,37 +251,31 @@ returned from executing the template.
 #+begin_export latex
 As page data we set the title and the list of services offered. This
 list is potentially long, so we sort it. We also set the number of
-genomes and taxa, and when the database was last updated. The numbers
-of genomes and taxa are of the order of three million, so we make them
-easier to read by inserting commas.
+taxa and genomes, and when the database was last updated.
 #+end_export
 #+begin_src go <<Set index page data, Pr. \ref{pr:nev}>>=
   p.Title = "Neighbors"
   p.Services = services
   //<<Sort services, Pr. \ref{pr:nev}>>
-  nt, err := neidb.NumTaxa()
-  util.CheckHTTP(w, err)
-  p.Ntaxa = humanize.Comma(int64(nt))
-  ng, err := neidb.NumGenomes()
-  util.CheckHTTP(w, err)
-  p.Ngenomes = humanize.Comma(int64(ng))
+  //<<Set number of taxa, Pr. \ref{pr:nev}>>
+  //<<Set number of genomes, Pr. \ref{pr:nev}>>
   //<<Set database time stamp, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
-We import \ty{humanize}.
-#+end_export
-#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
-  "github.com/dustin/go-humanize"
-#+end_src
-#+begin_export latex
-We declare the fields \ty{Title}, \ty{Date}, \ty{Ngenomes},
-\ty{Ntaxa}, and \ty{Services} in \ty{PageData}. The numbers of taxa
-and genomes are nominally integers, but we'd like to insert commans
-into them, so we declare these numbers as strings.
+We set the declare the fields \ty{Services} and \ty{Title} in
+``Neighbors''.
 #+end_export
 #+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
-  Title, URL, Date, Ngenomes, Ntaxa string
   Services []Service
+  Title string
+#+end_src
+#+begin_export latex
+A service consists of a name and a query.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type Service struct {
+	  Name, Query string
+  }
 #+end_src
 #+begin_export latex
 The variable \ty{services} is a global slice of services.
@@ -319,6 +313,50 @@ We import \ty{slices} and \ty{strings}.
   "strings"
 #+end_src
 #+begin_export latex
+There are roughly three million taxa, so we store them as a string we
+have ``humanized'' by inserting commas.
+#+end_export
+#+begin_src go <<Set number of taxa, Pr. \ref{pr:nev}>>=
+  nt, err := neidb.NumTaxa()
+  util.CheckHTTP(w, err)
+  p.Ntaxa = humanize.Comma(int64(nt))
+#+end_src
+#+begin_export latex
+We declare the field \ty{Ntaxa} in our page data.
+#+end_export
+#+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
+  Ntaxa string
+#+end_src
+#+begin_export latex
+We import \ty{humanize}.
+#+end_export
+#+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
+  "github.com/dustin/go-humanize"
+#+end_src
+#+begin_export latex
+Similarly, there are more than three million genomes distributed over
+four assembly levels in the root's recursive genome counts. So we also
+store their sum as a humanized string.
+#+end_export
+#+begin_src go <<Set number of genomes, Pr. \ref{pr:nev}>>=
+  n1, err := neidb.NumGenomesRec(1, "complete")
+  util.CheckHTTP(w, err)
+  n2, err := neidb.NumGenomesRec(1, "chromosome")
+  util.CheckHTTP(w, err)
+  n3, err := neidb.NumGenomesRec(1, "scaffold")
+  util.CheckHTTP(w, err)
+  n4, err := neidb.NumGenomesRec(1, "contig")
+  util.CheckHTTP(w, err)
+  ng := n1 + n2 + n3 + n4
+  p.Ngenomes = humanize.Comma(int64(ng))
+#+end_src
+#+begin_export latex
+We declare the field \ty{Ngenomes} in our page data.
+#+end_export
+#+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
+  Ngenomes string
+#+end_src
+#+begin_export latex
 To set the time stamp of the database, we read the content of the date
 file, which has the format
 \begin{verbatim}
@@ -341,6 +379,12 @@ May 22 2025 at 02:00:01 AM CEST
 	  fields[4],
 	  fields[5])
 
+#+end_src
+#+begin_export latex
+We declare the field \ty{Date} in our page data.
+#+end_export
+#+begin_src go <<\ty{PageData} fields, Pr. \ref{pr:nev}>>=
+  Date string
 #+end_src
 #+begin_export latex
 We import \ty{fmt}.
@@ -371,14 +415,7 @@ a number, a name, and an example query presented as a hyperlink.
   \input{../never/index}
 \caption{Sketch of the index page of \ty{never}.}\label{fig:idx}
 \end{figure}
-To store a service, we declare it as a \ty{struct} holding a name
-and a query.
 #+end_export
-#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
-  type Service struct {
-	  Name, Query string
-  }
-#+end_src
 #+begin_export latex
 We write all templates to the file \ty{templates.html}. In our first
 template, \ty{index}, we call two sub-templates for a generic head and
@@ -1202,36 +1239,34 @@ struct that wraps an accession/level pair.
   }
 #+end_src
 #+begin_export latex
-In our implementation of \ty{level} we extract the accession, get its
-level, and print the output.
+In our implementation of \ty{level} we extract the accessions, get
+their levels, and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func levels(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  accessions := getAccessions(w, r)
-	  out := []Level{}
-	  for _, accession := range accessions {
-		  level, err := neidb.Level(accession)
-		  util.CheckHTTP(w, err)
-		  o := Level{Accession: accession, Level: level}
-		  out = append(out, o)
-	  }
+	  //<<Extract accessions, Pr. \ref{pr:nev}>>
+	  //<<Look up levels, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We get the slice of accessions from the HTTP request.
+Accessions are passed as a comma-delimited string keyed by \ty{a}.
 #+end_export
-#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
-  func getAccessions(w http.ResponseWriter,
-	  r *http.Request) []string {
-	  accessions := []string{}
-	  a := r.URL.Query().Get("a")
-	  accs := strings.Split(a, ",")
-	  for _, accession := range accs {
-		  accessions = append(accessions, accession)
-	  }
-	  return accessions
+#+begin_src go <<Extract accessions, Pr. \ref{pr:nev}>>=
+  str := r.URL.Query().Get("a")
+  accessions := strings.Split(str, ",")
+#+end_src
+#+begin_export latex
+We look up the level of each accession and store it.
+#+end_export
+#+begin_src go <<Look up levels, Pr. \ref{pr:nev}>>=
+  out := []Level{}
+  for _, accession := range accessions {
+	  level, err := neidb.Level(accession)
+	  util.CheckHTTP(w, err)
+	  o := Level{Accession: accession, Level: level}
+	  out = append(out, o)
   }
 #+end_src
 #+begin_export latex
@@ -1246,6 +1281,114 @@ We also add \ty{levels} to our list of services.
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
   query = "?a=GCF_000001405.40,GCA_000002115.2"
   service = Service{Name: "levels",
+	  Query: query}
+  services = append(services, service)
+#+end_src
+#+begin_export latex
+\subsubsection{\ty{num\_genomes}}
+The service \ty{num\_genomes} takes a taxon ID and returns the number
+of genomes across all assembly levels. We store the genome counts in a
+slice of type \ty{GenomeCount}, which holds one count and one level.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type GenomeCount struct {
+	  Count int `json:"count"`
+	  Level string `json:"level"`
+  }
+#+end_src
+#+begin_export latex
+In the function \ty{num\_genomes} we get the taxon ID, get its
+genome counts, and print the output.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func num_genomes(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
+	  taxid := getTaxa(w, r)[0]
+	  //<<Get genome counts, Pr. \ref{pr:nev}>>
+	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We get the genome counts across all levels and store them.
+#+end_export
+#+begin_src go <<Get genome counts, Pr. \ref{pr:nev}>>=
+  out := []GenomeCount{}
+  for _, level := range assemblyLevels {
+	  n, err := neidb.NumGenomes(taxid, level)
+	  util.CheckHTTP(w, err)
+	  o := GenomeCount{Count: n, Level: level}
+	  out = append(out, o)
+  }
+#+end_src
+#+begin_export latex
+The variable \ty{assemblyLevels} holds the four possible assembly
+levels.
+#+end_export
+#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
+  var assemblyLevels = []string{
+	  "complete",
+	  "chromosome",
+	  "scaffold",
+	  "contig"}
+#+end_src
+#+begin_export latex
+We register \ty{num\_genomes}.
+#+end_export
+#+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/num_genomes/",
+	  makeHandler(num_genomes))
+#+end_src
+#+begin_export latex
+We also add \ty{num\_genomes} to our list of services with example
+query \emph{Escherichia coli}, taxid 562.
+#+end_export
+#+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "?t=562"
+  service = Service{Name: "num_genomes",
+	  Query: query}
+  services = append(services, service)
+#+end_src
+#+begin_export latex
+\subsubsection{\ty{num\_genomes\_rec}}
+The service \ty{num\_genomes\_rec} takes a taxon ID as input and
+returns the recursive number of genomes for all assembly levels. We
+get the taxon ID, get the recursive genome counts for it, and print
+the output.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func num_genomes_rec(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
+	  taxid := getTaxa(w, r)[0]
+	  //<<Get recursive genome counts, Pr. \ref{pr:nev}>>
+	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+Inside the function \ty{genome\_counts\_rec} we get the recursive
+genome counts across the levels and store them.
+#+end_export
+#+begin_src go <<Get recursive genome counts, Pr. \ref{pr:nev}>>=
+  out := []GenomeCount{}
+  for _, level := range assemblyLevels {
+	  n, err := neidb.NumGenomesRec(taxid, level)
+	  util.CheckHTTP(w, err)
+	  o := GenomeCount{Count: n, Level: level}
+	  out = append(out, o)
+  }
+#+end_src
+#+begin_export latex
+We register \ty{num\_genomes\_rec}.
+#+end_export
+#+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/num_genomes_rec/", makeHandler(num_genomes_rec))
+#+end_src
+#+begin_export latex
+We also add \ty{num\_genomes\_rec} to our list of services and again
+use \emph{Escherichia coli} as our example.
+#+end_export
+#+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "?t=562"
+  service = Service{Name: "num_genomes_rec",
 	  Query: query}
   services = append(services, service)
 #+end_src

@@ -19,8 +19,11 @@ import (
 )
 
 type PageData struct {
-	Title, URL, Date, Ngenomes, Ntaxa string
-	Services                          []Service
+	Services []Service
+	Title    string
+	Ntaxa    string
+	Ngenomes string
+	Date     string
 }
 type Service struct {
 	Name, Query string
@@ -52,6 +55,10 @@ type Level struct {
 	Accession string `json:"accession"`
 	Level     string `json:"level"`
 }
+type GenomeCount struct {
+	Count int    `json:"count"`
+	Level string `json:"level"`
+}
 
 var host, port string
 var neidb *tdb.TaxonomyDB
@@ -59,6 +66,11 @@ var dateFile string
 var services []Service
 var templates = template.New("templates")
 var templateFuncs = make(template.FuncMap)
+var assemblyLevels = []string{
+	"complete",
+	"chromosome",
+	"scaffold",
+	"contig"}
 
 func index(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
@@ -70,8 +82,15 @@ func index(w http.ResponseWriter, r *http.Request,
 	nt, err := neidb.NumTaxa()
 	util.CheckHTTP(w, err)
 	p.Ntaxa = humanize.Comma(int64(nt))
-	ng, err := neidb.NumGenomes()
+	n1, err := neidb.NumGenomesRec(1, "complete")
 	util.CheckHTTP(w, err)
+	n2, err := neidb.NumGenomesRec(1, "chromosome")
+	util.CheckHTTP(w, err)
+	n3, err := neidb.NumGenomesRec(1, "scaffold")
+	util.CheckHTTP(w, err)
+	n4, err := neidb.NumGenomesRec(1, "contig")
+	util.CheckHTTP(w, err)
+	ng := n1 + n2 + n3 + n4
 	p.Ngenomes = humanize.Comma(int64(ng))
 	date, err := os.ReadFile(dateFile)
 	util.CheckHTTP(w, err)
@@ -128,6 +147,14 @@ func init() {
 	services = append(services, service)
 	query = "?a=GCF_000001405.40,GCA_000002115.2"
 	service = Service{Name: "levels",
+		Query: query}
+	services = append(services, service)
+	query = "?t=562"
+	service = Service{Name: "num_genomes",
+		Query: query}
+	services = append(services, service)
+	query = "?t=562"
+	service = Service{Name: "num_genomes_rec",
 		Query: query}
 	services = append(services, service)
 }
@@ -305,7 +332,8 @@ func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func levels(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
-	accessions := getAccessions(w, r)
+	str := r.URL.Query().Get("a")
+	accessions := strings.Split(str, ",")
 	out := []Level{}
 	for _, accession := range accessions {
 		level, err := neidb.Level(accession)
@@ -317,15 +345,33 @@ func levels(w http.ResponseWriter, r *http.Request,
 	util.CheckHTTP(w, err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func getAccessions(w http.ResponseWriter,
-	r *http.Request) []string {
-	accessions := []string{}
-	a := r.URL.Query().Get("a")
-	accs := strings.Split(a, ",")
-	for _, accession := range accs {
-		accessions = append(accessions, accession)
+func num_genomes(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
+	taxid := getTaxa(w, r)[0]
+	out := []GenomeCount{}
+	for _, level := range assemblyLevels {
+		n, err := neidb.NumGenomes(taxid, level)
+		util.CheckHTTP(w, err)
+		o := GenomeCount{Count: n, Level: level}
+		out = append(out, o)
 	}
-	return accessions
+	b, err := json.MarshalIndent(out, "", "    ")
+	util.CheckHTTP(w, err)
+	fmt.Fprintf(w, "%s\n", string(b))
+}
+func num_genomes_rec(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
+	taxid := getTaxa(w, r)[0]
+	out := []GenomeCount{}
+	for _, level := range assemblyLevels {
+		n, err := neidb.NumGenomesRec(taxid, level)
+		util.CheckHTTP(w, err)
+		o := GenomeCount{Count: n, Level: level}
+		out = append(out, o)
+	}
+	b, err := json.MarshalIndent(out, "", "    ")
+	util.CheckHTTP(w, err)
+	fmt.Fprintf(w, "%s\n", string(b))
 }
 func main() {
 	util.PrepLog("never")
@@ -369,6 +415,9 @@ func main() {
 	http.HandleFunc("/taxids/", makeHandler(taxids))
 	http.HandleFunc("/mrca/", makeHandler(mrca))
 	http.HandleFunc("/levels/", makeHandler(levels))
+	http.HandleFunc("/num_genomes/",
+		makeHandler(num_genomes))
+	http.HandleFunc("/num_genomes_rec/", makeHandler(num_genomes_rec))
 	host := *flagO + ":" + *flagP
 	if *flagC != "" && *flagK != "" {
 		log.Fatal(http.ListenAndServeTLS(host, *flagC,
