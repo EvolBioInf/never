@@ -5,6 +5,11 @@ bin/never: never/never.org
 	test -d bin || mkdir bin
 	make -C never
 	cp never/never bin
+never_test: bin/never_test
+bin/never_test: never/never.org
+	test -d bin || mkdir bin
+	make -C never
+	cp never/never bin/never_test
 doc:
 	make -C doc
 
