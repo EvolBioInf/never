@@ -120,7 +120,7 @@ func init() {
 	service = Service{Name: "names",
 		Query: query}
 	services = append(services, service)
-	query = "t=9606,9605"
+	query = "?t=9606,9605"
 	service = Service{Name: "ranks",
 		Query: query}
 	services = append(services, service)
