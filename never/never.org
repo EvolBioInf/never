@@ -954,10 +954,8 @@ We look up the taxon's name and store it.
 #+begin_src go <<Find name, Pr. \ref{pr:nev}>>=
   name, err := neidb.Name(taxon)
   util.CheckHTTP(w, err)
-  if err != nil {
-	  o := Name{Taxid: taxa[i], Name: name}
-	  out = append(out, o)
-  }
+  o := Name{Taxid: taxa[i], Name: name}
+  out = append(out, o)
 #+end_src
 #+begin_export latex
 We convert \ty{names} to a handler function and register it.

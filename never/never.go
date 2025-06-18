@@ -241,10 +241,8 @@ func names(w http.ResponseWriter, r *http.Request,
 	for i, taxon := range taxa {
 		name, err := neidb.Name(taxon)
 		util.CheckHTTP(w, err)
-		if err != nil {
-			o := Name{Taxid: taxa[i], Name: name}
-			out = append(out, o)
-		}
+		o := Name{Taxid: taxa[i], Name: name}
+		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
