@@ -187,23 +187,31 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	var limit, offset int
 	limit, err := strconv.Atoi(size)
-	util.CheckHTTP(w, err)
+	if err != nil {
+		limit = 0
+	}
 	pageNum, err := strconv.Atoi(page)
-	util.CheckHTTP(w, err)
+	if err != nil {
+		pageNum = 1
+	}
 	offset = (pageNum - 1) * limit
 	ids, err := neidb.Taxids(name, limit, offset)
 	util.CheckHTTP(w, err)
 	out := []TaxiOut{}
 	for _, id := range ids {
 		sciName, err := neidb.Name(id)
+		tout := TaxiOut{}
 		util.CheckHTTP(w, err)
 		parent, err := neidb.Parent(id)
-		util.CheckHTTP(w, err)
-		tout := TaxiOut{
-			Taxid:  id,
-			Parent: parent,
-			Name:   sciName}
-		out = append(out, tout)
+		if err != nil {
+			tout = TaxiOut{
+				Taxid:  id,
+				Parent: parent,
+				Name:   sciName}
+		}
+		if err != nil {
+			out = append(out, tout)
+		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.CheckHTTP(w, err)
@@ -322,7 +330,7 @@ func subtree(w http.ResponseWriter, r *http.Request,
 		if taxid != taxon {
 			p, err = neidb.Parent(taxon)
 		}
-		if err == nil {
+		if err == nil && taxon != 0 {
 			o := Node{Taxid: taxon, Parent: p}
 			out = append(out, o)
 		}

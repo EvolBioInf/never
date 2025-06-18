@@ -1,4 +1,5 @@
 bin/
+never/bits
 doc/*.aux
 doc/*.bbl
 doc/*.blg

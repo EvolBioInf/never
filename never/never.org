@@ -218,7 +218,7 @@ We import \ty{http}.
   "net/http"
 #+end_src
 #+begin_export latex
-The files for visualizing the NCBI taxonomy are located in directory
+The files for visualizing the taxonomy are located in directory
 \ty{vitax}. We make them available by registering a file server to
 that directory.
 #+end_export
@@ -778,7 +778,9 @@ limit on the number of results returned.
 #+end_export
 #+begin_src go <<Convert page size to limit, Pr. \ref{pr:nev}>>=
   limit, err := strconv.Atoi(size)
-  util.CheckHTTP(w, err)
+  if err != nil {
+	  limit = 0
+  }
 #+end_src
 #+begin_export latex
 We import \ty{strconv}.
@@ -791,7 +793,9 @@ The offset is the pages number minus 1 times the page size.
 #+end_export
 #+begin_src go <<Calculate offset, Pr. \ref{pr:nev}>>=
   pageNum, err := strconv.Atoi(page)
-  util.CheckHTTP(w, err)
+  if err != nil {
+	  pageNum = 1
+  }
   offset = (pageNum-1) * limit
 #+end_src
 #+begin_export latex
@@ -800,20 +804,24 @@ The offset is the pages number minus 1 times the page size.
 #+end_export
 #+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
   sciName, err := neidb.Name(id)
+  tout := TaxiOut{}
   util.CheckHTTP(w, err)
   parent, err := neidb.Parent(id)
-  util.CheckHTTP(w, err)
-  tout := TaxiOut{
-	  Taxid: id,
-	  Parent: parent,
-	  Name: sciName}
+  if err != nil {
+	  tout = TaxiOut{
+		  Taxid: id,
+		  Parent: parent,
+		  Name: sciName}
+  }
 #+end_src
 #+begin_export latex
-  We store the output item we just constructed in our slice of taxon
-  output.
+If we just constructed an output item, we store it in the
+corresponding slice.
 #+end_export
 #+begin_src go <<Store taxon output, Pr. \ref{pr:nev}>>=
-  out = append(out, tout)
+  if err != nil {
+	  out = append(out, tout)
+  }
 #+end_src
 #+begin_export latex
 We convert the slice of taxi output to JSON format and write it to the
@@ -1190,7 +1198,7 @@ which we store in our slice of output values.
 	  if taxid != taxon {
 		  p, err = neidb.Parent(taxon)
 	  }
-	  if err == nil {
+	  if err == nil && taxon != 0 {
 		  o := Node{Taxid: taxon, Parent: p}
 		  out = append(out, o)
 	  }
