@@ -208,14 +208,23 @@ The style files are locate in the directory \ty{static}. We make them
 available by registering a file server to that directory.
 #+end_export
 #+begin_src go <<Serve style files, Pr. \ref{pr:nev}>>=
-  files := http.FileServer(http.Dir("static"))
-  http.Handle("/static/", http.StripPrefix("/static/", files))
+  staticFiles := http.FileServer(http.Dir("static"))
+  http.Handle("/static/", http.StripPrefix("/static/", staticFiles))
 #+end_src
 #+begin_export latex
 We import \ty{http}.
 #+end_export
 #+begin_src go <<Imports, Pr. \ref{pr:nev}>>=
   "net/http"
+#+end_src
+#+begin_export latex
+The files for visualizing the NCBI taxonomy are located in directory
+\ty{vitax}. We make them available by registering a file server to
+that directory.
+#+end_export
+#+begin_src go <<Serve style files, Pr. \ref{pr:nev}>>=
+  vitaxFiles := http.FileServer(http.Dir("vitax"))
+  http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
@@ -854,33 +863,75 @@ accession.
 #+end_src
 #+begin_export latex
 We implement the service in the function \ty{accessions}. Inside of
-\ty{accessions}, we get the taxon ID and from it the accessions,
+\ty{accessions}, we get the taxon ID and the corresponding accessions,
 before we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func accessions(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  taxid := getTaxa(w, r)[0]
+	  //<<Get taxid, Pr. \ref{pr:nev}>>
 	  //<<Get accessions, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-The function \ty{getTaxa} takes as input a HTTP request and returns
-the taxa passed. The taxa are comma-delimited and arrive as the value
-of key \ty{t}.
+We get the taxon ID through a call to the function \ty{getTaxa} we
+still need to write. If \ty{getTaxa} returns no taxa, we set the taxon
+ID to the non-existent taxid zero.
+#+end_export
+#+begin_src go <<Get taxid, Pr. \ref{pr:nev}>>=
+  taxa := getTaxa(w, r)
+  taxid := 0
+  if len(taxa) > 0 {
+	  taxid = taxa[0]
+  }
+#+end_src
+#+begin_export latex
+The function \ty{getTaxa} takes as input a HTTP request, stores the
+taxa passed, and returns them. The taxa arrive
+as the value of key \ty{t}.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func getTaxa(w http.ResponseWriter, r *http.Request) []int {
 	  taxa := []int{}
 	  t := r.URL.Query().Get("t")
-	  tokes := strings.Split(t, ",")
-	  for _, token := range tokes {
-		  taxon, err := strconv.Atoi(token)
-		  util.CheckHTTP(w, err)
-		  taxa = append(taxa, taxon)
-	  }
+	  //<<Store taxa, Pr. \ref{pr:nev}>>
 	  return taxa
+  }
+#+end_src
+#+begin_export latex
+The taxa are comma delimited so we split the taxon string at the
+commas and iterate over the resulting tokens to convert each one into
+a taxon. We check the existence of the taxon before we append it to
+the slice of taxa.
+#+end_export
+#+begin_src go <<Store taxa, Pr. \ref{pr:nev}>>=
+  tokes := strings.Split(t, ",")
+  for _, token := range tokes {
+	  taxon := 0
+	  //<<Convert token to taxon, Pr. \ref{pr:nev}>>
+	  //<<Check existence of taxon, Pr. \ref{pr:nev}>>
+	  taxa = append(taxa, taxon)
+  }
+#+end_src
+#+begin_export latex
+We convert the string token into an integer. If this fails, we skip
+the rest of the loop.
+#+end_export
+#+begin_src go <<Convert token to taxon, Pr. \ref{pr:nev}>>=
+  taxon, err := strconv.Atoi(token)
+  if err != nil {
+	  continue
+  }
+#+end_src
+#+begin_export latex
+If the taxon has no name, it doesn't exist and we skip the rest of the
+loop.
+#+end_export
+#+begin_src go <<Check existence of taxon, Pr. \ref{pr:nev}>>=
+  _, err = neidb.Name(taxon)
+  if err != nil {
+	  continue
   }
 #+end_src
 #+begin_export latex
@@ -1030,15 +1081,18 @@ single taxon ID, or taxid.
 #+end_src
 #+begin_export latex
 In the function \ty{parent} we get the taxon ID, look up the parent,
-and print the output.
+and print the output. If we cannot find a parent, we return zero as
+parent.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func parent(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  taxon := getTaxa(w, r)[0]
-	  parent, err := neidb.Parent(taxon)
-	  util.CheckHTTP(w, err)
-	  out := Taxid{parent}
+	  //<<Get taxid, Pr. \ref{pr:nev}>>
+	  parent, err := neidb.Parent(taxid)
+	  out := Taxid{0}
+	  if err != nil {
+		  out = Taxid{parent}
+	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
 #+end_src
@@ -1067,10 +1121,10 @@ corresponding children, before we print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func children(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  taxon := getTaxa(w, r)[0]
-	  out := []Taxid{}
-	  children, err := neidb.Children(taxon)
+	  //<<Get taxid, Pr. \ref{pr:nev}>>
+	  children, err := neidb.Children(taxid)
 	  util.CheckHTTP(w, err)
+	  out := []Taxid{}
 	  for _, child := range children {
 		  o := Taxid{child}
 		  out = append(out, o)
@@ -1119,26 +1173,27 @@ We extract the taxon $t$ from the query and obtain the taxa in the
 subtree rooted on $t$.
 #+end_export
 #+begin_src go <<Get taxa in subtree, Pr. \ref{pr:nev}>>=
-  taxon := getTaxa(w, r)[0]
-  taxids, err := neidb.Subtree(taxon)
+  //<<Get taxid, Pr. \ref{pr:nev}>>
+  taxa, err := neidb.Subtree(taxid)
   util.CheckHTTP(w, err)
 #+end_src
 #+begin_export latex
 We iterate over the taxa in the subtree and look up the parent for
-each one, except for the root, whose parent is itself. From the
-current taxon and its parent we construct a node, which we store in
-our slice of output values.
+each one, except for the root, \ty{taxid}, whose parent is
+itself. From the current taxon and its parent we construct a node,
+which we store in our slice of output values.
 #+end_export
 #+begin_src go <<Construct nodes in subtree, Pr. \ref{pr:nev}>>=
   out := []Node{}
-  for _, taxid := range taxids {
+  for _, taxon := range taxa {
 	  p := taxon
 	  if taxid != taxon {
-		  p, err = neidb.Parent(taxid)
+		  p, err = neidb.Parent(taxon)
 	  }
-	  util.CheckHTTP(w, err)
-	  o := Node{Taxid: taxid, Parent: p}
-	  out = append(out, o)
+	  if err == nil {
+		  o := Node{Taxid: taxon, Parent: p}
+		  out = append(out, o)
+	  }
   }
 #+end_src
 #+begin_export latex
@@ -1198,14 +1253,19 @@ We also add \ty{taxids} to the list of services.
 The service \ty{mrca} taks as argument a slice of taxon IDs and
 returns their most recent comon ancestor. We implement the service in
 the function \ty{mrca}, where we get the taxon IDs, caluclate their
-most recent common ancestor, and print the output.
+most recent common ancestor, and print the output. If there is no most
+recent common ancestor, we return taxid 0.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 	  taxa := getTaxa(w, r)
-	  mrca, err := neidb.MRCA(taxa)
-	  util.CheckHTTP(w, err)
-	  out := Taxid{mrca}
+	  out := Taxid{0}
+	  if len(taxa) > 0 {
+		  mrca, err := neidb.MRCA(taxa)
+		  if err == nil {
+			  out = Taxid{mrca}
+		  }
+	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
 #+end_src
@@ -1262,9 +1322,10 @@ We look up the level of each accession and store it.
   out := []Level{}
   for _, accession := range accessions {
 	  level, err := neidb.Level(accession)
-	  util.CheckHTTP(w, err)
-	  o := Level{Accession: accession, Level: level}
-	  out = append(out, o)
+	  if err == nil {
+		  o := Level{Accession: accession, Level: level}
+		  out = append(out, o)
+	  }
   }
 #+end_src
 #+begin_export latex
@@ -1301,7 +1362,7 @@ genome counts, and print the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func num_genomes(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  taxid := getTaxa(w, r)[0]
+	  //<<Get taxid, Pr. \ref{pr:nev}>>
 	  //<<Get genome counts, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
@@ -1313,9 +1374,10 @@ We get the genome counts across all levels and store them.
   out := []GenomeCount{}
   for _, level := range assemblyLevels {
 	  n, err := neidb.NumGenomes(taxid, level)
-	  util.CheckHTTP(w, err)
-	  o := GenomeCount{Count: n, Level: level}
-	  out = append(out, o)
+	  if err == nil {
+		  o := GenomeCount{Count: n, Level: level}
+		  out = append(out, o)
+	  }
   }
 #+end_src
 #+begin_export latex
@@ -1356,7 +1418,7 @@ the output.
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func num_genomes_rec(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  taxid := getTaxa(w, r)[0]
+	  //<<Get taxid, Pr. \ref{pr:nev}>>
 	  //<<Get recursive genome counts, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
@@ -1369,9 +1431,10 @@ genome counts across the levels and store them.
   out := []GenomeCount{}
   for _, level := range assemblyLevels {
 	  n, err := neidb.NumGenomesRec(taxid, level)
-	  util.CheckHTTP(w, err)
-	  o := GenomeCount{Count: n, Level: level}
-	  out = append(out, o)
+	  if err == nil {
+		  o := GenomeCount{Count: n, Level: level}
+		  out = append(out, o)
+	  }
   }
 #+end_src
 #+begin_export latex

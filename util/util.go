@@ -18,9 +18,12 @@ func Check(err error) {
 	}
 }
 
-// CheckHTTP takes as arguments a HTTP respose writer and an eror. It logs an HTTP error if the input error it isn't nil.
+// CheckHTTP takes as arguments a HTTP respose writer and an eror. If the error is not nil, it is printed, unless it corresponds to one of the two standard messages that crop up in never, in which case the error is ignored.
 func CheckHTTP(w http.ResponseWriter, err error) {
-	if err != nil {
+	m1 := "sql: Rows are closed"
+	m2 := "Empty ID list in tdb.MRCA"
+	if err != nil && err.Error() != m1 &&
+		err.Error() != m2 {
 		http.Error(w, err.Error(),
 			http.StatusInternalServerError)
 	}
