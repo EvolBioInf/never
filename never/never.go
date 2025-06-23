@@ -203,13 +203,13 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 		tout := TaxiOut{}
 		util.CheckHTTP(w, err)
 		parent, err := neidb.Parent(id)
-		if err != nil {
+		if err == nil {
 			tout = TaxiOut{
 				Taxid:  id,
 				Parent: parent,
 				Name:   sciName}
 		}
-		if err != nil {
+		if err == nil {
 			out = append(out, tout)
 		}
 	}

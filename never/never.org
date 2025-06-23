@@ -807,7 +807,7 @@ The offset is the pages number minus 1 times the page size.
   tout := TaxiOut{}
   util.CheckHTTP(w, err)
   parent, err := neidb.Parent(id)
-  if err != nil {
+  if err == nil {
 	  tout = TaxiOut{
 		  Taxid: id,
 		  Parent: parent,
@@ -819,7 +819,7 @@ If we just constructed an output item, we store it in the
 corresponding slice.
 #+end_export
 #+begin_src go <<Store taxon output, Pr. \ref{pr:nev}>>=
-  if err != nil {
+  if err == nil {
 	  out = append(out, tout)
   }
 #+end_src
