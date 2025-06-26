@@ -2,6 +2,7 @@
 package util
 
 import (
+	"fmt"
 	"github.com/evolbioinf/clio"
 	"log"
 	"net/http"
@@ -11,16 +12,16 @@ import (
 var program string
 var date, version string
 
-// Check takes an error as argument and logs a fatal error if the error isn't nil.
+// Check takes an error as argument. If the error isn't nil, it is printed to the standard error stream.
 func Check(err error) {
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "ERROR[never]: %s\n", err)
 	}
 }
 
 // CheckHTTP takes as arguments a HTTP respose writer and an eror. If the error is not nil, it is printed, unless it corresponds to one of the two standard messages that crop up in never, in which case the error is ignored.
 func CheckHTTP(w http.ResponseWriter, err error) {
-	m1 := "sql: Rows are closed"
+	m1 := "sql: Rows closed"
 	m2 := "Empty ID list in tdb.MRCA"
 	if err != nil && err.Error() != m1 &&
 		err.Error() != m2 {
