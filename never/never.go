@@ -48,8 +48,9 @@ type Taxid struct {
 	Taxid int `json:"taxid"`
 }
 type Node struct {
-	Taxid  int `json:"taxid"`
-	Parent int `json:"parent"`
+	Taxid  int    `json:"taxid"`
+	Name   string `json:"name"`
+	Parent int    `json:"parent"`
 }
 type Level struct {
 	Accession string `json:"accession"`
@@ -329,14 +330,20 @@ func subtree(w http.ResponseWriter, r *http.Request,
 	util.Check(err)
 	out := []Node{}
 	for _, taxon := range taxa {
-		p := taxon
-		if taxid != taxon {
-			p, err = neidb.Parent(taxon)
+		parent := taxon
+		parent, err := neidb.Parent(taxon)
+		util.Check(err)
+		if err != nil {
+			continue
 		}
-		if err == nil && taxon != 0 {
-			o := Node{Taxid: taxon, Parent: p}
-			out = append(out, o)
+		name := ""
+		name, err = neidb.Name(taxon)
+		util.Check(err)
+		if err != nil {
+			continue
 		}
+		o := Node{Taxid: taxon, Parent: parent, Name: name}
+		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.Check(err)

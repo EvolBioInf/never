@@ -1157,11 +1157,13 @@ We also add \ty{children} to our list of services.
 The service \ty{subtree} returns all taxa in a subtree, including the
 root. In the function \ty{subtree} we get the taxon ID, get and store
 the corresponding subtree, and print the output. A subtree consists of
-nodes, which are structs to hold a taxon ID and a parent ID.
+nodes, which are structs to hold a taxon ID, its name, and the parent
+ID.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Node struct {
 	  Taxid int `json:"taxid"`
+	  Name string `json:"name"`
 	  Parent int `json:"parent"`
   }
 #+end_src
@@ -1185,20 +1187,40 @@ subtree rooted on $t$.
 #+begin_export latex
 We iterate over the taxa in the subtree and look up the parent for
 each one, except for the root, \ty{taxid}, whose parent is
-itself. From the current taxon and its parent we construct a node,
-which we store in our slice of output values.
+itself. From the current taxon, its parent, and its name we construct
+the new node, which we store in our output slice.
 #+end_export
 #+begin_src go <<Construct nodes in subtree, Pr. \ref{pr:nev}>>=
   out := []Node{}
   for _, taxon := range taxa {
-	  p := taxon
-	  if taxid != taxon {
-		  p, err = neidb.Parent(taxon)
-	  }
-	  if err == nil && taxon != 0 {
-		  o := Node{Taxid: taxon, Parent: p}
-		  out = append(out, o)
-	  }
+	  parent := taxon
+	  //<<Get node parent, Pr. \ref{pr:nev}>>
+	  name := ""
+	  //<<Get node name, Pr. \ref{pr:nev}>>
+	  o := Node{Taxid: taxon, Parent: parent, Name: name}
+	  out = append(out, o)
+  }
+#+end_src
+#+begin_export latex
+We get the node's parent and skip the rest of the loop if we encounter
+an error.
+#+end_export
+#+begin_src go <<Get node parent, Pr. \ref{pr:nev}>>=
+  parent, err := neidb.Parent(taxon)
+  util.Check(err)
+  if err != nil {
+	  continue
+  }
+#+end_src
+#+begin_export latex
+We get the node's name and again skip to the end of the loop if we
+encounter an error.
+#+end_export
+#+begin_src go <<Get node name, Pr. \ref{pr:nev}>>=
+  name, err = neidb.Name(taxon)
+  util.Check(err)
+  if err != nil {
+	  continue
   }
 #+end_src
 #+begin_export latex
