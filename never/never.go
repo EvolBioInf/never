@@ -28,7 +28,7 @@ type PageData struct {
 type Service struct {
 	Name, Query string
 }
-type TaxiOut struct {
+type Taxon struct {
 	Taxid  int    `json:"taxid"`
 	Parent int    `json:"parent"`
 	Name   string `json:"name"`
@@ -56,8 +56,15 @@ type Level struct {
 	Level     string `json:"level"`
 }
 type GenomeCount struct {
-	Count int    `json:"count"`
 	Level string `json:"level"`
+	Count int    `json:"count"`
+}
+type TaxonInfo struct {
+	Taxid     int           `json:"taxid"`
+	Parent    int           `json:"parent"`
+	Name      string        `json:"name"`
+	RawCounts []GenomeCount `json:"raw_genome_counts"`
+	RecCounts []GenomeCount `json:"rec_genome_counts"`
 }
 
 var host, port string
@@ -66,11 +73,6 @@ var dateFile string
 var services []Service
 var templates = template.New("templates")
 var templateFuncs = make(template.FuncMap)
-var assemblyLevels = []string{
-	"complete",
-	"chromosome",
-	"scaffold",
-	"contig"}
 
 func index(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
@@ -80,20 +82,17 @@ func index(w http.ResponseWriter, r *http.Request,
 		return strings.Compare(a.Name, b.Name)
 	})
 	nt, err := neidb.NumTaxa()
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	p.Ntaxa = humanize.Comma(int64(nt))
-	n1, err := neidb.NumGenomesRec(1, "complete")
-	util.CheckHTTP(w, err)
-	n2, err := neidb.NumGenomesRec(1, "chromosome")
-	util.CheckHTTP(w, err)
-	n3, err := neidb.NumGenomesRec(1, "scaffold")
-	util.CheckHTTP(w, err)
-	n4, err := neidb.NumGenomesRec(1, "contig")
-	util.CheckHTTP(w, err)
-	ng := n1 + n2 + n3 + n4
+	ng := 0
+	for _, level := range tdb.AssemblyLevels() {
+		n, err := neidb.NumGenomesRec(1, level)
+		util.Check(err)
+		ng += n
+	}
 	p.Ngenomes = humanize.Comma(int64(ng))
 	date, err := os.ReadFile(dateFile)
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fields := strings.Fields(string(date))
 	p.Date = fmt.Sprintf("%s %s %s at %s %s %s",
 		fields[1],
@@ -104,7 +103,7 @@ func index(w http.ResponseWriter, r *http.Request,
 		fields[5])
 
 	err = templates.ExecuteTemplate(w, "index", p)
-	util.CheckHTTP(w, err)
+	util.Check(err)
 }
 func init() {
 	var service Service
@@ -157,6 +156,10 @@ func init() {
 	service = Service{Name: "num_genomes_rec",
 		Query: query}
 	services = append(services, service)
+	query = "?t=562,9606"
+	service = Service{Name: "taxa_info",
+		Query: query}
+	services = append(services, service)
 }
 func inc(i int) int {
 	return i + 1
@@ -196,15 +199,15 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	}
 	offset = (pageNum - 1) * limit
 	ids, err := neidb.Taxids(name, limit, offset)
-	util.CheckHTTP(w, err)
-	out := []TaxiOut{}
+	util.Check(err)
+	out := []Taxon{}
 	for _, id := range ids {
 		sciName, err := neidb.Name(id)
-		tout := TaxiOut{}
-		util.CheckHTTP(w, err)
+		tout := Taxon{}
+		util.Check(err)
 		parent, err := neidb.Parent(id)
 		if err == nil {
-			tout = TaxiOut{
+			tout = Taxon{
 				Taxid:  id,
 				Parent: parent,
 				Name:   sciName}
@@ -214,7 +217,7 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func accessions(w http.ResponseWriter, r *http.Request,
@@ -226,13 +229,13 @@ func accessions(w http.ResponseWriter, r *http.Request,
 	}
 	out := []Accession{}
 	accs, err := neidb.Accessions(taxid)
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	for _, acc := range accs {
 		o := Accession{acc}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func getTaxa(w http.ResponseWriter, r *http.Request) []int {
@@ -259,12 +262,12 @@ func names(w http.ResponseWriter, r *http.Request,
 	out := []Name{}
 	for i, taxon := range taxa {
 		name, err := neidb.Name(taxon)
-		util.CheckHTTP(w, err)
+		util.Check(err)
 		o := Name{Taxid: taxa[i], Name: name}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func ranks(w http.ResponseWriter, r *http.Request,
@@ -273,12 +276,12 @@ func ranks(w http.ResponseWriter, r *http.Request,
 	out := []Rank{}
 	for i, taxon := range taxa {
 		rank, err := neidb.Rank(taxon)
-		util.CheckHTTP(w, err)
+		util.Check(err)
 		o := Rank{Taxid: taxa[i], Rank: rank}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func parent(w http.ResponseWriter, r *http.Request,
@@ -294,7 +297,7 @@ func parent(w http.ResponseWriter, r *http.Request,
 		out = Taxid{parent}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func children(w http.ResponseWriter, r *http.Request,
@@ -305,14 +308,14 @@ func children(w http.ResponseWriter, r *http.Request,
 		taxid = taxa[0]
 	}
 	children, err := neidb.Children(taxid)
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	out := []Taxid{}
 	for _, child := range children {
 		o := Taxid{child}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func subtree(w http.ResponseWriter, r *http.Request,
@@ -323,7 +326,7 @@ func subtree(w http.ResponseWriter, r *http.Request,
 		taxid = taxa[0]
 	}
 	taxa, err := neidb.Subtree(taxid)
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	out := []Node{}
 	for _, taxon := range taxa {
 		p := taxon
@@ -336,7 +339,7 @@ func subtree(w http.ResponseWriter, r *http.Request,
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func taxids(w http.ResponseWriter, r *http.Request,
@@ -344,13 +347,13 @@ func taxids(w http.ResponseWriter, r *http.Request,
 	name := r.URL.Query().Get("t")
 	out := []Taxid{}
 	taxids, err := neidb.Taxids(name, -1, 0)
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	for _, taxid := range taxids {
 		o := Taxid{taxid}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
@@ -363,7 +366,7 @@ func mrca(w http.ResponseWriter, r *http.Request, p *PageData) {
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func levels(w http.ResponseWriter, r *http.Request,
@@ -379,7 +382,7 @@ func levels(w http.ResponseWriter, r *http.Request,
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func num_genomes(w http.ResponseWriter, r *http.Request,
@@ -390,7 +393,7 @@ func num_genomes(w http.ResponseWriter, r *http.Request,
 		taxid = taxa[0]
 	}
 	out := []GenomeCount{}
-	for _, level := range assemblyLevels {
+	for _, level := range tdb.AssemblyLevels() {
 		n, err := neidb.NumGenomes(taxid, level)
 		if err == nil {
 			o := GenomeCount{Count: n, Level: level}
@@ -398,7 +401,7 @@ func num_genomes(w http.ResponseWriter, r *http.Request,
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func num_genomes_rec(w http.ResponseWriter, r *http.Request,
@@ -409,7 +412,7 @@ func num_genomes_rec(w http.ResponseWriter, r *http.Request,
 		taxid = taxa[0]
 	}
 	out := []GenomeCount{}
-	for _, level := range assemblyLevels {
+	for _, level := range tdb.AssemblyLevels() {
 		n, err := neidb.NumGenomesRec(taxid, level)
 		if err == nil {
 			o := GenomeCount{Count: n, Level: level}
@@ -417,7 +420,39 @@ func num_genomes_rec(w http.ResponseWriter, r *http.Request,
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
-	util.CheckHTTP(w, err)
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+}
+func taxa_info(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
+	taxa := getTaxa(w, r)
+	out := []TaxonInfo{}
+	for _, taxon := range taxa {
+		parent, err := neidb.Parent(taxon)
+		util.Check(err)
+		name, err := neidb.Name(taxon)
+		util.Check(err)
+		var raw, rec []GenomeCount
+		for _, level := range tdb.AssemblyLevels() {
+			count, err := neidb.NumGenomes(taxon, level)
+			util.Check(err)
+			gc := GenomeCount{Count: count, Level: level}
+			raw = append(raw, gc)
+			count, err = neidb.NumGenomesRec(taxon, level)
+			util.Check(err)
+			gc = GenomeCount{Count: count, Level: level}
+			rec = append(rec, gc)
+		}
+		o := TaxonInfo{
+			Taxid:     taxon,
+			Parent:    parent,
+			Name:      name,
+			RawCounts: raw,
+			RecCounts: rec}
+		out = append(out, o)
+	}
+	b, err := json.MarshalIndent(out, "", "    ")
+	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 func main() {
@@ -467,6 +502,7 @@ func main() {
 	http.HandleFunc("/num_genomes/",
 		makeHandler(num_genomes))
 	http.HandleFunc("/num_genomes_rec/", makeHandler(num_genomes_rec))
+	http.HandleFunc("/taxa_info/", makeHandler(taxa_info))
 	host := *flagO + ":" + *flagP
 	if *flagC != "" && *flagK != "" {
 		log.Fatal(http.ListenAndServeTLS(host, *flagC,

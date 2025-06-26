@@ -254,7 +254,7 @@ returned from executing the template.
 	  p *PageData) {
 	  //<<Set index page data, Pr. \ref{pr:nev}>>
 	  err = templates.ExecuteTemplate(w, "index", p)
-	  util.CheckHTTP(w, err)
+	  util.Check(err)
   }
 #+end_src
 #+begin_export latex
@@ -327,7 +327,7 @@ have ``humanized'' by inserting commas.
 #+end_export
 #+begin_src go <<Set number of taxa, Pr. \ref{pr:nev}>>=
   nt, err := neidb.NumTaxa()
-  util.CheckHTTP(w, err)
+  util.Check(err)
   p.Ntaxa = humanize.Comma(int64(nt))
 #+end_src
 #+begin_export latex
@@ -348,15 +348,12 @@ four assembly levels in the root's recursive genome counts. So we also
 store their sum as a humanized string.
 #+end_export
 #+begin_src go <<Set number of genomes, Pr. \ref{pr:nev}>>=
-  n1, err := neidb.NumGenomesRec(1, "complete")
-  util.CheckHTTP(w, err)
-  n2, err := neidb.NumGenomesRec(1, "chromosome")
-  util.CheckHTTP(w, err)
-  n3, err := neidb.NumGenomesRec(1, "scaffold")
-  util.CheckHTTP(w, err)
-  n4, err := neidb.NumGenomesRec(1, "contig")
-  util.CheckHTTP(w, err)
-  ng := n1 + n2 + n3 + n4
+  ng := 0
+  for _, level := range tdb.AssemblyLevels() {
+	  n, err := neidb.NumGenomesRec(1, level)
+	  util.Check(err)
+	  ng += n
+  }
   p.Ngenomes = humanize.Comma(int64(ng))
 #+end_src
 #+begin_export latex
@@ -378,7 +375,7 @@ May 22 2025 at 02:00:01 AM CEST
 #+end_export
 #+begin_src go <<Set database time stamp, Pr. \ref{pr:nev}>>=
   date, err := os.ReadFile(dateFile)
-  util.CheckHTTP(w, err)
+  util.Check(err)
   fields := strings.Fields(string(date))
   p.Date = fmt.Sprintf("%s %s %s at %s %s %s",
 	  fields[1],
@@ -715,10 +712,10 @@ The service \ty{taxi} takes as input the name of a taxon, a matching
 mode, a page number, and a page size. It writes as response for each
 matching taxon the taxon ID, its parent's taxon ID, and its scientific
 name. To store these three items, we declare the \ty{struct}
-\ty{TaxiOut}.
+\ty{Taxon}.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
-  type TaxiOut struct {
+  type Taxon struct {
 	  Taxid int `json:"taxid"`
 	  Parent int `json:"parent"`
 	  Name string `json:"name"`
@@ -758,15 +755,15 @@ given page and page size as strings. So we calculate these two
 quantities before we execute the query in two phases. First, we get
 the matching taxon IDs. Then we iterate over the taxon IDs and for
 each one construct the taxon output and store it in our slice of
-\ty{TaxiOut} items.
+taxa.
 #+end_export
 #+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
   var limit, offset int
   //<<Convert page size to limit, Pr. \ref{pr:nev}>>
   //<<Calculate offset, Pr. \ref{pr:nev}>>
   ids, err := neidb.Taxids(name, limit, offset)
-  util.CheckHTTP(w, err)
-  out := []TaxiOut{}
+  util.Check(err)
+  out := []Taxon{}
   for _, id := range ids {
 	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
 	  //<<Store taxon output, Pr. \ref{pr:nev}>>
@@ -804,11 +801,11 @@ The offset is the pages number minus 1 times the page size.
 #+end_export
 #+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
   sciName, err := neidb.Name(id)
-  tout := TaxiOut{}
-  util.CheckHTTP(w, err)
+  tout := Taxon{}
+  util.Check(err)
   parent, err := neidb.Parent(id)
   if err == nil {
-	  tout = TaxiOut{
+	  tout = Taxon{
 		  Taxid: id,
 		  Parent: parent,
 		  Name: sciName}
@@ -829,7 +826,7 @@ response writer.
 #+end_export
 #+begin_src go <<Print taxi result, Pr. \ref{pr:nev}>>=
   b, err := json.MarshalIndent(out, "", "    ")
-  util.CheckHTTP(w, err)
+  util.Check(err)
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 #+begin_export latex
@@ -948,7 +945,7 @@ We get the accessions and store them in a slice of accessions.
 #+begin_src go <<Get accessions, Pr. \ref{pr:nev}>>=
   out := []Accession{}
   accs, err := neidb.Accessions(taxid)
-  util.CheckHTTP(w, err)
+  util.Check(err)
   for _, acc := range accs {
 	  o := Accession{acc}
 	  out = append(out, o)
@@ -960,7 +957,7 @@ response.
 #+end_export
 #+begin_src go <<Print output, Pr. \ref{pr:nev}>>=
   b, err := json.MarshalIndent(out, "", "    ")
-  util.CheckHTTP(w, err)
+  util.Check(err)
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 #+begin_export latex
@@ -1012,7 +1009,7 @@ We look up the taxon's name and store it.
 #+end_export
 #+begin_src go <<Find name, Pr. \ref{pr:nev}>>=
   name, err := neidb.Name(taxon)
-  util.CheckHTTP(w, err)
+  util.Check(err)
   o := Name{Taxid: taxa[i], Name: name}
   out = append(out, o)
 #+end_src
@@ -1054,7 +1051,7 @@ corresponding ranks, and print the output.
 	  out := []Rank{}
 	  for i, taxon := range taxa {
 		  rank, err := neidb.Rank(taxon)
-		  util.CheckHTTP(w, err)
+		  util.Check(err)
 		  o := Rank{Taxid: taxa[i], Rank: rank}
 		  out = append(out, o)
 	  }
@@ -1131,7 +1128,7 @@ corresponding children, before we print the output.
 	  p *PageData) {
 	  //<<Get taxid, Pr. \ref{pr:nev}>>
 	  children, err := neidb.Children(taxid)
-	  util.CheckHTTP(w, err)
+	  util.Check(err)
 	  out := []Taxid{}
 	  for _, child := range children {
 		  o := Taxid{child}
@@ -1183,7 +1180,7 @@ subtree rooted on $t$.
 #+begin_src go <<Get taxa in subtree, Pr. \ref{pr:nev}>>=
   //<<Get taxid, Pr. \ref{pr:nev}>>
   taxa, err := neidb.Subtree(taxid)
-  util.CheckHTTP(w, err)
+  util.Check(err)
 #+end_src
 #+begin_export latex
 We iterate over the taxa in the subtree and look up the parent for
@@ -1232,7 +1229,7 @@ taxon IDs before we print the output.
 	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
 	  taxids, err := neidb.Taxids(name, -1, 0)
-	  util.CheckHTTP(w, err)
+	  util.Check(err)
 	  for _, taxid := range taxids {
 		  o := Taxid{taxid}
 		  out = append(out, o)
@@ -1355,49 +1352,39 @@ We also add \ty{levels} to our list of services.
 \subsubsection{\ty{num\_genomes}}
 The service \ty{num\_genomes} takes a taxon ID and returns the number
 of genomes across all assembly levels. We store the genome counts in a
-slice of type \ty{GenomeCount}, which holds one count and one level.
+slice of type \ty{GenomeCount}, which holds the count for a given
+level.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type GenomeCount struct {
-	  Count int `json:"count"`
 	  Level string `json:"level"`
+	  Count int `json:"count"`
   }
 #+end_src
 #+begin_export latex
 In the function \ty{num\_genomes} we get the taxon ID, get its
-genome counts, and print the output.
+raw genome counts, and print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func num_genomes(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
 	  //<<Get taxid, Pr. \ref{pr:nev}>>
-	  //<<Get genome counts, Pr. \ref{pr:nev}>>
+	  //<<Get raw genome counts, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We get the genome counts across all levels and store them.
+We get the raw genome counts across all levels and store them.
 #+end_export
-#+begin_src go <<Get genome counts, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Get raw genome counts, Pr. \ref{pr:nev}>>=
   out := []GenomeCount{}
-  for _, level := range assemblyLevels {
+  for _, level := range tdb.AssemblyLevels() {
 	  n, err := neidb.NumGenomes(taxid, level)
 	  if err == nil {
 		  o := GenomeCount{Count: n, Level: level}
 		  out = append(out, o)
 	  }
   }
-#+end_src
-#+begin_export latex
-The variable \ty{assemblyLevels} holds the four possible assembly
-levels.
-#+end_export
-#+begin_src go <<Variables, Pr. \ref{pr:nev}>>=
-  var assemblyLevels = []string{
-	  "complete",
-	  "chromosome",
-	  "scaffold",
-	  "contig"}
 #+end_src
 #+begin_export latex
 We register \ty{num\_genomes}.
@@ -1437,7 +1424,7 @@ genome counts across the levels and store them.
 #+end_export
 #+begin_src go <<Get recursive genome counts, Pr. \ref{pr:nev}>>=
   out := []GenomeCount{}
-  for _, level := range assemblyLevels {
+  for _, level := range tdb.AssemblyLevels() {
 	  n, err := neidb.NumGenomesRec(taxid, level)
 	  if err == nil {
 		  o := GenomeCount{Count: n, Level: level}
@@ -1458,6 +1445,108 @@ use \emph{Escherichia coli} as our example.
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
   query = "?t=562"
   service = Service{Name: "num_genomes_rec",
+	  Query: query}
+  services = append(services, service)
+#+end_src
+#+begin_export latex
+\subsubsection{\ty{taxa\_info}}
+The service \ty{taxa\_info} takes as argument a string of
+comma-delimited taxon IDs and returns the information available for
+them. We get the taxon IDs and iterate over them to obtain and store
+the corresponding information for each one. After the iteration we
+print the output, which is stored as a slice of type \ty{TaxonInfo}.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
+  func taxa_info(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
+	  taxa := getTaxa(w, r)
+	  out := []TaxonInfo{}
+	  for _, taxon := range taxa {
+		  //<<Get information, Pr. \ref{pr:nev}>>
+		  //<<Store information, Pr. \ref{pr:nev}>>
+	  }
+	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+\ty{TaxonInfo} is a structure that holds the IDs of the taxon and its
+parent, its name, its raw genome counts, and its recursive genome
+counts.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type TaxonInfo struct {
+	  Taxid int `json:"taxid"`
+	  Parent int `json:"parent"`
+	  Name string `json:"name"`
+	  RawCounts []GenomeCount `json:"raw_genome_counts"`
+	  RecCounts []GenomeCount `json:"rec_genome_counts"`
+  }
+#+end_src
+#+begin_export latex
+We get the parent, the name, and the genome counts.
+#+end_export
+#+begin_src go <<Get information, Pr. \ref{pr:nev}>>=
+  //<<Get parent, Pr. \ref{pr:nev}>>
+  //<<Get name, Pr. \ref{pr:nev}>>
+  //<<Get genome counts, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+We look up the parent taxon and check the error.
+#+end_export
+#+begin_src go <<Get parent, Pr. \ref{pr:nev}>>=
+  parent, err := neidb.Parent(taxon)
+  util.Check(err)
+#+end_src
+#+begin_export latex
+We look up the taxon's name with error checking.
+#+end_export
+#+begin_src go <<Get name, Pr. \ref{pr:nev}>>=
+  name, err := neidb.Name(taxon)
+  util.Check(err)
+#+end_src
+#+begin_export latex
+We look up the raw and recursive genome counts across the assembly
+levels.
+#+end_export
+#+begin_src go <<Get genome counts, Pr. \ref{pr:nev}>>=
+  var raw, rec []GenomeCount
+  for _, level := range tdb.AssemblyLevels() {
+	  count, err := neidb.NumGenomes(taxon, level)
+	  util.Check(err)
+	  gc := GenomeCount{Count: count, Level: level}
+	  raw = append(raw, gc)
+	  count, err = neidb.NumGenomesRec(taxon, level)
+	  util.Check(err)
+	  gc = GenomeCount{Count: count, Level: level}
+	  rec = append(rec, gc)
+  }
+#+end_src
+#+begin_export latex
+We store the taxon ID and the information we just looked up for our
+focal taxon.
+#+end_export
+#+begin_src go <<Store information, Pr. \ref{pr:nev}>>=
+  o := TaxonInfo {
+	  Taxid: taxon,
+	  Parent: parent,
+	  Name: name,
+	  RawCounts: raw,
+	  RecCounts: rec}
+  out = append(out, o)
+#+end_src
+#+begin_export latex
+We register \ty{taxon\_info}.
+#+end_export
+#+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/taxa_info/", makeHandler(taxa_info))
+#+end_src
+#+begin_export latex
+We also add \ty{taxa\_info} to our list of services and use
+\emph{Escherichia coli} and \emph{Homo sapiens} as example.
+#+end_export
+#+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "?t=562,9606"
+  service = Service{Name: "taxa_info",
 	  Query: query}
   services = append(services, service)
 #+end_src
