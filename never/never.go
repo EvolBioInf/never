@@ -47,6 +47,10 @@ type Rank struct {
 type Taxid struct {
 	Taxid int `json:"taxid"`
 }
+type Child struct {
+	Taxid int    `json:"taxid"`
+	Name  string `json:"name"`
+}
 type Node struct {
 	Taxid  int    `json:"taxid"`
 	Name   string `json:"name"`
@@ -310,9 +314,11 @@ func children(w http.ResponseWriter, r *http.Request,
 	}
 	children, err := neidb.Children(taxid)
 	util.Check(err)
-	out := []Taxid{}
+	out := []Child{}
 	for _, child := range children {
-		o := Taxid{child}
+		name, err := neidb.Name(child)
+		util.Check(err)
+		o := Child{child, name}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")

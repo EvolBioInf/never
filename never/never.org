@@ -1119,9 +1119,20 @@ We also add \ty{parent} to our list of services.
 #+begin_export latex
 \subsubsection{\ty{children}}
 The service \ty{children} takes as argument a taxon ID and returns its
-children as a slice of their taxon IDs.  We implement it in the
-function \ty{children}, where we get the taxon ID and the
-corresponding children, before we print the output.
+children as a slice of their taxon IDs. A child is stored in a
+structure that holds its taxon ID and its name.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type Child struct {
+	  Taxid int `json:"taxid"`
+	  Name string `json:"name"`
+  }
+#+end_src
+#+begin_export latex
+We implement the service \ty{children} in the function \ty{children},
+where we get the taxon ID and the corresponding children. Then we
+iterate over the children and construct the output object for each
+one, before we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func children(w http.ResponseWriter, r *http.Request,
@@ -1129,13 +1140,21 @@ corresponding children, before we print the output.
 	  //<<Get taxid, Pr. \ref{pr:nev}>>
 	  children, err := neidb.Children(taxid)
 	  util.Check(err)
-	  out := []Taxid{}
+	  out := []Child{}
 	  for _, child := range children {
-		  o := Taxid{child}
-		  out = append(out, o)
+		  //<<Construct child, Pr. \ref{pr:nev}>>
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
   }
+#+end_src
+#+begin_export latex
+We construct the child from its taxon ID and its name.
+#+end_export
+#+begin_src go <<Construct child, Pr. \ref{pr:nev}>>=
+  name, err := neidb.Name(child)
+  util.Check(err)
+  o := Child{child, name}
+  out = append(out, o)
 #+end_src
 #+begin_export latex
 We register \ty{children}.
