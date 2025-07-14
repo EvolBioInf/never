@@ -1627,7 +1627,7 @@ print the empty output and return.
 #+end_src
 #+begin_export latex
 If the start node is root, we only add it if it is identical to the
-end node.
+end node. Otherwise, we again print the empty output and return.
 #+end_export
 #+begin_src go <<Add start node, Pr. \ref{pr:nev}>>=
   parent, err := neidb.Parent(start)
@@ -1675,7 +1675,7 @@ We construct and store the new node on the path.
   out = append(out, o)
 #+end_src
 #+begin_export latex
-We register \ty{path}.
+We register the service \ty{path}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
   http.HandleFunc("/path/", makeHandler(path))
