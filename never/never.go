@@ -298,7 +298,7 @@ func parent(w http.ResponseWriter, r *http.Request,
 	}
 	parent, err := neidb.Parent(taxid)
 	out := Taxid{0}
-	if err != nil {
+	if err == nil {
 		out = Taxid{parent}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")

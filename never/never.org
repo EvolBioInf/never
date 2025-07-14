@@ -1095,7 +1095,7 @@ parent.
 	  //<<Get taxid, Pr. \ref{pr:nev}>>
 	  parent, err := neidb.Parent(taxid)
 	  out := Taxid{0}
-	  if err != nil {
+	  if err == nil {
 		  out = Taxid{parent}
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
