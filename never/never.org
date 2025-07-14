@@ -1592,6 +1592,105 @@ We also add \ty{taxa\_info} to our list of services and use
   services = append(services, service)
 #+end_src
 #+begin_export latex
+\subsubsection{\ty{path}}
+The service \ty{path} takes as input the taxon IDs of a start and an
+end node in the taxonomy, where the end is closer to the root than the
+start. It returns the array of taxon IDs that form the path from the
+start to the end. If no such path exists, an empty array is returned.
+
+We initialize the path calculation, add the start node, climb the rest
+of the path, and print the output.
+#+end_export
+#+begin_src go <<Functions, Pr. \ref{pr:nev}>>= 
+  func path(w http.ResponseWriter, r *http.Request,
+	  p *PageData) {
+	  taxa := getTaxa(w, r)
+	  //<<Initialize path calculation, Pr. \ref{pr:nev}>>
+	  //<<Add start node, Pr. \ref{pr:nev}>>
+	  //<<Climb path, Pr. \ref{pr:nev}>>
+	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+To initialize the path calculation, we declare the output slice and
+check whether we obtained two taxon IDs from the user. If not, we
+print the empty output and return.
+#+end_export
+#+begin_src go <<Initialize path calculation, Pr. \ref{pr:nev}>>=
+  out := []Taxon{}
+  if len(taxa) != 2 {
+	  //<<Print output, Pr. \ref{pr:nev}>>
+	  return
+  }
+  start := taxa[0]
+  end := taxa[1]
+#+end_src
+#+begin_export latex
+If the start node is root, we only add it if it is identical to the
+end node.
+#+end_export
+#+begin_src go <<Add start node, Pr. \ref{pr:nev}>>=
+  parent, err := neidb.Parent(start)
+  util.Check(err)
+  if parent == start && start != end {
+	  //<<Print output, Pr. \ref{pr:nev}>>
+	  return
+  }
+  name, err := neidb.Name(start)
+  o := Taxon{Taxid: start, Parent: parent, Name: name}
+  out = append(out, o)
+#+end_src
+#+begin_export latex
+We climb the path until we reach its end or the root, whichever comes
+first.
+#+end_export
+#+begin_src go <<Climb path, Pr. \ref{pr:nev}>>=
+  for start != end {
+	  parent, err := neidb.Parent(start)
+	  util.Check(err)
+	  //<<Has the path reached the root?, Pr. \ref{pr:nev}>>
+	  start = parent
+	  //<<Store new node on path, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+If the path has reached the root, we empty the output slice and break
+from climbing the tree.
+#+end_export
+#+begin_src go <<Has the path reached the root?, Pr. \ref{pr:nev}>>=
+  if start == parent {
+	  out = out[:0]
+	  break
+  }
+#+end_src
+#+begin_export latex
+We construct and store the new node on the path.
+#+end_export
+#+begin_src go <<Store new node on path, Pr. \ref{pr:nev}>>=
+  name, err := neidb.Name(start)
+  util.Check(err)
+  parent, err = neidb.Parent(start)
+  util.Check(err)
+  o := Taxon{Taxid: start, Parent: parent, Name: name}
+  out = append(out, o)
+#+end_src
+#+begin_export latex
+We register \ty{path}.
+#+end_export
+#+begin_src go <<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>=
+  http.HandleFunc("/path/", makeHandler(path))
+#+end_src
+#+begin_export latex
+We also add \ty{path} to our list of services and use the path between
+\emph{Homo sapiens} and \emph{Mammalia} as our example.
+#+end_export
+#+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
+  query = "?t=9606,40674"
+  service = Service{Name: "path",
+	  Query: query}
+  services = append(services, service)
+#+end_src
+#+begin_export latex
 \subsection{Start Server}
 We have built the server, now we can start it. If the user supplied a
 pair of encryption keys, we start it as an HTTPS server, otherwise its

@@ -165,6 +165,10 @@ func init() {
 	service = Service{Name: "taxa_info",
 		Query: query}
 	services = append(services, service)
+	query = "?t=9606,40674"
+	service = Service{Name: "path",
+		Query: query}
+	services = append(services, service)
 }
 func inc(i int) int {
 	return i + 1
@@ -468,6 +472,48 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
+func path(w http.ResponseWriter, r *http.Request,
+	p *PageData) {
+	taxa := getTaxa(w, r)
+	out := []Taxon{}
+	if len(taxa) != 2 {
+		b, err := json.MarshalIndent(out, "", "    ")
+		util.Check(err)
+		fmt.Fprintf(w, "%s\n", string(b))
+		return
+	}
+	start := taxa[0]
+	end := taxa[1]
+	parent, err := neidb.Parent(start)
+	util.Check(err)
+	if parent == start && start != end {
+		b, err := json.MarshalIndent(out, "", "    ")
+		util.Check(err)
+		fmt.Fprintf(w, "%s\n", string(b))
+		return
+	}
+	name, err := neidb.Name(start)
+	o := Taxon{Taxid: start, Parent: parent, Name: name}
+	out = append(out, o)
+	for start != end {
+		parent, err := neidb.Parent(start)
+		util.Check(err)
+		if start == parent {
+			out = out[:0]
+			break
+		}
+		start = parent
+		name, err := neidb.Name(start)
+		util.Check(err)
+		parent, err = neidb.Parent(start)
+		util.Check(err)
+		o := Taxon{Taxid: start, Parent: parent, Name: name}
+		out = append(out, o)
+	}
+	b, err := json.MarshalIndent(out, "", "    ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+}
 func main() {
 	util.PrepLog("never")
 	flagV := flag.Bool("v", false, "version")
@@ -516,6 +562,7 @@ func main() {
 		makeHandler(num_genomes))
 	http.HandleFunc("/num_genomes_rec/", makeHandler(num_genomes_rec))
 	http.HandleFunc("/taxa_info/", makeHandler(taxa_info))
+	http.HandleFunc("/path/", makeHandler(path))
 	host := *flagO + ":" + *flagP
 	if *flagC != "" && *flagK != "" {
 		log.Fatal(http.ListenAndServeTLS(host, *flagC,
