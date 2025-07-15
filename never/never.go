@@ -71,6 +71,7 @@ type GenomeCount struct {
 type TaxonInfo struct {
 	Taxid      int           `json:"taxid"`
 	Parent     int           `json:"parent"`
+	IsLeaf     bool          `json:"is_leaf"`
 	Name       string        `json:"name"`
 	CommonName string        `json:"common_name"`
 	RawCounts  []GenomeCount `json:"raw_genome_counts"`
@@ -465,6 +466,8 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 	for _, taxon := range taxa {
 		parent, err := neidb.Parent(taxon)
 		util.Check(err)
+		isLeaf, err := neidb.IsLeaf(taxon)
+		util.Check(err)
 		name, err := neidb.Name(taxon)
 		util.Check(err)
 		cname, err := neidb.CommonName(taxon)
@@ -483,6 +486,7 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 		o := TaxonInfo{
 			Taxid:      taxon,
 			Parent:     parent,
+			IsLeaf:     isLeaf,
 			Name:       name,
 			CommonName: cname,
 			RawCounts:  raw,
