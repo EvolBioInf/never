@@ -706,8 +706,7 @@ of our web site.
   http.HandleFunc("/", makeHandler(index))
 #+end_src
 #+begin_export latex
-\subsection{Emulate Neighbors Programs}
-\subsubsection{\ty{taxi}}
+\subsection{\ty{taxi}}
 The service \ty{taxi} takes as input the name of a taxon, a matching
 mode, a page number, and a page size. It writes as response for each
 matching taxon the taxon ID, its parent's taxon ID, and its scientific
@@ -719,6 +718,7 @@ name. To store these three items, we declare the \ty{struct}
 	  Taxid int `json:"taxid"`
 	  Parent int `json:"parent"`
 	  Name string `json:"name"`
+	  CommonName string `json:"common_name"`
   }
 #+end_src
 #+begin_export latex
@@ -796,19 +796,19 @@ The offset is the pages number minus 1 times the page size.
   offset = (pageNum-1) * limit
 #+end_src
 #+begin_export latex
-  We get the taxon's scientific name and parent. Then we construct the
-  corresponding taxon output.
+We get the taxon's scientific and common names and parent. Then we
+construct the corresponding taxon output.
 #+end_export
 #+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
   sciName, err := neidb.Name(id)
-  tout := Taxon{}
   util.Check(err)
+  comName, err := neidb.CommonName(id)
+  util.Check(err)
+  tout := Taxon{}
   parent, err := neidb.Parent(id)
   if err == nil {
-	  tout = Taxon{
-		  Taxid: id,
-		  Parent: parent,
-		  Name: sciName}
+	  tout = Taxon{Taxid: id, Parent: parent,
+		  Name: sciName, CommonName: comName}
   }
 #+end_src
 #+begin_export latex
@@ -854,8 +854,7 @@ getting a second page of no more than 10 results.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsection{Access \ty{tdb} Functions}
-\subsubsection{\ty{accessions}}
+\subsection{\ty{accessions}}
 The service \ty{accessions} takes as argument a taxon ID and returns
 the corresponding genome accessions as a slice of strings. We store
 its output in the struct \ty{Accession}, which wraps a single
@@ -977,15 +976,16 @@ We also add \ty{accessions} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{names}}
+\subsection{\ty{names}}
 The service \ty{names} takes a as argument a list of taxon IDs and
-returns their scientific names. We store its output in the struct
+returns their scientific and common names. We store its output in the struct
 \ty{Name}, which wraps a taxid/name pair.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Name struct {
 	  Taxid int `json:"taxid"`
 	  Name string `json:"name"`
+	  CommonName string `json:"common_name"`
   }
 #+end_src
 #+begin_export latex
@@ -1010,7 +1010,10 @@ We look up the taxon's name and store it.
 #+begin_src go <<Find name, Pr. \ref{pr:nev}>>=
   name, err := neidb.Name(taxon)
   util.Check(err)
-  o := Name{Taxid: taxa[i], Name: name}
+  cname, err := neidb.CommonName(taxon)
+  util.Check(err)
+  o := Name{Taxid: taxa[i], Name: name,
+	  CommonName: cname}
   out = append(out, o)
 #+end_src
 #+begin_export latex
@@ -1029,7 +1032,7 @@ We also add \ty{names} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{ranks}}
+\subsection{\ty{ranks}}
 The service \ty{ranks} takes as argument a list of taxon IDs and
 returns their ranks. We store the output in a slice with elements of
 type \ty{Rank}, which wraps a taxid/rank pair.
@@ -1053,6 +1056,7 @@ corresponding ranks, and print the output.
 		  rank, err := neidb.Rank(taxon)
 		  util.Check(err)
 		  o := Rank{Taxid: taxa[i], Rank: rank}
+
 		  out = append(out, o)
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
@@ -1074,7 +1078,7 @@ We also add \ty{ranks} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{parent}}
+\subsection{\ty{parent}}
 The service \ty{parent} takes as argument a taxon ID and returns the
 parent's taxon ID. We store its output in a \ty{struct} that wraps a
 single taxon ID, or taxid.
@@ -1117,7 +1121,7 @@ We also add \ty{parent} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{children}}
+\subsection{\ty{children}}
 The service \ty{children} takes as argument a taxon ID and returns its
 children as a slice of their taxon IDs. A child is stored in a
 structure that holds its taxon ID and its name.
@@ -1126,6 +1130,7 @@ structure that holds its taxon ID and its name.
   type Child struct {
 	  Taxid int `json:"taxid"`
 	  Name string `json:"name"`
+	  CommonName string `json:"common_name"`
   }
 #+end_src
 #+begin_export latex
@@ -1148,12 +1153,14 @@ one, before we print the output.
   }
 #+end_src
 #+begin_export latex
-We construct the child from its taxon ID and its name.
+We construct the child from its taxon ID and its names.
 #+end_export
 #+begin_src go <<Construct child, Pr. \ref{pr:nev}>>=
   name, err := neidb.Name(child)
   util.Check(err)
-  o := Child{child, name}
+  cname, err := neidb.CommonName(child)
+  util.Check(err)
+  o := Child{child, name, cname}
   out = append(out, o)
 #+end_src
 #+begin_export latex
@@ -1172,17 +1179,18 @@ We also add \ty{children} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{subtree}}
+\subsection{\ty{subtree}}
 The service \ty{subtree} returns all taxa in a subtree, including the
 root. In the function \ty{subtree} we get the taxon ID, get and store
 the corresponding subtree, and print the output. A subtree consists of
-nodes, which are structs to hold a taxon ID, its name, and the parent
-ID.
+nodes, which are structs to hold a taxon ID, its name, its common
+name, and the parent ID.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Node struct {
 	  Taxid int `json:"taxid"`
 	  Name string `json:"name"`
+	  CommonName string `json:"common_name"`
 	  Parent int `json:"parent"`
   }
 #+end_src
@@ -1206,7 +1214,7 @@ subtree rooted on $t$.
 #+begin_export latex
 We iterate over the taxa in the subtree and look up the parent for
 each one, except for the root, \ty{taxid}, whose parent is
-itself. From the current taxon, its parent, and its name we construct
+itself. From the current taxon, its parent, and its names we construct
 the new node, which we store in our output slice.
 #+end_export
 #+begin_src go <<Construct nodes in subtree, Pr. \ref{pr:nev}>>=
@@ -1215,8 +1223,10 @@ the new node, which we store in our output slice.
 	  parent := taxon
 	  //<<Get node parent, Pr. \ref{pr:nev}>>
 	  name := ""
-	  //<<Get node name, Pr. \ref{pr:nev}>>
-	  o := Node{Taxid: taxon, Parent: parent, Name: name}
+	  cname := ""
+	  //<<Get node names, Pr. \ref{pr:nev}>>
+	  o := Node{Taxid: taxon, Parent: parent, Name: name,
+		  CommonName: cname}
 	  out = append(out, o)
   }
 #+end_src
@@ -1232,11 +1242,16 @@ an error.
   }
 #+end_src
 #+begin_export latex
-We get the node's name and again skip to the end of the loop if we
-encounter an error.
+We get the node's scientific and common names and again skip to the
+end of the loop if we encounter an error.
 #+end_export
-#+begin_src go <<Get node name, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Get node names, Pr. \ref{pr:nev}>>=
   name, err = neidb.Name(taxon)
+  util.Check(err)
+  if err != nil {
+	  continue
+  }
+  cname, err = neidb.CommonName(taxon)
   util.Check(err)
   if err != nil {
 	  continue
@@ -1258,7 +1273,7 @@ We also add \ty{subtree} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{Taxids}}
+\subsection{\ty{Taxids}}
 The function \ty{Taxids} takes as argument a taxon name and returns
 the corresponding taxon IDs. We implement the query in the function
 \ty{taxids} where we get the taxon name and store the corresponding
@@ -1269,7 +1284,7 @@ taxon IDs before we print the output.
 	  p *PageData) {
 	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
-	  taxids, err := neidb.Taxids(name, -1, 0)
+	  taxids, err := neidb.CommonTaxids(name, -1, 0)
 	  util.Check(err)
 	  for _, taxid := range taxids {
 		  o := Taxid{taxid}
@@ -1295,7 +1310,7 @@ We also add \ty{taxids} to the list of services.
 #+end_src
 
 #+begin_export latex
-\subsubsection{\ty{mrca}}
+\subsection{\ty{mrca}}
 The service \ty{mrca} taks as argument a slice of taxon IDs and
 returns their most recent comon ancestor. We implement the service in
 the function \ty{mrca}, where we get the taxon IDs, caluclate their
@@ -1331,7 +1346,7 @@ We also add \ty{mrca} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{levels}}
+\subsection{\ty{levels}}
 The service \ty{levels} takes as argument a list of genome accessions
 and returns their assembly levels. We store an assembly level in a
 struct that wraps an accession/level pair.
@@ -1390,7 +1405,7 @@ We also add \ty{levels} to our list of services.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{num\_genomes}}
+\subsection{\ty{num\_genomes}}
 The service \ty{num\_genomes} takes a taxon ID and returns the number
 of genomes across all assembly levels. We store the genome counts in a
 slice of type \ty{GenomeCount}, which holds the count for a given
@@ -1445,7 +1460,7 @@ query \emph{Escherichia coli}, taxid 562.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{num\_genomes\_rec}}
+\subsection{\ty{num\_genomes\_rec}}
 The service \ty{num\_genomes\_rec} takes a taxon ID as input and
 returns the recursive number of genomes for all assembly levels. We
 get the taxon ID, get the recursive genome counts for it, and print
@@ -1490,7 +1505,7 @@ use \emph{Escherichia coli} as our example.
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{taxa\_info}}
+\subsection{\ty{taxa\_info}}
 The service \ty{taxa\_info} takes as argument a string of
 comma-delimited taxon IDs and returns the information available for
 them. We get the taxon IDs and iterate over them to obtain and store
@@ -1519,16 +1534,17 @@ counts.
 	  Taxid int `json:"taxid"`
 	  Parent int `json:"parent"`
 	  Name string `json:"name"`
+	  CommonName string `json:"common_name"`
 	  RawCounts []GenomeCount `json:"raw_genome_counts"`
 	  RecCounts []GenomeCount `json:"rec_genome_counts"`
   }
 #+end_src
 #+begin_export latex
-We get the parent, the name, and the genome counts.
+We get the parent, the names, and the genome counts.
 #+end_export
 #+begin_src go <<Get information, Pr. \ref{pr:nev}>>=
   //<<Get parent, Pr. \ref{pr:nev}>>
-  //<<Get name, Pr. \ref{pr:nev}>>
+  //<<Get names, Pr. \ref{pr:nev}>>
   //<<Get genome counts, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
@@ -1539,10 +1555,13 @@ We look up the parent taxon and check the error.
   util.Check(err)
 #+end_src
 #+begin_export latex
-We look up the taxon's name with error checking.
+We look up the taxon's scientific and common names with error
+checking.
 #+end_export
-#+begin_src go <<Get name, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Get names, Pr. \ref{pr:nev}>>=
   name, err := neidb.Name(taxon)
+  util.Check(err)
+  cname, err := neidb.CommonName(taxon)
   util.Check(err)
 #+end_src
 #+begin_export latex
@@ -1571,6 +1590,7 @@ focal taxon.
 	  Taxid: taxon,
 	  Parent: parent,
 	  Name: name,
+	  CommonName: cname,
 	  RawCounts: raw,
 	  RecCounts: rec}
   out = append(out, o)
@@ -1592,7 +1612,7 @@ We also add \ty{taxa\_info} to our list of services and use
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsubsection{\ty{path}}
+\subsection{\ty{path}}
 The service \ty{path} takes as input the taxon IDs of a start and an
 end node in the taxonomy, where the end is closer to the root than the
 start. It returns the array of taxon IDs that form the path from the
@@ -1669,9 +1689,12 @@ We construct and store the new node on the path.
 #+begin_src go <<Store new node on path, Pr. \ref{pr:nev}>>=
   name, err := neidb.Name(start)
   util.Check(err)
+  cname, err := neidb.CommonName(start)
+  util.Check(err)
   parent, err = neidb.Parent(start)
   util.Check(err)
-  o := Taxon{Taxid: start, Parent: parent, Name: name}
+  o := Taxon{Taxid: start, Parent: parent, Name: name,
+	  CommonName: cname}
   out = append(out, o)
 #+end_src
 #+begin_export latex
@@ -1691,7 +1714,7 @@ We also add \ty{path} to our list of services and use the path between
   services = append(services, service)
 #+end_src
 #+begin_export latex
-\subsection{Start Server}
+\section{Start Server}
 We have built the server, now we can start it. If the user supplied a
 pair of encryption keys, we start it as an HTTPS server, otherwise its
 an HTTP server.

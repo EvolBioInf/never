@@ -14,5 +14,7 @@ github.com/evolbioinf/neighbors v0.0.0-20250625100416-f11f02ca09c5 h1:C17TvxTuED
 github.com/evolbioinf/neighbors v0.0.0-20250625100416-f11f02ca09c5/go.mod h1:tkx8ax/AluGLO6myG1IMYykVmCv434TvvOpi9oO3I2M=
 github.com/evolbioinf/neighbors v0.0.0-20250625132002-88252e4e7313 h1:k3UgCmcUbZ4AkKkGwJihsT3RJdXbu7Axyo62keLQGlk=
 github.com/evolbioinf/neighbors v0.0.0-20250625132002-88252e4e7313/go.mod h1:tkx8ax/AluGLO6myG1IMYykVmCv434TvvOpi9oO3I2M=
+github.com/evolbioinf/neighbors v0.0.0-20250715081503-9fc43bdc9a6e h1:AMMGy9EM0Rj8mKnUowYN7lcNZA9gPRcLO71dOkMC0Os=
+github.com/evolbioinf/neighbors v0.0.0-20250715081503-9fc43bdc9a6e/go.mod h1:tkx8ax/AluGLO6myG1IMYykVmCv434TvvOpi9oO3I2M=
 github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
 github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=

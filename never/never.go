@@ -29,16 +29,18 @@ type Service struct {
 	Name, Query string
 }
 type Taxon struct {
-	Taxid  int    `json:"taxid"`
-	Parent int    `json:"parent"`
-	Name   string `json:"name"`
+	Taxid      int    `json:"taxid"`
+	Parent     int    `json:"parent"`
+	Name       string `json:"name"`
+	CommonName string `json:"common_name"`
 }
 type Accession struct {
 	Accession string `json:"accession"`
 }
 type Name struct {
-	Taxid int    `json:"taxid"`
-	Name  string `json:"name"`
+	Taxid      int    `json:"taxid"`
+	Name       string `json:"name"`
+	CommonName string `json:"common_name"`
 }
 type Rank struct {
 	Taxid int    `json:"taxid"`
@@ -48,13 +50,15 @@ type Taxid struct {
 	Taxid int `json:"taxid"`
 }
 type Child struct {
-	Taxid int    `json:"taxid"`
-	Name  string `json:"name"`
+	Taxid      int    `json:"taxid"`
+	Name       string `json:"name"`
+	CommonName string `json:"common_name"`
 }
 type Node struct {
-	Taxid  int    `json:"taxid"`
-	Name   string `json:"name"`
-	Parent int    `json:"parent"`
+	Taxid      int    `json:"taxid"`
+	Name       string `json:"name"`
+	CommonName string `json:"common_name"`
+	Parent     int    `json:"parent"`
 }
 type Level struct {
 	Accession string `json:"accession"`
@@ -65,11 +69,12 @@ type GenomeCount struct {
 	Count int    `json:"count"`
 }
 type TaxonInfo struct {
-	Taxid     int           `json:"taxid"`
-	Parent    int           `json:"parent"`
-	Name      string        `json:"name"`
-	RawCounts []GenomeCount `json:"raw_genome_counts"`
-	RecCounts []GenomeCount `json:"rec_genome_counts"`
+	Taxid      int           `json:"taxid"`
+	Parent     int           `json:"parent"`
+	Name       string        `json:"name"`
+	CommonName string        `json:"common_name"`
+	RawCounts  []GenomeCount `json:"raw_genome_counts"`
+	RecCounts  []GenomeCount `json:"rec_genome_counts"`
 }
 
 var host, port string
@@ -212,14 +217,14 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	out := []Taxon{}
 	for _, id := range ids {
 		sciName, err := neidb.Name(id)
-		tout := Taxon{}
 		util.Check(err)
+		comName, err := neidb.CommonName(id)
+		util.Check(err)
+		tout := Taxon{}
 		parent, err := neidb.Parent(id)
 		if err == nil {
-			tout = Taxon{
-				Taxid:  id,
-				Parent: parent,
-				Name:   sciName}
+			tout = Taxon{Taxid: id, Parent: parent,
+				Name: sciName, CommonName: comName}
 		}
 		if err == nil {
 			out = append(out, tout)
@@ -272,7 +277,10 @@ func names(w http.ResponseWriter, r *http.Request,
 	for i, taxon := range taxa {
 		name, err := neidb.Name(taxon)
 		util.Check(err)
-		o := Name{Taxid: taxa[i], Name: name}
+		cname, err := neidb.CommonName(taxon)
+		util.Check(err)
+		o := Name{Taxid: taxa[i], Name: name,
+			CommonName: cname}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
@@ -287,6 +295,7 @@ func ranks(w http.ResponseWriter, r *http.Request,
 		rank, err := neidb.Rank(taxon)
 		util.Check(err)
 		o := Rank{Taxid: taxa[i], Rank: rank}
+
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
@@ -322,7 +331,9 @@ func children(w http.ResponseWriter, r *http.Request,
 	for _, child := range children {
 		name, err := neidb.Name(child)
 		util.Check(err)
-		o := Child{child, name}
+		cname, err := neidb.CommonName(child)
+		util.Check(err)
+		o := Child{child, name, cname}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
@@ -347,12 +358,19 @@ func subtree(w http.ResponseWriter, r *http.Request,
 			continue
 		}
 		name := ""
+		cname := ""
 		name, err = neidb.Name(taxon)
 		util.Check(err)
 		if err != nil {
 			continue
 		}
-		o := Node{Taxid: taxon, Parent: parent, Name: name}
+		cname, err = neidb.CommonName(taxon)
+		util.Check(err)
+		if err != nil {
+			continue
+		}
+		o := Node{Taxid: taxon, Parent: parent, Name: name,
+			CommonName: cname}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
@@ -363,7 +381,7 @@ func taxids(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
 	name := r.URL.Query().Get("t")
 	out := []Taxid{}
-	taxids, err := neidb.Taxids(name, -1, 0)
+	taxids, err := neidb.CommonTaxids(name, -1, 0)
 	util.Check(err)
 	for _, taxid := range taxids {
 		o := Taxid{taxid}
@@ -449,6 +467,8 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 		util.Check(err)
 		name, err := neidb.Name(taxon)
 		util.Check(err)
+		cname, err := neidb.CommonName(taxon)
+		util.Check(err)
 		var raw, rec []GenomeCount
 		for _, level := range tdb.AssemblyLevels() {
 			count, err := neidb.NumGenomes(taxon, level)
@@ -461,11 +481,12 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 			rec = append(rec, gc)
 		}
 		o := TaxonInfo{
-			Taxid:     taxon,
-			Parent:    parent,
-			Name:      name,
-			RawCounts: raw,
-			RecCounts: rec}
+			Taxid:      taxon,
+			Parent:     parent,
+			Name:       name,
+			CommonName: cname,
+			RawCounts:  raw,
+			RecCounts:  rec}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
@@ -505,9 +526,12 @@ func path(w http.ResponseWriter, r *http.Request,
 		start = parent
 		name, err := neidb.Name(start)
 		util.Check(err)
+		cname, err := neidb.CommonName(start)
+		util.Check(err)
 		parent, err = neidb.Parent(start)
 		util.Check(err)
-		o := Taxon{Taxid: start, Parent: parent, Name: name}
+		o := Taxon{Taxid: start, Parent: parent, Name: name,
+			CommonName: cname}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")

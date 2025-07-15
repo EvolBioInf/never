@@ -5,7 +5,7 @@ go 1.22.2
 require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/evolbioinf/clio v0.0.0-20230620105705-02d07225d27e
-	github.com/evolbioinf/neighbors v0.0.0-20250625132002-88252e4e7313
+	github.com/evolbioinf/neighbors v0.0.0-20250715081503-9fc43bdc9a6e
 )
 
 require github.com/mattn/go-sqlite3 v1.14.18 // indirect
