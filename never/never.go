@@ -36,6 +36,7 @@ type Taxon struct {
 }
 type Accession struct {
 	Accession string `json:"accession"`
+	Level     string `json:"level"`
 }
 type Name struct {
 	Taxid      int    `json:"taxid"`
@@ -246,7 +247,9 @@ func accessions(w http.ResponseWriter, r *http.Request,
 	accs, err := neidb.Accessions(taxid)
 	util.Check(err)
 	for _, acc := range accs {
-		o := Accession{acc}
+		level, err := neidb.Level(acc)
+		util.Check(err)
+		o := Accession{acc, level}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")

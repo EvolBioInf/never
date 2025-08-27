@@ -857,12 +857,13 @@ getting a second page of no more than 10 results.
 \subsection{\ty{accessions}}
 The service \ty{accessions} takes as argument a taxon ID and returns
 the corresponding genome accessions as a slice of strings. We store
-its output in the struct \ty{Accession}, which wraps a single
-accession.
+its output in the struct \ty{Accession}, which wraps an
+accession and an assembly level.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Accession struct {
 	  Accession string `json:"accession"`
+	  Level string `json:"level"`
   }
 #+end_src
 #+begin_export latex
@@ -946,7 +947,9 @@ We get the accessions and store them in a slice of accessions.
   accs, err := neidb.Accessions(taxid)
   util.Check(err)
   for _, acc := range accs {
-	  o := Accession{acc}
+	  level, err := neidb.Level(acc)
+	  util.Check(err)
+	  o := Accession{acc, level}
 	  out = append(out, o)
   }
 #+end_src
