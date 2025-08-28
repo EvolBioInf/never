@@ -1530,8 +1530,8 @@ print the output, which is stored as a slice of type \ty{TaxonInfo}.
 #+begin_export latex
 \ty{TaxonInfo} is a structure that holds the IDs of the taxon and its
 parent, wheter the taxon is a leaf in the taxonomy tree, the taxon's
-name, its common name, its raw genome counts, and its recursive genome
-counts.
+name, its common name, its rank, its raw genome counts, and its
+recursive genome counts.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type TaxonInfo struct {
@@ -1540,18 +1540,20 @@ counts.
 	  IsLeaf bool `json:"is_leaf"`
 	  Name string `json:"name"`
 	  CommonName string `json:"common_name"`
+	  Rank string `json:"rank"`
 	  RawCounts []GenomeCount `json:"raw_genome_counts"`
 	  RecCounts []GenomeCount `json:"rec_genome_counts"`
   }
 #+end_src
 #+begin_export latex
 We get the parent, determine whether the taxon is a leaf, its names,
-and the genome counts.
+rank, and the genome counts.
 #+end_export
 #+begin_src go <<Get information, Pr. \ref{pr:nev}>>=
   //<<Get parent, Pr. \ref{pr:nev}>>
   //<<Is the taxon a leaf? Pr. \ref{pr:nev}>>
   //<<Get names, Pr. \ref{pr:nev}>>
+  //<<Get taxon rank, Pr. \ref{pr:nev}>>
   //<<Get genome counts, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
@@ -1566,6 +1568,13 @@ We determine whether the taxon is a leaf.
 #+end_export
 #+begin_src go <<Is the taxon a leaf? Pr. \ref{pr:nev}>>=
   isLeaf, err := neidb.IsLeaf(taxon)
+  util.Check(err)
+#+end_src
+#+begin_export latex
+We get the rank of the taxon.
+#+end_export
+#+begin_src go <<Get taxon rank, Pr. \ref{pr:nev}>>=
+  rank, err := neidb.Rank(taxon)
   util.Check(err)
 #+end_src
 #+begin_export latex
@@ -1606,6 +1615,7 @@ focal taxon.
 	  IsLeaf: isLeaf,
 	  Name: name,
 	  CommonName: cname,
+	  Rank: rank,
 	  RawCounts: raw,
 	  RecCounts: rec}
   out = append(out, o)

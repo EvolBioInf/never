@@ -75,6 +75,7 @@ type TaxonInfo struct {
 	IsLeaf     bool          `json:"is_leaf"`
 	Name       string        `json:"name"`
 	CommonName string        `json:"common_name"`
+	Rank       string        `json:"rank"`
 	RawCounts  []GenomeCount `json:"raw_genome_counts"`
 	RecCounts  []GenomeCount `json:"rec_genome_counts"`
 }
@@ -475,6 +476,8 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 		util.Check(err)
 		cname, err := neidb.CommonName(taxon)
 		util.Check(err)
+		rank, err := neidb.Rank(taxon)
+		util.Check(err)
 		var raw, rec []GenomeCount
 		for _, level := range tdb.AssemblyLevels() {
 			count, err := neidb.NumGenomes(taxon, level)
@@ -492,6 +495,7 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 			IsLeaf:     isLeaf,
 			Name:       name,
 			CommonName: cname,
+			Rank:       rank,
 			RawCounts:  raw,
 			RecCounts:  rec}
 		out = append(out, o)
