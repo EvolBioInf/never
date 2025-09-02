@@ -582,6 +582,8 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", staticFiles))
 	vitaxFiles := http.FileServer(http.Dir("vitax"))
 	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
+	dataFiles := http.FileServer(http.Dir("data"))
+	http.Handle("/data/", http.StripPrefix("/data/", dataFiles))
 	http.HandleFunc("/", makeHandler(index))
 	http.HandleFunc("/taxi/", makeHandler(taxi))
 	http.HandleFunc("/accessions/", makeHandler(accessions))

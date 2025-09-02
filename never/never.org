@@ -190,20 +190,29 @@ We declare \ty{dateFile}.
 #+begin_export latex
 \section{Front End}
 We've finished writing the back end, so we turn to the front end. This
-consists of a set of HTML pages, which depend on style files we serve
-first of all. The HTML files themselves are divided into three
-categories. First, there is the start, or \emph{index} page, then
-there are pages to emulate Neighbors programs, and finally there are
-pages giving access to \ty{tdb} functions.
+depends on a various files we need to serve first of all. Then we
+construct the HTML files that make up the user interface. These are
+divided into three categories. First, there is the start, or
+\emph{index} page, then there are pages to emulate Neighbors programs,
+and finally there are pages giving access to \ty{tdb} functions.
 #+end_export
 #+begin_src go <<Construct front end, Pr. \ref{pr:nev}>>=
-  //<<Serve style files, Pr. \ref{pr:nev}>>
+  //<<Serve files, Pr. \ref{pr:nev}>>
   //<<Construct index page, Pr. \ref{pr:nev}>>
   //<<Emulate Neighbors programs, Pr. \ref{pr:nev}>>
   //<<Access \ty{tdb} functions, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
 \subsection{Files}
+We serve three kinds of files. Style files, the files of the Vitax
+interface for visualizing the taxonomy, and data files.
+#+end_export
+#+begin_src go <<Serve files, Pr. \ref{pr:nev}>>=
+  //<<Serve style files, Pr. \ref{pr:nev}>>
+  //<<Serve Vitax files, Pr. \ref{pr:nev}>>
+  //<<Serve data files, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
 The style files are locate in the directory \ty{static}. We make them
 available by registering a file server to that directory.
 #+end_export
@@ -218,13 +227,20 @@ We import \ty{http}.
   "net/http"
 #+end_src
 #+begin_export latex
-The files for visualizing the taxonomy are located in directory
-\ty{vitax}. We make them available by registering a file server to
-that directory.
+The Vitax files are located in directory \ty{vitax}. We make them
+available by registering a file server to that directory.
 #+end_export
-#+begin_src go <<Serve style files, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Serve Vitax files, Pr. \ref{pr:nev}>>=
   vitaxFiles := http.FileServer(http.Dir("vitax"))
   http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
+#+end_src
+#+begin_export latex
+The data files, finally, are located in the directory \ty{data}. We
+make them available by registering a file server to that directory.
+#+end_export
+#+begin_src go <<Serve data files, Pr. \ref{pr:nev}>>=
+  dataFiles := http.FileServer(http.Dir("data"))
+  http.Handle("/data/", http.StripPrefix("/data/", dataFiles))
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
@@ -524,15 +540,18 @@ server, and quote the pertient paper.
   </p>
 #+end_src
 #+begin_export latex
-We list the NCBI as the source of our raw data.
+We list the NCBI as the source of our raw data. And link to a package
+from which the current database was built.
 #+end_export
 #+begin_src html <<List data sources, Pr. \ref{pr:nev}>>=
   We use the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">
   taxonomy</a>
   and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">
   genome data</a> supplied by
-  the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a
-  custom database.
+  the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a custom
+  database. The compressed files we used for the construction of the
+  current database can be downloaded
+  from <a href="https://neighbors.evolbio.mpg.de/data/neidbData.tgz">here</a>.
 #+end_src
 #+begin_export latex
 Our server is a group effort, as is the underlying Neighbors package.
