@@ -18,8 +18,8 @@ $(text).pdf: $(text).tex $(SRC1) $(SRC2)
 	dvips $(text) -o -q
 	ps2pdf -dALLOWPSTRANSPARENCY $(text).ps
 publish: $(text).pdf
-	if [ -d /mnt/c/Users/haubold/ownCloud\ -\ haubold@evolbio.mpg.de@owncloud.gwdg.de/docs/ ]; then \
-		cp $(text).pdf /mnt/c/Users/haubold/ownCloud\ -\ haubold@evolbio.mpg.de@owncloud.gwdg.de/docs/; \
+	if [ -d ~/WinHome/ownCloud/ ]; then \
+		cp $(text).pdf ~/WinHome/ownCloud/docs/; \
 	fi
 
 clean:
