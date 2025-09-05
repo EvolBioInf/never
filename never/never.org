@@ -876,10 +876,10 @@ getting a second page of no more than 10 results.
 #+end_src
 #+begin_export latex
 \subsection{\ty{accessions}}
-The service \ty{accessions} takes as argument a taxon ID and returns
-the corresponding genome accessions as a slice of strings. We store
-its output in the struct \ty{Accession}, which wraps an
-accession and an assembly level.
+The service \ty{accessions} takes as argument one or more taxon IDs
+and returns the genome accessions in the clades rooted on them,
+indexed by taxon ID. We store individual accessions in the type
+\ty{Accession}, which wraps an accession and an assembly level.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Accession struct {
@@ -888,28 +888,28 @@ accession and an assembly level.
   }
 #+end_src
 #+begin_export latex
+The output of our service is a slice of type \ty{Accessions}, which
+consists of a taxon ID and a slice of the accessions that belong to
+it.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type Accessions struct {
+	  Taxid int `json:"taxid"`
+	  Accs []Accession `json:"accessions"`
+  }
+#+end_src
+#+begin_export latex
 We implement the service in the function \ty{accessions}. Inside of
-\ty{accessions}, we get the taxon ID and the corresponding accessions,
+\ty{accessions}, we get the taxa through a call to \ty{getTaxa}, which
+we still need to implement. Then we get the corresponding accessions,
 before we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func accessions(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  //<<Get taxid, Pr. \ref{pr:nev}>>
+	  taxa := getTaxa(w, r)
 	  //<<Get accessions, Pr. \ref{pr:nev}>>
 	  //<<Print output, Pr. \ref{pr:nev}>>
-  }
-#+end_src
-#+begin_export latex
-We get the taxon ID through a call to the function \ty{getTaxa} we
-still need to write. If \ty{getTaxa} returns no taxa, we set the taxon
-ID to the non-existent taxid zero.
-#+end_export
-#+begin_src go <<Get taxid, Pr. \ref{pr:nev}>>=
-  taxa := getTaxa(w, r)
-  taxid := 0
-  if len(taxa) > 0 {
-	  taxid = taxa[0]
   }
 #+end_src
 #+begin_export latex
@@ -932,8 +932,8 @@ a taxon. We check the existence of the taxon before we append it to
 the slice of taxa.
 #+end_export
 #+begin_src go <<Store taxa, Pr. \ref{pr:nev}>>=
-  tokes := strings.Split(t, ",")
-  for _, token := range tokes {
+  tokens := strings.Split(t, ",")
+  for _, token := range tokens {
 	  taxon := 0
 	  //<<Convert token to taxon, Pr. \ref{pr:nev}>>
 	  //<<Check existence of taxon, Pr. \ref{pr:nev}>>
@@ -951,8 +951,8 @@ the rest of the loop.
   }
 #+end_src
 #+begin_export latex
-If the taxon has no name, it doesn't exist and we skip the rest of the
-loop.
+If the taxon has no name, it doesn't exist and we also skip the rest
+of the loop.
 #+end_export
 #+begin_src go <<Check existence of taxon, Pr. \ref{pr:nev}>>=
   _, err = neidb.Name(taxon)
@@ -961,21 +961,51 @@ loop.
   }
 #+end_src
 #+begin_export latex
-We get the accessions and store them in a slice of accessions.
+We declare a slice of accessions for storing them. Then we iterate for
+as long as our slice of taxa isn't empty. Inside the loop we remove
+the first taxon from the slice and look up its accessions. If we get
+at least one, we store it. Then we get the taxon's children.
 #+end_export
 #+begin_src go <<Get accessions, Pr. \ref{pr:nev}>>=
-  out := []Accession{}
-  accs, err := neidb.Accessions(taxid)
-  util.Check(err)
-  for _, acc := range accs {
-	  level, err := neidb.Level(acc)
+  out := []Accessions{}
+  for len(taxa) > 0 {
+	  taxid := taxa[0]
+	  taxa = taxa[1:]
+	  accs, err := neidb.Accessions(taxid)
 	  util.Check(err)
-	  o := Accession{acc, level}
-	  out = append(out, o)
+	  if len(accs) > 0 {
+		  //<<Store accessions, Pr. \ref{pr:nev}>>
+	  }
+	  //<<Get children, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We convert our slice of accession items to JSON and print it as our
+We make a variable of type \ty{Accessions} based on the taxid and
+store it in our output slice. Then we complete the accessions by
+adding their levels before storing them.
+#+end_export
+#+begin_src go <<Store accessions, Pr. \ref{pr:nev}>>=
+  o := Accessions{Taxid: taxid}
+  for _, acc := range accs {
+	  level, err := neidb.Level(acc)
+	  util.Check(err)
+	  accession := Accession{Accession: acc, Level: level}
+	  o.Accs = append(o.Accs, accession)
+  }
+  out = append(out, o)
+#+end_src
+#+begin_export latex
+We retrieve the children of the current taxon and store them in our
+slice of taxa, ready for the next iteration.
+#+end_export
+#+begin_src go <<Get children, Pr. \ref{pr:nev}>>=
+  children, err := neidb.Children(taxid)
+  for _, child := range children {
+	  taxa = append(taxa, child)
+  }
+#+end_src
+#+begin_export latex
+We convert our slice of accessions items to JSON and print it as our
 response.
 #+end_export
 #+begin_src go <<Print output, Pr. \ref{pr:nev}>>=
@@ -991,7 +1021,10 @@ function and register it.
   http.HandleFunc("/accessions/", makeHandler(accessions))
 #+end_src
 #+begin_export latex
-We also add \ty{accessions} to our list of services.
+We also add \ty{accessions} to our list of services. We use
+\emph{Mesorhizobiom ciceri biovar biserrulae} (taxid 278148) as
+example, because it is small and illustrates the recursive nature of
+\ty{accessions}.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
   query = "?t=9606"
@@ -1127,6 +1160,18 @@ parent.
 		  out = Taxid{parent}
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We get the taxon ID through a call to the function \ty{getTaxa}. If
+\ty{getTaxa} returns no taxa, we set the taxon ID to the non-existent
+taxid zero.
+#+end_export
+#+begin_src go <<Get taxid, Pr. \ref{pr:nev}>>=
+  taxa := getTaxa(w, r)
+  taxid := 0
+  if len(taxa) > 0 {
+	  taxid = taxa[0]
   }
 #+end_src
 #+begin_export latex

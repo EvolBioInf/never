@@ -38,6 +38,10 @@ type Accession struct {
 	Accession string `json:"accession"`
 	Level     string `json:"level"`
 }
+type Accessions struct {
+	Taxid int         `json:"taxid"`
+	Accs  []Accession `json:"accessions"`
+}
 type Name struct {
 	Taxid      int    `json:"taxid"`
 	Name       string `json:"name"`
@@ -240,18 +244,26 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 func accessions(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
 	taxa := getTaxa(w, r)
-	taxid := 0
-	if len(taxa) > 0 {
-		taxid = taxa[0]
-	}
-	out := []Accession{}
-	accs, err := neidb.Accessions(taxid)
-	util.Check(err)
-	for _, acc := range accs {
-		level, err := neidb.Level(acc)
+	out := []Accessions{}
+	for len(taxa) > 0 {
+		taxid := taxa[0]
+		taxa = taxa[1:]
+		accs, err := neidb.Accessions(taxid)
 		util.Check(err)
-		o := Accession{acc, level}
-		out = append(out, o)
+		if len(accs) > 0 {
+			o := Accessions{Taxid: taxid}
+			for _, acc := range accs {
+				level, err := neidb.Level(acc)
+				util.Check(err)
+				accession := Accession{Accession: acc, Level: level}
+				o.Accs = append(o.Accs, accession)
+			}
+			out = append(out, o)
+		}
+		children, err := neidb.Children(taxid)
+		for _, child := range children {
+			taxa = append(taxa, child)
+		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.Check(err)
@@ -260,8 +272,8 @@ func accessions(w http.ResponseWriter, r *http.Request,
 func getTaxa(w http.ResponseWriter, r *http.Request) []int {
 	taxa := []int{}
 	t := r.URL.Query().Get("t")
-	tokes := strings.Split(t, ",")
-	for _, token := range tokes {
+	tokens := strings.Split(t, ",")
+	for _, token := range tokens {
 		taxon := 0
 		taxon, err := strconv.Atoi(token)
 		if err != nil {
