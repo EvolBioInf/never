@@ -128,7 +128,7 @@ func init() {
 	query = "?t=E&n=10&p=2"
 	service = Service{Name: "taxi", Query: query}
 	services = append(services, service)
-	query = "?t=9606"
+	query = "?t=278148,602633"
 	service = Service{Name: "accessions",
 		Query: query}
 	services = append(services, service)

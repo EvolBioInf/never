@@ -1024,10 +1024,12 @@ function and register it.
 We also add \ty{accessions} to our list of services. We use
 \emph{Mesorhizobiom ciceri biovar biserrulae} (taxid 278148) as
 example, because it is small and illustrates the recursive nature of
-\ty{accessions}.
+\ty{accessions}. We also add the closely related \emph{Mesorhizobiom
+ciceri ca181} (taxid 602633) to illustrate that more than one taxon ID
+can be submitted.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
-  query = "?t=9606"
+  query = "?t=278148,602633"
   service = Service{Name: "accessions",
 	  Query: query}
   services = append(services, service)
