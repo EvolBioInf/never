@@ -82,6 +82,12 @@ type TaxonInfo struct {
 	Rank       string        `json:"rank"`
 	RawCounts  []GenomeCount `json:"raw_genome_counts"`
 	RecCounts  []GenomeCount `json:"rec_genome_counts"`
+	Images     []Image       `json:"images"`
+}
+type Image struct {
+	Id          int    `json:"id"`
+	Url         string `json:"url"`
+	Attribution string `json:"attribution"`
 }
 
 var host, port string
@@ -501,6 +507,15 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 			gc = GenomeCount{Count: count, Level: level}
 			rec = append(rec, gc)
 		}
+		var neiImages []Image
+		images, err := neidb.Images(taxon)
+		util.Check(err)
+		for _, image := range images {
+			i := Image{Id: image.Id,
+				Url:         image.Url,
+				Attribution: image.Attribution}
+			neiImages = append(neiImages, i)
+		}
 		o := TaxonInfo{
 			Taxid:      taxon,
 			Parent:     parent,
@@ -509,7 +524,8 @@ func taxa_info(w http.ResponseWriter, r *http.Request,
 			CommonName: cname,
 			Rank:       rank,
 			RawCounts:  raw,
-			RecCounts:  rec}
+			RecCounts:  rec,
+			Images:     neiImages}
 		out = append(out, o)
 	}
 	b, err := json.MarshalIndent(out, "", "    ")

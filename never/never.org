@@ -1598,8 +1598,8 @@ print the output, which is stored as a slice of type \ty{TaxonInfo}.
 #+begin_export latex
 \ty{TaxonInfo} is a structure that holds the IDs of the taxon and its
 parent, wheter the taxon is a leaf in the taxonomy tree, the taxon's
-name, its common name, its rank, its raw genome counts, and its
-recursive genome counts.
+name, its common name, its rank, its raw genome counts, its
+recursive genome counts, and its images.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type TaxonInfo struct {
@@ -1611,11 +1611,23 @@ recursive genome counts.
 	  Rank string `json:"rank"`
 	  RawCounts []GenomeCount `json:"raw_genome_counts"`
 	  RecCounts []GenomeCount `json:"rec_genome_counts"`
+	  Images []Image `json:"images"`
+  }
+#+end_src
+#+begin_export latex
+The type \ty{Image} doesn't exist yet, so we declare it to hold the
+three fields \ty{Id}, \ty{Url}, and \ty{Attribution}.
+#+end_export
+#+begin_src go <<Types, Pr. \ref{pr:nev}>>=
+  type Image struct {
+	  Id int `json:"id"`
+	  Url string `json:"url"`
+	  Attribution string `json:"attribution"`
   }
 #+end_src
 #+begin_export latex
 We get the parent, determine whether the taxon is a leaf, its names,
-rank, and the genome counts.
+rank, genome counts, and images.
 #+end_export
 #+begin_src go <<Get information, Pr. \ref{pr:nev}>>=
   //<<Get parent, Pr. \ref{pr:nev}>>
@@ -1623,6 +1635,7 @@ rank, and the genome counts.
   //<<Get names, Pr. \ref{pr:nev}>>
   //<<Get taxon rank, Pr. \ref{pr:nev}>>
   //<<Get genome counts, Pr. \ref{pr:nev}>>
+  //<<Get images, Pr. \ref{pr:nev}>>
 #+end_src
 #+begin_export latex
 We look up the parent taxon and check the error.
@@ -1673,6 +1686,20 @@ levels.
   }
 #+end_src
 #+begin_export latex
+We look up the images associated with the taxon.
+#+end_export
+#+begin_src go <<Get images, Pr. \ref{pr:nev}>>=
+  var neiImages []Image
+  images, err := neidb.Images(taxon)
+  util.Check(err)
+  for _, image := range images {
+	  i := Image{Id: image.Id,
+		  Url: image.Url,
+		  Attribution: image.Attribution}
+	  neiImages = append(neiImages, i)
+  }
+#+end_src
+#+begin_export latex
 We store the taxon ID and the information we just looked up for our
 focal taxon.
 #+end_export
@@ -1685,7 +1712,8 @@ focal taxon.
 	  CommonName: cname,
 	  Rank: rank,
 	  RawCounts: raw,
-	  RecCounts: rec}
+	  RecCounts: rec,
+	  Images: neiImages}
   out = append(out, o)
 #+end_src
 #+begin_export latex

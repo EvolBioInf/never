@@ -4,5 +4,7 @@ github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b h1:26/B3KZkdt/NzB5
 github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b/go.mod h1:S13GccNRJPbjEsLZ/yCLFRVhdTS4qUJ+mf9GtZja8do=
 github.com/evolbioinf/neighbors v0.0.0-20250715142645-f0f9fee624bd h1:C/5TVBJKq8gyDeWJ0r5sUINZrDfF+/S5wFz81Fdp4Ug=
 github.com/evolbioinf/neighbors v0.0.0-20250715142645-f0f9fee624bd/go.mod h1:tkx8ax/AluGLO6myG1IMYykVmCv434TvvOpi9oO3I2M=
+github.com/evolbioinf/neighbors v0.0.0-20250912082531-bd0b8902c108 h1:WMQTTMAqogazanOPcwu0Z7AJIYuDl3qruVQ7SEIWXHE=
+github.com/evolbioinf/neighbors v0.0.0-20250912082531-bd0b8902c108/go.mod h1:tkx8ax/AluGLO6myG1IMYykVmCv434TvvOpi9oO3I2M=
 github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
 github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
