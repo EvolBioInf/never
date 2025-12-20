@@ -30,7 +30,7 @@ See [[http://github.com/evolbioinf/neighbors][Neighbors]] for a
 description of how to make a Neighbors database.
 
 ** Query for Taxon IDs
-If =never= is running as show above, you can download the taxon IDs of
+If =never= is running as shown above, you can download the taxon IDs of
 taxa whose name matches /Homo sapiens/ in substring mode. In substring
 mode matching is run on the input string wrapped in SQL wild cards,
 =%=, and with blanks replaced by wild cards, so =Homo sapiens= becomes =%Homo%sapiens%=
