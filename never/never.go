@@ -553,7 +553,11 @@ func path(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	name, err := neidb.Name(start)
-	o := Taxon{Taxid: start, Parent: parent, Name: name}
+	util.Check(err)
+	cn, err := neidb.CommonName(start)
+	util.Check(err)
+	o := Taxon{Taxid: start, Parent: parent,
+		Name: name, CommonName: cn}
 	out = append(out, o)
 	for start != end {
 		parent, err := neidb.Parent(start)

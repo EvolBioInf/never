@@ -1767,19 +1767,30 @@ print the empty output and return.
   end := taxa[1]
 #+end_src
 #+begin_export latex
-If the start node is root, we only add it if it is identical to the
-end node. Otherwise, we again print the empty output and return.
+We get the parent and check whether the start node is root. If not, we
+add the taxon.
 #+end_export
 #+begin_src go <<Add start node, Pr. \ref{pr:nev}>>=
   parent, err := neidb.Parent(start)
   util.Check(err)
+  //<<Is start node root?, Pr. \ref{pr:nev}>>
+  name, err := neidb.Name(start)
+  util.Check(err)
+  cn, err := neidb.CommonName(start)
+  util.Check(err)
+  o := Taxon{Taxid: start, Parent: parent,
+	  Name: name, CommonName: cn}
+  out = append(out, o)
+#+end_src
+#+begin_export latex
+If the start node \emph{is} root, we only add it if it is identical to
+the end node. Otherwise, we again print the empty output and return.
+#+end_export
+#+begin_src go <<Is start node root?, Pr. \ref{pr:nev}>>=
   if parent == start && start != end {
 	  //<<Print output, Pr. \ref{pr:nev}>>
 	  return
   }
-  name, err := neidb.Name(start)
-  o := Taxon{Taxid: start, Parent: parent, Name: name}
-  out = append(out, o)
 #+end_src
 #+begin_export latex
 We climb the path until we reach its end or the root, whichever comes
