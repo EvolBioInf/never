@@ -730,9 +730,9 @@ of our web site.
 \subsection{\ty{taxi}}
 The service \ty{taxi} takes as input the name of a taxon, a matching
 mode, a page number, and a page size. It writes as response for each
-matching taxon the taxon ID, its parent's taxon ID, and its scientific
-name. To store these three items, we declare the \ty{struct}
-\ty{Taxon}.
+matching taxon the taxon ID, its parent's taxon ID, its scientific
+name, and its common name. To store these four items, we declare the
+\ty{struct} \ty{Taxon}.
 #+end_export
 #+begin_src go <<Types, Pr. \ref{pr:nev}>>=
   type Taxon struct {
@@ -782,7 +782,7 @@ taxa.
   var limit, offset int
   //<<Convert page size to limit, Pr. \ref{pr:nev}>>
   //<<Calculate offset, Pr. \ref{pr:nev}>>
-  ids, err := neidb.Taxids(name, limit, offset)
+  ids, err := neidb.CommonTaxids(name, limit, offset)
   util.Check(err)
   out := []Taxon{}
   for _, id := range ids {
@@ -866,11 +866,11 @@ We can now emulate the \ty{taxi} program by registering the service
 #+end_src
 #+begin_export latex
 We also add the \ty{taxi} service to our list of services. Our example
-query simulates a user typing \emph{E} for \emph{Escherichia coli} and
-getting a second page of no more than 10 results.
+query simulates a user typing \emph{dolph} for \emph{dolphin} and
+getting a second page of hits containing no more than 10 results.
 #+end_export
 #+begin_src go <<Add services, Pr. \ref{pr:nev}>>=
-  query = "?t=E&n=10&p=2"
+  query = "?t=dolph&n=10&p=2"
   service = Service{Name: "taxi", Query: query}
   services = append(services, service)
 #+end_src

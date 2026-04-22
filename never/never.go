@@ -131,7 +131,7 @@ func index(w http.ResponseWriter, r *http.Request,
 func init() {
 	var service Service
 	var query string
-	query = "?t=E&n=10&p=2"
+	query = "?t=dolph&n=10&p=2"
 	service = Service{Name: "taxi", Query: query}
 	services = append(services, service)
 	query = "?t=278148,602633"
@@ -225,7 +225,7 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 		pageNum = 1
 	}
 	offset = (pageNum - 1) * limit
-	ids, err := neidb.Taxids(name, limit, offset)
+	ids, err := neidb.CommonTaxids(name, limit, offset)
 	util.Check(err)
 	out := []Taxon{}
 	for _, id := range ids {
