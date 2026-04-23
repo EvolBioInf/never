@@ -569,8 +569,8 @@ Our server is a group effort, as is the underlying Neighbors package.
     <code>never</code></a>, developed by
   the <a href="https://evolbioinf.github.io/">Research Group
   Bioinformatics</a> at
-  the <a href="https://evolbio.mpg.de">Max-Planck-Institute for
-  Evolutionary Biology</a> using
+  the <a href="https://www.evolbio.mpg.de">Max-Planck-Institute
+  for Evolutionary Biology</a> using
   our <a href="https://github.com/evolbioinf/neighbors">
     Neighbors</a> package.
 #+end_src
