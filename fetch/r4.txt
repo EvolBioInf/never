@@ -1,3 +1,18 @@
-{
-    "taxid": 9605
-}
+[
+    {
+        "level": "complete",
+        "count": 3
+    },
+    {
+        "level": "chromosome",
+        "count": 1107
+    },
+    {
+        "level": "scaffold",
+        "count": 978
+    },
+    {
+        "level": "contig",
+        "count": 410
+    }
+]

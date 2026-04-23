@@ -1,0 +1,62 @@
+[
+    {
+        "taxid": 9606,
+        "parent": 9605,
+        "name": "Homo sapiens",
+        "common_name": "human"
+    },
+    {
+        "taxid": 3472185,
+        "parent": 2676648,
+        "name": "Coxiella endosymbiont of Homo sapiens",
+        "common_name": ""
+    },
+    {
+        "taxid": 2665953,
+        "parent": 2665952,
+        "name": "Homo sapiens environmental sample",
+        "common_name": ""
+    },
+    {
+        "taxid": 63221,
+        "parent": 9606,
+        "name": "Homo sapiens neanderthalensis",
+        "common_name": "Neandertal"
+    },
+    {
+        "taxid": 741158,
+        "parent": 9606,
+        "name": "Homo sapiens subsp. 'Denisova'",
+        "common_name": "Denisova hominin"
+    },
+    {
+        "taxid": 1849111,
+        "parent": 1002697,
+        "name": "Homo sapiens x Cricetulus griseus hybrid cell line",
+        "common_name": ""
+    },
+    {
+        "taxid": 1131344,
+        "parent": 1002697,
+        "name": "Homo sapiens x Mus musculus hybrid cell line",
+        "common_name": ""
+    },
+    {
+        "taxid": 2883641,
+        "parent": 2883640,
+        "name": "Homo sapiens x Pan troglodytes tetraploid cell line",
+        "common_name": ""
+    },
+    {
+        "taxid": 2045059,
+        "parent": 1002697,
+        "name": "Homo sapiens x Rattus norvegicus fusion cell line",
+        "common_name": ""
+    },
+    {
+        "taxid": 1383439,
+        "parent": 1002697,
+        "name": "Homo sapiens/Mus musculus xenograft",
+        "common_name": ""
+    }
+]

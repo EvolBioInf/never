@@ -128,12 +128,6 @@ We print the response to the standard output stream.
   fmt.Printf("%s", body)
 #+end_src
 #+begin_export latex
-We import \ty{fmt}.
-#+end_export
-#+begin_src go <<Imports, Pr. \ref{pr:fet}>>=
-  "fmt"
-#+end_src
-#+begin_export latex
 We are finished writing \ty{fetch}, time to test it.
 
 \section{Testing}\label{sec:testFetch}
@@ -184,10 +178,10 @@ querying its index page.
 #+end_src
 #+begin_export latex
 At this point we have established whether or not \ty{fetch} is
-working. But just for good measure, let's also query the other ten
+working. But just for good measure, let's also query the other 14
 services provided by \ty{never} at the time of writing. We can
 classify these services by query, which may consist of a single taxon
-ID, multiple taxon IDs, a single name, or multiple accessions.
+ID, multiple taxon IDs, a single name, or multiple genome accessions.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:fet}>>=
   //<<Query single taxid, Pr. \ref{pr:fet}>>
@@ -201,29 +195,32 @@ pairs of keys and values separated by ampersands, for example,
 \begin{verbatim}
 ?k1=v1&k2=v2
 \end{verbatim}
-The services \ty{accessions}, \ty{children}, and \ty{parent} each
-query a single taxon ID. Our first query is the taxon ID of \emph{Homo
-sapiens}, 9606, which is passed as the value of key \ty{t}. The
-extended URLs we need for testing follow the pattern
+The five services \ty{children}, \ty{num\_genomes},
+\ty{num\_genomes\_rec}, \ty{parent}, and \ty{subtree} each query a
+single taxon ID. Our query is the taxon ID of \emph{Homo sapiens},
+9606, which is passed as the value of key \ty{t}. The extended URLs we
+need for testing follow the pattern
 \begin{verbatim}
 url/service/?query
 \end{verbatim}
 We use a template to construct these extended URLs for testing
-\ty{accessions}, \ty{children}, \ty{parent}, and \ty{subtree}.
+\ty{children}, \ty{num\_genomes}, \ty{num\_genomes\_rec}, \ty{parent},
+and \ty{subtree}.
 #+end_export
 #+begin_src go <<Query single taxid, Pr. \ref{pr:fet}>>=
   query := "t=9606"
   tmpl := "%s/%s/?%s"
-  //<<Test \ty{accessions}, Pr. \ref{pr:fet}>>
   //<<Test \ty{children}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{num\_genomes}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{num\_genomes\_rec}, Pr. \ref{pr:fet}>>
   //<<Test \ty{parent}, Pr. \ref{pr:fet}>>
   //<<Test \ty{subtree}, Pr. \ref{pr:fet}>>
 #+end_src
 #+begin_export latex
-We test the service \ty{accessions}.
+We test the service \ty{children}.
 #+end_export
-#+begin_src go <<Test \ty{accessions}, Pr. \ref{pr:fet}>>=
-  eURL := fmt.Sprintf(tmpl, url, "accessions", query)
+#+begin_src go <<Test \ty{children}, Pr. \ref{pr:fet}>>=
+  eURL := fmt.Sprintf(tmpl, url, "children", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
 #+end_src
@@ -234,10 +231,18 @@ We import \ty{fmt}.
   "fmt"
 #+end_src
 #+begin_export latex
-We test the service \ty{children}.
+We test the service \ty{num\_genomes}.
 #+end_export
-#+begin_src go <<Test \ty{children}, Pr. \ref{pr:fet}>>=
-  eURL = fmt.Sprintf(tmpl, url, "children", query)
+#+begin_src go <<Test \ty{num\_genomes}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "num_genomes", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test the recursive version of \ty{num\_genomes}.
+#+end_export
+#+begin_src go <<Test \ty{num\_genomes\_rec}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "num_genomes_rec", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
 #+end_src
@@ -258,38 +263,90 @@ We test the service \ty{subtree}.
   tests = append(tests, test)
 #+end_src
 #+begin_export latex
-We set the query to two taxa, 9606 for \emph{Homo sapiens} as before,
-741158 for human subspecies Denisova, and 63221 for human subspecies
-neanderthalensis. Then we call the three services \ty{mrca},
-\ty{names}, and \ty{ranks} with these three taxa.
+We set the query to the three taxa, 9606 for \emph{Homo sapiens} as
+before, 741158 for human subspecies Denisova, and 63221 for human
+subspecies neanderthalensis. Then we test the first three of six
+services that take multiple taxon IDs as arguments, \ty{accessions},
+\ty{mrca}, \ty{names}. For the service \ty{path} we require two taxon
+IDs on a lineage, for which we use humans as before and mammals,
+40674. With these two taxa we test not only \ty{path} but also
+\ty{ranks} and \ty{taxa\_info}.
 #+end_export
 #+begin_src go <<Query multiple taxids, Pr. \ref{pr:fet}>>=
   query = "t=9606,741158,63221"
+  //<<Test \ty{accessions}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{mrca}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{names}, Pr. \ref{pr:fet}>>
+  query = "t=9606,40674"
+  //<<Test \ty{path}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{ranks}, Pr. \ref{pr:fet}>>
+  //<<Test \ty{taxa\_info}, Pr. \ref{pr:fet}>>
+#+end_src
+#+begin_export latex
+We test \ty{accessions}.
+#+end_export
+#+begin_src go <<Test \ty{accessions}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "accessions", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test \ty{mrca}.
+#+end_export
+#+begin_src go <<Test \ty{mrca}, Pr. \ref{pr:fet}>>=
   eURL = fmt.Sprintf(tmpl, url, "mrca", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test \ty{names}.
+#+end_export
+#+begin_src go <<Test \ty{names}, Pr. \ref{pr:fet}>>=
   eURL = fmt.Sprintf(tmpl, url, "names", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We get the \ty{path} between human (9606) and mammals (40674).
+#+end_export
+#+begin_src go <<Test \ty{path}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "path", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test \ty{ranks}.
+#+end_export
+#+begin_src go <<Test \ty{ranks}, Pr. \ref{pr:fet}>>=
   eURL = fmt.Sprintf(tmpl, url, "ranks", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
 #+end_src
 #+begin_export latex
-We set our query to the single taxon \emph{Homo sapiens} and run the
-services \ty{taxi} and \ty{taxids}.
+We test \ty{taxa\_info}.
 #+end_export
-#+begin_src go <<Query single name, Pr. \ref{pr:fet}>>=
-  query = "t=Homo sapiens"
-  eURL = fmt.Sprintf(tmpl, url, "taxi", query)
-  test = exec.Command("./fetch", eURL)
-  tests = append(tests, test)
-  eURL = fmt.Sprintf(tmpl, url, "taxids", query)
+#+begin_src go <<Test \ty{taxa\_info}, Pr. \ref{pr:fet}>>=
+  eURL = fmt.Sprintf(tmpl, url, "taxa_info", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
 #+end_src
 #+begin_export latex
-We set our query to two accessions and run the \ty{levels} service.
+We set our query to the single taxon \emph{Homo sapiens} and run the
+services \ty{taxids} and \ty{taxi}.
+#+end_export
+#+begin_src go <<Query single name, Pr. \ref{pr:fet}>>=
+  query = "t=Homo sapiens"
+  eURL = fmt.Sprintf(tmpl, url, "taxids", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+  query += "&n=10&p=1"
+  eURL = fmt.Sprintf(tmpl, url, "taxi", query)
+  test = exec.Command("./fetch", eURL)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We set our query to two genome accessions and run the \ty{levels}
+service.
 #+end_export
 #+begin_src go <<Query multiple accessions, Pr. \ref{pr:fet}>>=
   query = "a=GCF_000001405.40,GCA_000002115.2"
@@ -299,7 +356,7 @@ We set our query to two accessions and run the \ty{levels} service.
 #+end_src
 #+begin_export latex
 We have now constructed all our tests. When we run one of them, we
-compare what we get to what we want, which we is stored in files
+compare what we get to what we want, which is stored in files
 \ty{r1.txt}, \ty{r2.txt}, and so on.
 #+end_export
 #+begin_src go <<Run test, Pr. \ref{pr:fet}>>=
@@ -307,13 +364,13 @@ compare what we get to what we want, which we is stored in files
   if err != nil {
 	  t.Error(err)
   }
-  name := fmt.Sprintf("r%d.txt", i+1)
-  want, err := os.ReadFile(name)
+  f := fmt.Sprintf("r%d.txt", i+1)
+  want, err := os.ReadFile(f)
   if err != nil {
 	  t.Error(err)
   }
   if !bytes.Equal(get, want) {
-	  t.Errorf("get:\n%s\nwant:\n%s\n", get, want)
+	  t.Errorf("%s get:\n%s\nwant:\n%s\n", f, get, want)
   }
 #+end_src
 #+begin_export latex

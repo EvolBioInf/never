@@ -1,10 +1,10 @@
 [
     {
-        "accession": "GCF_000001405.40",
-        "level": "chromosome"
+        "taxid": 9606,
+        "rank": "species"
     },
     {
-        "accession": "GCA_000002115.2",
-        "level": "chromosome"
+        "taxid": 40674,
+        "rank": "class"
     }
 ]
