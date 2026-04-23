@@ -1,0 +1,29 @@
+[
+    {
+        "taxid": 278148,
+        "accessions": [
+            {
+                "accession": "GCF_001618845.1",
+                "level": "complete"
+            }
+        ]
+    },
+    {
+        "taxid": 602633,
+        "accessions": [
+            {
+                "accession": "GCA_003063835.1",
+                "level": "scaffold"
+            }
+        ]
+    },
+    {
+        "taxid": 765698,
+        "accessions": [
+            {
+                "accession": "GCF_000185905.1",
+                "level": "complete"
+            }
+        ]
+    }
+]

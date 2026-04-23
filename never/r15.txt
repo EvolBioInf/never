@@ -1,0 +1,10 @@
+[
+    {
+        "accession": "GCF_000001405.40",
+        "level": "chromosome"
+    },
+    {
+        "accession": "GCA_000002115.2",
+        "level": "chromosome"
+    }
+]

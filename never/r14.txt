@@ -1,0 +1,62 @@
+[
+    {
+        "taxid": 27610,
+        "parent": 27609,
+        "name": "Lagenorhynchus albirostris",
+        "common_name": "white-beaked dolphin"
+    },
+    {
+        "taxid": 3371109,
+        "parent": 3371041,
+        "name": "Leucopleurus acutus",
+        "common_name": "Atlantic white-sided dolphin"
+    },
+    {
+        "taxid": 118798,
+        "parent": 48750,
+        "name": "Platanista gangetica",
+        "common_name": "Ganges River dolphin"
+    },
+    {
+        "taxid": 103600,
+        "parent": 103599,
+        "name": "Sousa chinensis",
+        "common_name": "Indo-pacific humpbacked dolphin"
+    },
+    {
+        "taxid": 9737,
+        "parent": 9734,
+        "name": "Stenella coeruleoalba",
+        "common_name": "striped dolphin"
+    },
+    {
+        "taxid": 79784,
+        "parent": 9738,
+        "name": "Tursiops aduncus",
+        "common_name": "Indo-pacific bottlenose dolphin"
+    },
+    {
+        "taxid": 645425,
+        "parent": 1239571,
+        "name": "Bottlenose dolphin astrovirus 1",
+        "common_name": ""
+    },
+    {
+        "taxid": 2716128,
+        "parent": 2724084,
+        "name": "Bottlenose dolphin coronavirus",
+        "common_name": ""
+    },
+    {
+        "taxid": 2022783,
+        "parent": 1981153,
+        "name": "Common bottlenose dolphin gammaherpesvirus 1 strain Sarasota",
+        "common_name": ""
+    },
+    {
+        "taxid": 34814,
+        "parent": 13453,
+        "name": "Coryphaena hippurus",
+        "common_name": "common dolphinfish"
+    }
+]

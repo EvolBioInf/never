@@ -1,9 +1,11 @@
+version = $(shell bash ../scripts/getVersion.sh)
+date = $(shell bash ../scripts/getDate.sh)
 nw = $(shell which noweb)
 
 all: never static/templates.html
 
 never: never.go
-	go build never.go
+	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" never.go
 never.go: never.org
 	if [ "$(nw)" != "" ]; then\
 		bash ../scripts/org2nw never.org | notangle -Rnever.go | gofmt > never.go;\
@@ -18,7 +20,7 @@ test: never_test.go never.go
 	go test -v
 never_test.go: testNever.org
 	if [ "$(nw)" != "" ]; then\
-		awk -f ../scripts/preTangle.awk testNever.org | bash ../scripts/org2nw | notangle -Rnver_test.go | gofmt > never_test.go;\
+		awk -f ../scripts/preTangle.awk testNever.org | bash ../scripts/org2nw | notangle -Rnever_test.go | gofmt > never_test.go;\
 	fi
 
 clean:

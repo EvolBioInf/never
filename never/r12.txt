@@ -1,0 +1,104 @@
+[
+    {
+        "taxid": 562,
+        "parent": 561,
+        "is_leaf": false,
+        "name": "Escherichia coli",
+        "common_name": "",
+        "rank": "species",
+        "raw_genome_counts": [
+            {
+                "level": "complete",
+                "count": 7041
+            },
+            {
+                "level": "chromosome",
+                "count": 719
+            },
+            {
+                "level": "scaffold",
+                "count": 25175
+            },
+            {
+                "level": "contig",
+                "count": 350373
+            }
+        ],
+        "rec_genome_counts": [
+            {
+                "level": "complete",
+                "count": 7599
+            },
+            {
+                "level": "chromosome",
+                "count": 744
+            },
+            {
+                "level": "scaffold",
+                "count": 26945
+            },
+            {
+                "level": "contig",
+                "count": 356919
+            }
+        ],
+        "images": [
+            {
+                "id": 70910,
+                "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/4591",
+                "attribution": ""
+            }
+        ]
+    },
+    {
+        "taxid": 9606,
+        "parent": 9605,
+        "is_leaf": false,
+        "name": "Homo sapiens",
+        "common_name": "human",
+        "rank": "species",
+        "raw_genome_counts": [
+            {
+                "level": "complete",
+                "count": 3
+            },
+            {
+                "level": "chromosome",
+                "count": 554
+            },
+            {
+                "level": "scaffold",
+                "count": 978
+            },
+            {
+                "level": "contig",
+                "count": 410
+            }
+        ],
+        "rec_genome_counts": [
+            {
+                "level": "complete",
+                "count": 3
+            },
+            {
+                "level": "chromosome",
+                "count": 554
+            },
+            {
+                "level": "scaffold",
+                "count": 978
+            },
+            {
+                "level": "contig",
+                "count": 410
+            }
+        ],
+        "images": [
+            {
+                "id": 64784,
+                "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/422",
+                "attribution": "All of Us Initiative"
+            }
+        ]
+    }
+]

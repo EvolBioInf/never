@@ -1,0 +1,12 @@
+[
+    {
+        "taxid": 9606,
+        "name": "Homo sapiens",
+        "common_name": "human"
+    },
+    {
+        "taxid": 9605,
+        "name": "Homo",
+        "common_name": ""
+    }
+]

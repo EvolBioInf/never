@@ -92,7 +92,8 @@ purpose of \ty{never}, and an example command.
   u := "never [flag]..."
   p := "The program never is a web server " +
 	  "providing a REST API for the Neighbors package."
-  e := "never -o 10.254.1.21 -c Cert_bundle.pem -k privateKey.pem"
+  e := "never -o 10.254.1.21 -c Cert_bundle.pem " +
+	  "-k privateKey.pem"
   clio.Usage(u, p, e)
 #+end_src
 #+begin_export latex
@@ -218,7 +219,8 @@ available by registering a file server to that directory.
 #+end_export
 #+begin_src go <<Serve style files, Pr. \ref{pr:nev}>>=
   staticFiles := http.FileServer(http.Dir("static"))
-  http.Handle("/static/", http.StripPrefix("/static/", staticFiles))
+  http.Handle("/static/", http.StripPrefix("/static/",
+	  staticFiles))
 #+end_src
 #+begin_export latex
 We import \ty{http}.
@@ -544,22 +546,27 @@ We list the NCBI as the source of our raw data. And link to a package
 from which the current database was built.
 #+end_export
 #+begin_src html <<List data sources, Pr. \ref{pr:nev}>>=
-  We use the <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/">
-  taxonomy</a>
-  and <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">
-  genome data</a> supplied by
-  the <a href="https://www.ncbi.nlm.nih.gov/">NCBI</a> to build a custom
+  We use the
+  <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy">
+    taxonomy</a> and
+  <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">
+    genome data</a> supplied by the
+  <a href=https://www.ncbi.nlm.nih.gov> NCBI</a> to build a custom
   database. The compressed files we used for the construction of the
-  current database can be downloaded
-  from <a href="https://neighbors.evolbio.mpg.de/data/neidbData.tgz">here</a>,
-  the much larger sqlite database itself
-  is <a href="https://neighbors.evolbio.mpg.de/data/neidb">here</a>.
+  current database can be downloaded from
+  <a href="https://neighbors.evolbio.mpg.de/data/neidbData.tgz">
+    here</a>, the much larger sqlite database itself is
+  <a href="https://neighbors.evolbio.mpg.de/data/neidb">
+    here</a>.
 #+end_src
 #+begin_export latex
 Our server is a group effort, as is the underlying Neighbors package.
 #+end_export
 #+begin_src html <<Give credit for server, Pr. \ref{pr:nev}>>=
-  Our REST API for querying this database is developed by
+  Our REST API for querying this database is implemented in
+  the Neighbors server,
+  <a href="https://github.com/evolbioinf/never">
+    <code>never</code></a>, developed by
   the <a href="https://evolbioinf.github.io/">Research Group
   Bioinformatics</a> at
   the <a href="https://evolbio.mpg.de">Max-Planck-Institute for

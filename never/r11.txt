@@ -1,0 +1,10 @@
+[
+    {
+        "taxid": 9606,
+        "rank": "species"
+    },
+    {
+        "taxid": 9605,
+        "rank": "genus"
+    }
+]

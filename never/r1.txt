@@ -1,32 +1,23 @@
-{{define "index"}}
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    {{template "head" .}}
-  </head>
-  <body>
-    {{template "indexBody" .}}
-  </body>
-</html>
-{{end}}
-{{define "head"}}
+    
 <meta charset="UTF-8"/>
 <meta name="viewport"
         content="width=device-width,initial-scale=1.0"/>
 <link rel="stylesheet" href="./static/w3.css"/>
-<title>{{.Title}}</title>
-{{end}}
-{{define "indexBody"}}
-{{template "indexTitle"}}
-{{template "indexDescr" .}}
-{{template "services" .Services}}
-{{end}}
-{{define "indexTitle"}}
+<title>Neighbors</title>
+
+  </head>
+  <body>
+    
+
 <div class="w3-container">
   <h1>Welcome to the Neighbors REST API</h1>
 </div>
-{{end}}
-{{define "indexDescr"}}
+
+
 <div class="w3-container">
   <p>
     The Neighbors REST API gives access to genome sequences via
@@ -72,44 +63,122 @@
     <table>
       <tr>
           <td>Number of taxa</td>
-          <td>{{.Ntaxa}}</td>
+          <td>2,730,517</td>
       </tr>
       <tr>
           <td>Number of genomes</td>
-          <td>{{.Ngenomes}}</td>
+          <td>3,371,798</td>
       </tr>
     </table>
   </p>
   <p>
-            The database was last updated on {{.Date}}.
+            The database was last updated on May 22 2025 at 02:00:01 AM CEST.
   </p>    
  </div>
-{{end}}
-{{define "services"}}
+
+
 <div class="w3-container">
   <h2>Services</h2>
   <table class="w3-container">
-    {{template "table" .}}
-  </table>
-</div>
-{{end}}
-{{define "table"}}
-{{template "header"}}
-{{template "body" .}}
-{{end}}
-{{define "header"}}
+    
+
 <tr>
   <th>#</th>
   <th>Name</th>
   <th>Query</th>
 </tr>
-{{end}}
-{{define "body"}}
-{{range $i, $e := .}}
+
+
+
 <tr>
-  <td>{{inc $i}}</td>
-  <td>{{.Name}}</td>
-  <td><a href="{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
+  <td>1</td>
+  <td>accessions</td>
+  <td><a href="accessions?t=278148,602633"><code>?t=278148,602633</code></td>
 </tr>
-{{end}}
-{{end}}
+
+<tr>
+  <td>2</td>
+  <td>children</td>
+  <td><a href="children?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>3</td>
+  <td>levels</td>
+  <td><a href="levels?a=GCF_000001405.40,GCA_000002115.2"><code>?a=GCF_000001405.40,GCA_000002115.2</code></td>
+</tr>
+
+<tr>
+  <td>4</td>
+  <td>mrca</td>
+  <td><a href="mrca?t=9606,741158,63221"><code>?t=9606,741158,63221</code></td>
+</tr>
+
+<tr>
+  <td>5</td>
+  <td>names</td>
+  <td><a href="names?t=9606,9605"><code>?t=9606,9605</code></td>
+</tr>
+
+<tr>
+  <td>6</td>
+  <td>num_genomes</td>
+  <td><a href="num_genomes?t=562"><code>?t=562</code></td>
+</tr>
+
+<tr>
+  <td>7</td>
+  <td>num_genomes_rec</td>
+  <td><a href="num_genomes_rec?t=562"><code>?t=562</code></td>
+</tr>
+
+<tr>
+  <td>8</td>
+  <td>parent</td>
+  <td><a href="parent?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>9</td>
+  <td>path</td>
+  <td><a href="path?t=9606,40674"><code>?t=9606,40674</code></td>
+</tr>
+
+<tr>
+  <td>10</td>
+  <td>ranks</td>
+  <td><a href="ranks?t=9606,9605"><code>?t=9606,9605</code></td>
+</tr>
+
+<tr>
+  <td>11</td>
+  <td>subtree</td>
+  <td><a href="subtree?t=9606"><code>?t=9606</code></td>
+</tr>
+
+<tr>
+  <td>12</td>
+  <td>taxa_info</td>
+  <td><a href="taxa_info?t=562,9606"><code>?t=562,9606</code></td>
+</tr>
+
+<tr>
+  <td>13</td>
+  <td>taxi</td>
+  <td><a href="taxi?t=dolph&amp;n=10&amp;p=2"><code>?t=dolph&amp;n=10&amp;p=2</code></td>
+</tr>
+
+<tr>
+  <td>14</td>
+  <td>taxids</td>
+  <td><a href="taxids?t=Homo&#43;sapiens"><code>?t=Homo&#43;sapiens</code></td>
+</tr>
+
+
+
+  </table>
+</div>
+
+
+  </body>
+</html>

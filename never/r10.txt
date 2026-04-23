@@ -1,0 +1,86 @@
+[
+    {
+        "taxid": 9606,
+        "parent": 9605,
+        "name": "Homo sapiens",
+        "common_name": "human"
+    },
+    {
+        "taxid": 9605,
+        "parent": 207598,
+        "name": "Homo",
+        "common_name": ""
+    },
+    {
+        "taxid": 207598,
+        "parent": 9604,
+        "name": "Homininae",
+        "common_name": ""
+    },
+    {
+        "taxid": 9604,
+        "parent": 314295,
+        "name": "Hominidae",
+        "common_name": "great apes"
+    },
+    {
+        "taxid": 314295,
+        "parent": 9526,
+        "name": "Hominoidea",
+        "common_name": "apes"
+    },
+    {
+        "taxid": 9526,
+        "parent": 314293,
+        "name": "Catarrhini",
+        "common_name": ""
+    },
+    {
+        "taxid": 314293,
+        "parent": 376913,
+        "name": "Simiiformes",
+        "common_name": ""
+    },
+    {
+        "taxid": 376913,
+        "parent": 9443,
+        "name": "Haplorrhini",
+        "common_name": ""
+    },
+    {
+        "taxid": 9443,
+        "parent": 314146,
+        "name": "Primates",
+        "common_name": "primates"
+    },
+    {
+        "taxid": 314146,
+        "parent": 1437010,
+        "name": "Euarchontoglires",
+        "common_name": ""
+    },
+    {
+        "taxid": 1437010,
+        "parent": 9347,
+        "name": "Boreoeutheria",
+        "common_name": ""
+    },
+    {
+        "taxid": 9347,
+        "parent": 32525,
+        "name": "Eutheria",
+        "common_name": "placentals"
+    },
+    {
+        "taxid": 32525,
+        "parent": 40674,
+        "name": "Theria",
+        "common_name": ""
+    },
+    {
+        "taxid": 40674,
+        "parent": 32524,
+        "name": "Mammalia",
+        "common_name": "mammals"
+    }
+]

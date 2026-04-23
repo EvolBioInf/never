@@ -24,16 +24,22 @@ We import \ty{testing}.
 We construct a set of tests and run each one.
 #+end_export
 #+begin_src go <<Testing, Pr. \ref{pr:nev}>>=
-  tests := []*exec.Com{}
+  tests := []*exec.Cmd{}
   //<<Construct tests, Pr. \ref{pr:nev}>>
-  for _, test := range tests {
+  for i, test := range tests {
 	  //<<Run test, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
-We our program \ty{fetch} to query our server. The server is running
-on the local host and listens at port 8080. In our first test we fetch
-the data from the root of that server.
+We import \ty{exec}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:nev}>>=
+  "os/exec"
+#+end_src
+#+begin_export latex
+We use our program \ty{fetch} to query \ty{never}, which needs to be
+running on the local host listening at port 8080. In our first test we
+fetch the data from the root of \ty{never}.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:nev}>>=
   prog := "../bin/fetch"
@@ -57,7 +63,7 @@ single name, or multiple accessions.
 #+end_src
 #+begin_export latex
 A query is called by passing a URL to \ty{fetch} that is extended by
-the name of the service and a query,
+the name of the service and a query string,
 \begin{verbatim}
 url/service/?query
 \end{verbatim}
@@ -67,14 +73,208 @@ URLs.
 #+begin_src go <<Prepare queries, Pr. \ref{pr:nev}>>=
   tmpl := "%s/%s/?%s"
 #+end_src
-
 #+begin_export latex
-There are four services with single taxon IDs as arguments,
-\ty{accessions}, \ty{children}, \ty{parent}, and \ty{subtree}.
+There are five services with a single taxon-ID as argument,
+\ty{children}, \ty{num\_genomes}, \ty{num\_ge\-nomes\_rec}, \ty{parent},
+and \ty{subtree}.
 #+end_export
+#+begin_src go <<Query single taxid, Pr. \ref{pr:nev}>>=
+  //<<Test \ty{children}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{num\_genomes}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{num\_genomes\_rec}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{parent}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{subtree}, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+We test getting the children of human.
+#+end_export
+#+begin_src go <<Test \ty{children}, Pr. \ref{pr:nev}>>=
+  query := "t=9606"
+  u := fmt.Sprintf(tmpl, url, "children", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We import \ty{fmt}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:nev}>>=
+  "fmt"
+#+end_src
+#+begin_export latex
+Since in human the number of raw genomes and the number of recursive
+genomes is identical, we switch to \emph{Escherichia coli}, 562, as
+our focal taxon for getting the number of genomes. We begin with the
+raw number of genomes.
+#+end_export
+#+begin_src go <<Test \ty{num\_genomes}, Pr. \ref{pr:nev}>>=
+  query = "t=562"
+  u = fmt.Sprintf(tmpl, url, "num_genomes", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test getting the recursive number of genomes.
+#+end_export
+#+begin_src go <<Test \ty{num\_genomes\_rec}, Pr. \ref{pr:nev}>>=
+  u = fmt.Sprintf(tmpl, url, "num_genomes_rec", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test getting the parent.
+#+end_export
+#+begin_src go <<Test \ty{parent}, Pr. \ref{pr:nev}>>=
+  u = fmt.Sprintf(tmpl, url, "parent", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+Since the subtree rooted on \emph{E. coli} is vast, we switch back to
+human for testing \ty{subtree}.
+#+end_export
+#+begin_src go <<Test \ty{subtree}, Pr. \ref{pr:nev}>>=
+  query = "t=9606"
+  u = fmt.Sprintf(tmpl, url, "subtree", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+There are six services that take multiple taxon-IDs as argument,
+\ty{accessions}, \ty{mrca}, \ty{names}, \ty{path}, \ty{ranks}, and
+\ty{taxa\_info}. We test each one in turn.
+#+end_export
+#+begin_src go <<Query multiple taxids, Pr. \ref{pr:nev}>>=
+  //<<Test \ty{accessions}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{mrca}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{names}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{path}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{ranks}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{taxa\_info}, Pr \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+We carry out each test on the same set of taxa we already used in the example
+printed by \ty{never}. So we test getting genome accessions on the rather
+obscure bacteria \emph{Mesorhizobium ciceri} biovar biserrulae (278148)
+and \emph{Aphaenogaster floridana} (602633), which have two and one
+sequenced genome, respectively.
+#+end_export
+#+begin_src go <<Test \ty{accessions}, Pr. \ref{pr:nev}>>=
+  query = "t=278148,602633"
+  u = fmt.Sprintf(tmpl, url, "accessions", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We look up the most recent common ancestor of human (9606), Denisova
+(741158), and Neanderthal (63221).
+#+end_export
+#+begin_src go <<Test \ty{mrca}, Pr. \ref{pr:nev}>>=
+  query = "t=9606,741158,63221"
+  u = fmt.Sprintf(tmpl, url, "mrca", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We get the names of human (9606) and its genus, \emph{Homo} (9605).
+#+end_export
+#+begin_src go <<Test \ty{names}, Pr. \ref{pr:nev}>>=
+  query = "t=9606,9605"
+  u = fmt.Sprintf(tmpl, url, "names", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We get the path between human (9606) and mammals (40674).
+#+end_export
+#+begin_src go <<Test \ty{path}, Pr. \ref{pr:nev}>>=
+  query = "t=9606,40674"
+  u = fmt.Sprintf(tmpl, url, "path", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We look up the ranks of human (9606) and \emph{Homo} (9605).
+#+end_export
+#+begin_src go <<Test \ty{ranks}, Pr. \ref{pr:nev}>>=
+  query = "t=9606,9605"
+  u = fmt.Sprintf(tmpl, url, "ranks", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We look up the taxon info for \emph{E. coli} (562) and human (9606).
+#+end_export
+#+begin_src go <<Test \ty{taxa\_info}, Pr \ref{pr:nev}>>=
+  query = "t=562,9606"
+  u = fmt.Sprintf(tmpl, url, "taxa_info", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+Two services are centered on a single name, \ty{taxids} and \ty{taxi}.
+#+end_export
+#+begin_src go <<Query single name, Pr. \ref{pr:nev}>>=
+  //<<Test \ty{taxids}, Pr. \ref{pr:nev}>>
+  //<<Test \ty{taxi}, Pr. \ref{pr:nev}>>
+#+end_src
+#+begin_export latex
+We test \ty{taxids} on \emph{Homo sapiens}.
+#+end_export
+#+begin_src go <<Test \ty{taxids}, Pr. \ref{pr:nev}>>=
+  query = "t=homo+sapiens"
+  u = fmt.Sprintf(tmpl, url, "taxids", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+We test \ty{taxi} on ``dolph'' to simulate a user about to type
+``dolphin'', and request the second page of at most 10 results.
+#+end_export
+#+begin_src go <<Test \ty{taxi}, Pr. \ref{pr:nev}>>=
+  query = "t=dolph&n=10&p=2"
+  u = fmt.Sprintf(tmpl, url, "taxi", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+There is only one service that takes multiple genome accessions as
+query, \ty{levels}. We test it on two accessions.
+#+end_export
+#+begin_src go <<Query multiple accessions, Pr. \ref{pr:nev}>>=
+  query = "a=GCF_000001405.40,GCA_000002115.2"
+  u = fmt.Sprintf(tmpl, url, "levels", query)
+  test = exec.Command(prog, u)
+  tests = append(tests, test)
+#+end_src
+#+begin_export latex
+When we run a test, we compare the results we get to the results we
+want, which are stored in files \ty{r1.txt}, \ty{r2.txt}, and so
+on. If we don't get what we want, we write an error message that
+includes the name of the output file that tripped us up.
+#+end_export
+#+begin_src go <<Run test, Pr. \ref{pr:nev}>>=
+  get, err := test.Output()
+  if err != nil {
+	  t.Error(err)
+  }
+  f := "r" + strconv.Itoa(i+1) + ".txt"
+  want, err := os.ReadFile(f)
+  if err != nil {
+	  t.Error(err)
+  }
+  if !bytes.Equal(get, want) {
+	  t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
+  }
+#+end_src
+#+begin_export latex
+We import \ty{strconv}, \ty{os}, and \ty{bytes}.
+#+end_export
+#+begin_src go <<Testing imports, Pr. \ref{pr:nev}>>=
+  "strconv"
+  "os"
+  "bytes"
+#+end_src
 
-<<Run test, Pr. \ref{pr:nev}>>
 
 
 
-<<Testing imports, Pr. \ref{pr:nev}>>
