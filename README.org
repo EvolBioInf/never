@@ -7,7 +7,7 @@ Neighbors Server
 [[https://github.com/evolbioinf/neighbors][Neighbors]] is a package for finding the genomes of one or more target
 organisms and their closest relatives, their /neighbors/. The
 Neighbors server, =never=, provides web access to the facilities of
-the Neighbors package.
+the Neighbors package. A live installation can be accessed [[https://neighbors.evolbio.mpg.de/][here]].
 
 ** Author
 [[http://guanine.evolbio.mpg.de/][Bernhard Haubold]],
