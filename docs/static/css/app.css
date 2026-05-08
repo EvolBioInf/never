@@ -1,0 +1,16 @@
+:root {
+  --primary-color: #fafafa;
+  --secondary-color: #495057;
+  --accent-color: #006c66;
+  color: var(--secondary-color);
+  background-color: var(--primary-color);
+  font-family: "Roboto",Arial,sans-serif;
+}
+
+body {
+  padding: 0 20px 0 20px;
+}
+
+.api-description {
+  width: 65%;
+}

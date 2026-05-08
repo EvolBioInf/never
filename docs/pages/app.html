@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Neighbors</title>
+  </head>
+  <body>
+    <!-- This is not the local address, I'm setting the link that is used in the web, as the file server changes urls -->
+    <link rel="stylesheet" href="/docs/v2/static/css/app.css" media="screen" />
+    <header class="hero">
+      <h1>Welcome to the Neighbors REST API</h1>
+      <p class="api-description">
+        The Neighbors REST API gives access to genome sequences via the taxonomy
+        of sequenced life. <br />
+        <br />
+        Starting from one or more target organisms, the accessions of their
+        genomes can be looked up. In addition, the genome accessions of the
+        targets' closest relatives, their neighbors, can be looked up. Such
+        pairs of samples of target and neighbor genomes make good starting
+        material for developing diagnostic markers. <br />
+        <br />
+        We use the taxonomy and genome data supplied by the NCBI to build a
+        custom database. The compressed files we used for the construction of
+        the current database can be downloaded from here, the much larger sqlite
+        database itself is here. Our REST API for querying this database is
+        implemented in the Neighbors server, never, developed by the Research
+        Group Bioinformatics at the Max-Planck-Institute for Evolutionary
+        Biology using our Neighbors package. For more details on genetic marker
+        discovery from whole genome sequences with Neighbors and related
+        software, please read our publication.
+      </p>
+    </header>
+    <section>
+      <h1>Services</h1>
+
+    {{range .Endpoints}} {{block "components/endpoint-card/endpoint-card" .}} {{end}}
+    {{end}}
+  </body>
+</html>

@@ -1,0 +1,42 @@
+{{define "components/endpoint-card/detail"}}
+<!-- This is not the local address, I'm setting the link that is used in the web, as the file server changes urls -->
+<link
+  rel="stylesheet"
+  href="/docs/v2/static/css/endpoint_card_detail.css"
+  media="screen"
+/>
+<div class="endpoint-card-body-{{.RequestType}}" id="body-{{.Route}}">
+  <div class="description">
+    <h3>{{.Description}}</h3>
+    <h4>Path Parameters</h4>
+    <div class="path-params">
+      {{$totalArgs := len .PathParams}} {{range $index, $item := .PathParams}}
+      <div class="single-argument">
+        <p class="argument-definition">
+          {{$item.Name}} {{$item.Datatype}} {{if $item.Required}}
+          Required{{end}} ex: {{$item.Example}}
+        </p>
+        <div class="argument-description">{{.Description}}</div>
+      </div>
+      {{if lt $index (sub $totalArgs 1)}}
+      <hr class="arg-divider" />
+      {{end}} {{end}}
+    </div>
+    <div class="query-params">
+      {{if gt (len .QueryParams) 0}}
+      <h4>Query Parameters</h4>
+      {{end}}
+    </div>
+  </div>
+  <div class="responses">
+    <h4>Responses</h4>
+    <div class="response-codes">
+      <button>Example</button>
+      {{$totalResponses := len .ResponseCodes}} {{range $index, $item :=
+      .ResponseCodes}}
+      <button>{{$item.Code}}</button>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}

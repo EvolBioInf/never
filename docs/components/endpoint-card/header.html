@@ -1,0 +1,15 @@
+{{define "components/endpoint-card/header"}}
+<!-- This is not the local address, I'm setting the link that is used in the web, as the file server changes urls -->
+<link
+  rel="stylesheet"
+  href="/docs/v2/static/css/endpoint_card_header.css"
+  media="screen"
+/>
+  <div class="endpoint-card-header-{{.RequestType}}" id="header-{{.Route}}" onclick="location.href='#';">
+    <div class="request-main-info">
+      <p class="request-type-block-{{.RequestType}}">{{.RequestType}}</p>
+      <p>{{.Route}}</p>
+    </div>
+    <p>{{.Description}}</p>
+  </div>
+{{end}}
