@@ -12,14 +12,14 @@
     const oldId = "body-" + oldHash;
     const newId = "body-" + newHash;
 
-    const oldEndpoint = document.getElementById(oldId);
-    if (oldEndpoint) {
-      oldEndpoint.style.display = "none";
-    }
-
     const newEndpoint = document.getElementById(newId);
     if (newEndpoint) {
       newEndpoint.style.display = "flex";
+    }
+
+    const oldEndpoint = document.getElementById(oldId);
+    if (oldEndpoint) {
+      oldEndpoint.style.display = "none";
     }
   });
 </script>

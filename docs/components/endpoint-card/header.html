@@ -6,15 +6,22 @@
   media="screen"
 />
 
-<div
-  class="endpoint-card-header-{{.RequestType}}"
-  id="header-{{.Route}}"
-  onclick="location.href='#{{toCSSId .Route .RequestType}}';"
->
+<div class="endpoint-card-header-{{.RequestType}}" id="header-{{.Route}}">
   <div class="request-main-info">
     <p class="request-type-block-{{.RequestType}}">{{.RequestType}}</p>
     <p>{{.Route}}</p>
   </div>
   <p>{{.Description}}</p>
 </div>
+
+<script>
+  document.getElementById("header-{{.Route}}").onclick = () => {
+    const id = "{{toCSSId .Route .RequestType}}";
+    if (window.location.hash === "#" + id) {
+      location.href = "#";
+    } else {
+      location.href = "#" + id;
+    }
+  };
+</script>
 {{end}}
