@@ -52,7 +52,7 @@ func toCSSId(args ...string) string {
 		noSlash[i] = strings.ReplaceAll(str, "/", "-")
 	}
 
-	joined := strings.Join(noSlash, "-")
+	joined := strings.ReplaceAll(strings.Join(noSlash, "-"), "--", "-")
 	if len(joined) > 1 && joined[0] == '-' {
 		joined = joined[1:]
 	}
@@ -74,7 +74,12 @@ func RegisterRoutes(prefix string) {
 	})
 
 	fmt.Println("Reading files")
-	files := []string{path.Join("docs", "pages", "*.html"), path.Join("docs", "components", "*", "*.html")}
+	files := []string{
+		path.Join("docs", "pages", "*.html"),
+		path.Join("docs", "components", "*.html"),
+		path.Join("docs", "components", "*", "*.html"),
+	}
+
 	for _, file := range files {
 		tmpl, err = tmpl.ParseGlob(file)
 		if err != nil {
@@ -90,8 +95,6 @@ func RegisterRoutes(prefix string) {
 
 func defaultHandler(tmpl *template.Template, w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Served default")
-
-	fmt.Println(r.URL)
 
 	tmpl.ExecuteTemplate(w, "app.html",
 		&Content{Endpoints: []Endpoint{

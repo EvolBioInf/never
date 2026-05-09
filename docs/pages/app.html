@@ -33,7 +33,6 @@
     <section>
       <h1>Services</h1>
 
-    {{range .Endpoints}} {{block "components/endpoint-card/endpoint-card" .}} {{end}}
-    {{end}}
+      {{template "components/endpoint" .}}
   </body>
 </html>

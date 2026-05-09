@@ -1,0 +1,28 @@
+{{define "components/endpoint"}}
+<script type="text/javascript">
+  window.addEventListener("hashchange", ({ oldURL }) => {
+    const hashIndex = oldURL?.lastIndexOf("#") ?? -1;
+    const oldHash =
+      hashIndex !== -1 && oldURL?.length > hashIndex
+        ? oldURL.substring(hashIndex + 1)
+        : "";
+    const newHash =
+      window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
+
+    const oldId = "body-" + oldHash;
+    const newId = "body-" + newHash;
+
+    const oldEndpoint = document.getElementById(oldId);
+    if (oldEndpoint) {
+      oldEndpoint.style.display = "none";
+    }
+
+    const newEndpoint = document.getElementById(newId);
+    if (newEndpoint) {
+      newEndpoint.style.display = "flex";
+    }
+  });
+</script>
+
+{{range .Endpoints}} {{template "components/endpoint-card/endpoint-card" .}}
+{{end}} {{end}}

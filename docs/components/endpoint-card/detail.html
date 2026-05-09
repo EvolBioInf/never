@@ -5,7 +5,10 @@
   href="/docs/v2/static/css/endpoint-card-detail.css"
   media="screen"
 />
-<div class="endpoint-card-body-{{.RequestType}}" id="body-{{.Route}}">
+<div
+  class="endpoint-card-body-{{.RequestType}}"
+  id='{{toCSSId "body" .Route .RequestType}}'
+>
   <div class="description">
     <h3>{{.Description}}</h3>
     <h4>Path Parameters</h4>
