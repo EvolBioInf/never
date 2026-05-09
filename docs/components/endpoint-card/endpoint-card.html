@@ -1,8 +1,11 @@
 {{define "components/endpoint-card/endpoint-card"}}
-<section class="endpoint-card">
-  {{template "components/endpoint-card/header" .}} 
-  {{if true}}
-  {{template "components/endpoint-card/detail" .}}
-  {{end}}
+<link
+  rel="stylesheet"
+  href="/docs/v2/static/css/endpoint-card.css"
+  media="screen"
+/>
+<section class="endpoint-card" id="{{toCSSId .Route .RequestType}}">
+  {{template "components/endpoint-card/header" .}} {{if .Extended}} {{template
+  "components/endpoint-card/detail" .}} {{end}}
 </section>
 {{end}}

@@ -4,7 +4,11 @@
   --accent-color: #006c66;
   color: var(--secondary-color);
   background-color: var(--primary-color);
-  font-family: "Roboto",Arial,sans-serif;
+  font-family: "Roboto", Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
