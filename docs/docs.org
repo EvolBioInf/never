@@ -1,0 +1,307 @@
+#+begin_src latex
+      \section{docs}
+      \ty{docs} is the frontend application for never api/v2.
+      It serves to document all endpoints, requests, responses and
+      schemes provided by the api. Data is provided by a openAPI
+      document in json format. While based on go's html templating
+      package it uses basic html, css and javscript to render the docs.
+
+      \subsection*{Implementation}
+      The program \ty{docs} provides functions for registering the routes
+      and obtaining the api data from the openAPI document, as
+      well as types for holding the data in intermediate data structures.
+      \bpr{docs}{pr:docs}
+#+end_src
+
+#+begin_src go <<docs.go>>=
+  package docs
+
+  import (
+    //<<Imports, Pa. \ref{pa:docs}>>
+  )
+
+  //<<Types, Pa. \ref{pa:docs}>>
+
+  //<<Functions, Pa. \ref{pa:docs}>>
+#+end_src
+
+#+begin_src latex
+  The first function we will be looking at is
+  \ty{RegisterRoutes}. This function will be called by
+  the actual webserver. This allows the \ty{docs} to register
+  all its routes and setup how to handle the different frontend
+  endpoints. To prevent route clashing, the functions expects a prefix
+  that is prepended to all registered routes.
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>
+  func RegisterRoutes(prefix string) {
+	  // <<Create template, Pa. \ref{pa:docs}>>
+	  // <<Add template functions, Pa. \ref{pa:docs}>>
+	  // <<Read HTML files, Pa. \ref{pa:docs}>>
+	  // <<Retrieve Data, Pa. \ref{pa:docs}>>
+	  // <<Handle base route, Pa. \ref{pa:docs}>>
+	  // <<Handle static files, Pa. \ref{pa:docs}>>
+  }
+#+end_src
+
+#+begin_src latex
+  We begin \ty{RegisterRoutes} by creating a template called app.
+  For server side debugging purposes we also add some prints
+  for all the actions we take.
+#+end_src
+
+#+begin_src go <<Create template, Pa. \ref{pa:docs}>>
+  fmt.Println("Creating template")
+  tmpl := template.New("app")
+#+end_src
+
+#+begin_src latex
+    To be able to use those commands we need to
+    import the fmt and html/template packages.
+#+end_src
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>
+  "fmt"
+  "html/template"
+#+end_src
+
+#+begin_src latex
+  Functions for the templating engine are provided by a function map.
+  Every function defined within that map may be used inside the html
+  via the templating syntax. We need two utility functions in the html.
+  One is a simple subtraction the other is used for rewriting the endpoints names.
+  The endpoints are identified by their names in url syntax. Using those for
+  css identifiers does not seem like a good idea, so we replace some characters
+  to make them more css friendly.
+#+end_src
+
+#+begin_src go <<Add template functions, Pa. \ref{pa:docs}>>
+  fmt.Println("Registering custom functions")
+  tmpl.Func(template.FuncMap{
+    "sub": func(a, b int) int {
+	return a - b
+    },
+    "toCSSId": toCSSId,
+  })
+#+end_src
+
+#+begin_src latex
+  Now we define \ty{toCSSid}. The function is provided a variable
+  amount of strings and returns a single joined string. To get
+  rid of the hierarchical url structure of an endpoint we replace
+  every slash with a dash whichr results in strings in kebab-case notation.
+  Then we join the strings and delete leading dashes as well as dashes followed
+  by another dash.
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>
+  func toCSSId(args ...string) string {
+  	noSlash := make([]string, len(args))
+  	for i, str := range args {
+  		noSlash[i] = strings.ReplaceAll(str, "/", "-")
+  	}
+  
+  	joined := strings.ReplaceAll(strings.Join(noSlash, "-"), "--", "-")
+  	if len(joined) > 1 && joined[0] == '-' {
+  		joined = joined[1:]
+  	}
+  
+  	return joined
+  }
+#+end_src
+
+#+begin_src latex
+  Reading the HTML files is rather simple. We just define an
+  array of strings to all the files paths and parse them using the
+  template object. Instead of writing down every HTML file
+  explicitly, we can use wildcards. This allows us to just define
+  the directories of the files instead. Addionally we need to react
+  to errors during parsing. The easiest way to do this is by printing
+  them to the console.
+#+end_src
+
+#+begin_src go <<Read HTML files, Pa. \ref{pa:docs}>>
+  fmt.Println("Reading files")
+  files:= []string{
+    path.Join("docs", "pages", "*.html"),
+    path.Join("docs", "components", "*.html"),
+    path.Join("docs", "components", "*", "*.html"),
+  }
+
+  for _, file := range files {
+    tmpl, err = tmpl.ParseGlob(file)
+    if err != nil {
+      fmt.Fprintf(os.Stderr, "Internal Server error: %s\n %d\n", err.Error(), http.StatusInternalServerError)
+    }
+  }
+#+end_src
+
+#+begin_src latex
+  The next step is to retrieve the data from the openAPI document.
+  For this we use the library libopenapi. This library parses a
+  byte slice from an openAPI document and lets us create a \ty{DocumentModel}.
+  Using this model we can retrieve the data and form it into an intermediate
+  representation. The intermediate representation needs to be taylored
+  to our spec and use for it within the html templating. With this in mind
+  we create the types that shall hold our data.
+#+end_src
+
+#+begin_src go <<Types, Pa. \ref{pa:docs}>>
+type Content struct {
+	Version     string
+	Description string
+	ApiVersion  string
+	ServerURL   string
+	Title       string
+	Tags        []Tag
+	Paths       []Path
+}
+
+type Tag struct {
+	Name        string
+	Description string
+}
+
+type Path struct {
+	Name       string
+	Operations []Operation
+}
+
+type Operation struct {
+	Description string
+	Parameters  []Parameter
+	Responses   []Response
+	Example     string
+}
+
+type Parameter struct {
+	ParamType   string
+	Name        string
+	Description string
+	Required    bool
+	Example     any
+	Schema      any
+}
+
+type Response struct {
+	Code        int
+	Description string
+	Mime        string
+	Schema      any
+	Example     any
+}
+#+end_src
+
+#+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>
+  retrieveData("/docs/api_spec.json")
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>
+  func retrieveData(filepath string) Content {
+ 	  // <<Create Model from library, Pa. \ref{pa:docs}>>
+ 	  // <<Parse data to Content, Pa. \ref{pa:docs}>>  
+  }
+#+end_src
+
+#+begin_src latex
+  We begin by reading the openAPI document. The library expects a 
+  byte slice in either yaml or json format. With that
+  raw data we create a Document which lets us build the model.
+#+end_src
+
+#+begin_src go <<Create Model from library, Pa. \ref{pa:docs}>>
+    fmt.Println("reading spec")
+    spec, _ := os.ReadFile("/docs/api_spec.json")
+
+    fmt.Println("creating document")
+    document, err := libopenapi.NewDocument(spec)
+    if err != nil {
+      panic(fmt.Sprintf("cannot create new document: %e", err))
+    }
+
+    fmt.Println("building model")
+    docModel, err := document.BuildV3Model()
+    if err != nil {
+      panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
+    }
+#+end_src
+
+#+begin_src latex
+  Just like the openAPI spec allows for broad and immensely 
+  detailed and broad specifications so does the model created by the library.
+  This means the Model is too unspecific and powerful for our purpose.
+  We now go through it and parse it bit by bit into our Content structure,
+  which is much more managable.
+#+end_src
+
+#+begin_src go <<Parse data to Content, Pa. \ref{pa:docs}>>
+	content := Content{
+		ApiVersion:  docModel.Model.Version,
+		Title:       docModel.Model.Info.Title,
+		Version:     docModel.Model.Info.Version,
+		Description: docModel.Model.Info.Description,
+		ServerURL:   docModel.Model.Servers[0].URL,
+	}
+
+  // <<Parse Tags, Pa. \ref{pa:docs}>>
+ 	// <<Parse Paths, Pa. \ref{pa:docs}>>
+#+end_src
+
+#+begin_src latex
+  The tags are a rather shallow structure, we can parse them by
+  iterating over a top level key of the Model.
+#+end_src
+
+#+begin_src go <<Parse Tags, Pa. \ref{pa:docs}>>
+	for _, tag := range docModel.Model.Tags {
+		content.Tags = append(content.Tags, Tag{
+      Name: tag.Name,
+      Description: tag.Description})
+	}
+#+end_src
+
+#+begin_src latex
+  Parsing the paths is much more complex. We can already see that by
+  just looking at how deeply nested our Path type is. All the same we
+  begin just like we did with the tags, just a few levels deeper.
+#+end_src
+
+#+begin_src go <<Parse Tags, Pa. \ref{pa:docs}>>
+for pathName, pathItem := range docModel.Model.Paths.PathItems.FromOldest() {
+		content.Paths = append(content.Paths, Path{
+			Name: pathName,
+		})
+    
+    // <<Parse path parameters, Pa. \ref{pa:docs}>>
+ 	  // <<Parse operations, Pa. \ref{pa:docs}>>
+	}
+#+end_src
+
+#+begin_src latex
+  As we dont differentiate between path level parameters and
+  operation level parameters in our data structure we extract 
+  the path parameters before creating the operations. We can use
+  them later on by adding them to the list of the operation's 
+  parameters.
+#+end_src
+
+#+begin_src go <<Parse path parameters, Pa. \ref{pa:docs}>>
+		var pathParams []Parameter
+		for _, parameter := range pathItem.Parameters {
+			schema, err := parameter.Schema.BuildSchema()
+
+			if err != nil {
+				panic(fmt.Sprintf("cannot build schema: %e", err))
+			}
+
+			pathParams = append(pathParams, Parameter{
+				ParamType:   "Path",
+				Name:        parameter.Name,
+				Description: parameter.Description,
+				Example:     schema.Example.Value,
+				Required:    *parameter.Required,
+				Schema:      schema.Type[0],
+			})
+		}
+#+end_src
