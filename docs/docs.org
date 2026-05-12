@@ -1,4 +1,4 @@
-#+begin_src latex
+#+begin_export latex
       \section{docs}
       \ty{docs} is the frontend application for never api/v2.
       It serves to document all endpoints, requests, responses and
@@ -11,7 +11,7 @@
       and obtaining the api data from the openAPI document, as
       well as types for holding the data in intermediate data structures.
       \bpr{docs}{pr:docs}
-#+end_src
+#+end_export
 
 #+begin_src go <<docs.go>>=
   package docs
@@ -25,93 +25,126 @@
   //<<Functions, Pa. \ref{pa:docs}>>
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
   The first function we will be looking at is
   \ty{RegisterRoutes}. This function will be called by
   the actual webserver. This allows the \ty{docs} to register
   all its routes and setup how to handle the different frontend
   endpoints. To prevent route clashing, the functions expects a prefix
   that is prepended to all registered routes.
-#+end_src
+#+end_export
 
-#+begin_src go <<Functions, Pa. \ref{pa:docs}>>
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
   func RegisterRoutes(prefix string) {
-	  // <<Create template, Pa. \ref{pa:docs}>>
-	  // <<Add template functions, Pa. \ref{pa:docs}>>
-	  // <<Read HTML files, Pa. \ref{pa:docs}>>
-	  // <<Retrieve Data, Pa. \ref{pa:docs}>>
-	  // <<Handle base route, Pa. \ref{pa:docs}>>
-	  // <<Handle static files, Pa. \ref{pa:docs}>>
+    // <<Create template, Pa. \ref{pa:docs}>>
+    // <<Add template functions, Pa. \ref{pa:docs}>>
+    // <<Read HTML files, Pa. \ref{pa:docs}>>
+    // <<Retrieve Data, Pa. \ref{pa:docs}>>
+    // <<Handle base route, Pa. \ref{pa:docs}>>
+    // <<Handle static files, Pa. \ref{pa:docs}>>
   }
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
   We begin \ty{RegisterRoutes} by creating a template called app.
   For server side debugging purposes we also add some prints
   for all the actions we take.
-#+end_src
+#+end_export
 
-#+begin_src go <<Create template, Pa. \ref{pa:docs}>>
+#+begin_src go <<Create template, Pa. \ref{pa:docs}>>=
   fmt.Println("Creating template")
   tmpl := template.New("app")
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
     To be able to use those commands we need to
     import the fmt and html/template packages.
-#+end_src
+#+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:docs}>>
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
   "fmt"
   "html/template"
-#+end_src
+#+end_export
 
-#+begin_src latex
+#+begin_export latex
   Functions for the templating engine are provided by a function map.
-  Every function defined within that map may be used inside the html
-  via the templating syntax. We need two utility functions in the html.
-  One is a simple subtraction the other is used for rewriting the endpoints names.
+  Every function defined within that map may be used inside the HTML
+  via the templating syntax. We need three utility functions for the HTML.
+  The first is a simple subtraction. 
+  \ty{toCSSId} is for rewriting the endpoints names.
   The endpoints are identified by their names in url syntax. Using those for
   css identifiers does not seem like a good idea, so we replace some characters
   to make them more css friendly.
-#+end_src
+  \ty{dict} lets us create dictionaries inside HTML. We use this to bypass the 
+  single parameter rule sub-templates.
+#+end_export
 
-#+begin_src go <<Add template functions, Pa. \ref{pa:docs}>>
+#+begin_src go <<Add template functions, Pa. \ref{pa:docs}>>=
   fmt.Println("Registering custom functions")
-  tmpl.Func(template.FuncMap{
+  tmpl.Funcs(template.FuncMap{
     "sub": func(a, b int) int {
-	return a - b
+  return a - b
     },
-    "toCSSId": toCSSId,
+    // <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>
+    // <<Create dict from args, Pa. \ref{pa:docs}>>
   })
-#+end_src
+#+end_export
 
-#+begin_src latex
+#+begin_export latex
   Now we define \ty{toCSSid}. The function is provided a variable
   amount of strings and returns a single joined string. To get
   rid of the hierarchical url structure of an endpoint we replace
   every slash with a dash whichr results in strings in kebab-case notation.
   Then we join the strings and delete leading dashes as well as dashes followed
   by another dash.
+#+end_export
+
+#+begin_src go <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>=
+	"toCSSId": func(args ...string) string {
+		noSlash := make([]string, len(args))
+		for i, str := range args {
+			noSlash[i] = strings.ReplaceAll(str, "/", "-")
+		}
+
+		joined := strings.ReplaceAll(strings.Join(noSlash, "-"), "--", "-")
+		if len(joined) > 1 && joined[0] == '-' {
+			joined = joined[1:]
+		}
+
+		return joined
+	},
 #+end_src
 
-#+begin_src go <<Functions, Pa. \ref{pa:docs}>>
-  func toCSSId(args ...string) string {
-  	noSlash := make([]string, len(args))
-  	for i, str := range args {
-  		noSlash[i] = strings.ReplaceAll(str, "/", "-")
-  	}
-  
-  	joined := strings.ReplaceAll(strings.Join(noSlash, "-"), "--", "-")
-  	if len(joined) > 1 && joined[0] == '-' {
-  		joined = joined[1:]
-  	}
-  
-  	return joined
-  }
+#+begin_export latex
+  As mentioned before, as of now go's html templating does not 
+  allow to pass multiple values from within a template to a 
+  sub-template. To bypass this we use a dict function. This
+  function takes a variable amount of arguments. It uses arguments
+  with an even index as a key and the following argument with an odd
+  index as a value. It should fail if the amount of arguments is not
+  even. 
+#+end_export
+
+#+begin_src go <<Create dict from args, Pa. \ref{pa:docs}>>=
+	"dict": func(args ...any) map[string]any {
+		dict := make(map[string]any)
+		if len(args)%2 != 0 {
+			panic("Cannot create dictionary in template. Number of parameters is odd.\n")
+		}
+
+		for i := 0; i < len(args); i += 2 {
+			key, ok := args[i].(string)
+			if !ok {
+				panic("Cannot create dictionary in template. Key argument is not a string.\n")
+			}
+
+			dict[key] = args[i+1]
+		}
+		return dict
+	},
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
   Reading the HTML files is rather simple. We just define an
   array of strings to all the files paths and parse them using the
   template object. Instead of writing down every HTML file
@@ -119,9 +152,9 @@
   the directories of the files instead. Addionally we need to react
   to errors during parsing. The easiest way to do this is by printing
   them to the console.
-#+end_src
+#+end_export
 
-#+begin_src go <<Read HTML files, Pa. \ref{pa:docs}>>
+#+begin_src go <<Read HTML files, Pa. \ref{pa:docs}>>=
   fmt.Println("Reading files")
   files:= []string{
     path.Join("docs", "pages", "*.html"),
@@ -129,6 +162,7 @@
     path.Join("docs", "components", "*", "*.html"),
   }
 
+  var err error
   for _, file := range files {
     tmpl, err = tmpl.ParseGlob(file)
     if err != nil {
@@ -137,7 +171,16 @@
   }
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
+  We also need to add an import for \ty{net/http} and \ty{path}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+	"net/http"
+ 	"path"
+#+end_src
+
+#+begin_export latex
   The next step is to retrieve the data from the openAPI document.
   For this we use the library libopenapi. This library parses a
   byte slice from an openAPI document and lets us create a \ty{DocumentModel}.
@@ -145,9 +188,9 @@
   representation. The intermediate representation needs to be taylored
   to our spec and use for it within the html templating. With this in mind
   we create the types that shall hold our data.
-#+end_src
+#+end_export
 
-#+begin_src go <<Types, Pa. \ref{pa:docs}>>
+#+begin_src go <<Types, Pa. \ref{pa:docs}>>=
 type Content struct {
 	Version     string
 	Description string
@@ -169,7 +212,9 @@ type Path struct {
 }
 
 type Operation struct {
+	Verb        string
 	Description string
+	Tags        []string
 	Parameters  []Parameter
 	Responses   []Response
 	Example     string
@@ -180,128 +225,331 @@ type Parameter struct {
 	Name        string
 	Description string
 	Required    bool
-	Example     any
-	Schema      any
+	Example     string
+	Schema      string
 }
 
 type Response struct {
 	Code        int
 	Description string
 	Mime        string
-	Schema      any
-	Example     any
+	Schema      string
+	Example     string
 }
 #+end_src
 
-#+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>
-  retrieveData("/docs/api_spec.json")
+#+begin_export latex
+  Now we import the library as well as some utility packages
+  and begin the retrieval process as described above.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+	"os"
+	"strings"
+
+	"github.com/pb33f/libopenapi"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 #+end_src
 
-#+begin_src go <<Functions, Pa. \ref{pa:docs}>>
+#+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
+  content := retrieveData("docs/api_spec.json")
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
   func retrieveData(filepath string) Content {
- 	  // <<Create Model from library, Pa. \ref{pa:docs}>>
- 	  // <<Parse data to Content, Pa. \ref{pa:docs}>>  
+    // <<Create Model from library, Pa. \ref{pa:docs}>>
+    // <<Parse data to Content, Pa. \ref{pa:docs}>>  
   }
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
   We begin by reading the openAPI document. The library expects a 
   byte slice in either yaml or json format. With that
   raw data we create a Document which lets us build the model.
+#+end_export
+
+#+begin_src go <<Create Model from library, Pa. \ref{pa:docs}>>=
+  fmt.Println("reading spec")
+  spec, _ := os.ReadFile(filepath)
+
+  fmt.Println("creating document")
+  document, err := libopenapi.NewDocument(spec)
+  if err != nil {
+    panic(fmt.Sprintf("cannot create new document: %e", err))
+  }
+
+  fmt.Println("building model")
+  docModel, err := document.BuildV3Model()
+  if err != nil {
+    panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
+  }
 #+end_src
 
-#+begin_src go <<Create Model from library, Pa. \ref{pa:docs}>>
-    fmt.Println("reading spec")
-    spec, _ := os.ReadFile("/docs/api_spec.json")
-
-    fmt.Println("creating document")
-    document, err := libopenapi.NewDocument(spec)
-    if err != nil {
-      panic(fmt.Sprintf("cannot create new document: %e", err))
-    }
-
-    fmt.Println("building model")
-    docModel, err := document.BuildV3Model()
-    if err != nil {
-      panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
-    }
-#+end_src
-
-#+begin_src latex
+#+begin_export latex
   Just like the openAPI spec allows for broad and immensely 
   detailed and broad specifications so does the model created by the library.
   This means the Model is too unspecific and powerful for our purpose.
   We now go through it and parse it bit by bit into our Content structure,
   which is much more managable.
-#+end_src
+#+end_export
 
-#+begin_src go <<Parse data to Content, Pa. \ref{pa:docs}>>
-	content := Content{
-		ApiVersion:  docModel.Model.Version,
-		Title:       docModel.Model.Info.Title,
-		Version:     docModel.Model.Info.Version,
-		Description: docModel.Model.Info.Description,
-		ServerURL:   docModel.Model.Servers[0].URL,
-	}
+#+begin_src go <<Parse data to Content, Pa. \ref{pa:docs}>>=
+  content := Content{
+    ApiVersion:  docModel.Model.Version,
+    Title:       docModel.Model.Info.Title,
+    Version:     docModel.Model.Info.Version,
+    Description: docModel.Model.Info.Description,
+    ServerURL:   docModel.Model.Servers[0].URL,
+  }
 
   // <<Parse Tags, Pa. \ref{pa:docs}>>
- 	// <<Parse Paths, Pa. \ref{pa:docs}>>
+  // <<Parse Paths, Pa. \ref{pa:docs}>>
+  return content
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
   The tags are a rather shallow structure, we can parse them by
   iterating over a top level key of the Model.
-#+end_src
+#+end_export
 
-#+begin_src go <<Parse Tags, Pa. \ref{pa:docs}>>
-	for _, tag := range docModel.Model.Tags {
-		content.Tags = append(content.Tags, Tag{
+#+begin_src go <<Parse Tags, Pa. \ref{pa:docs}>>=
+  for _, tag := range docModel.Model.Tags {
+    content.Tags = append(content.Tags, Tag{
       Name: tag.Name,
-      Description: tag.Description})
-	}
+      Description: tag.Description,
+    })
+  }
 #+end_src
 
-#+begin_src latex
+#+begin_export latex
   Parsing the paths is much more complex. We can already see that by
   just looking at how deeply nested our Path type is. All the same we
   begin just like we did with the tags, just a few levels deeper.
-#+end_src
+#+end_export
 
-#+begin_src go <<Parse Tags, Pa. \ref{pa:docs}>>
-for pathName, pathItem := range docModel.Model.Paths.PathItems.FromOldest() {
-		content.Paths = append(content.Paths, Path{
-			Name: pathName,
-		})
-    
+#+begin_src go <<Parse Paths, Pa. \ref{pa:docs}>>=
+  for pathName, pathItem := range docModel.Model.Paths.PathItems.FromOldest() {
+    newPath := Path{Name: pathName}
+
     // <<Parse path parameters, Pa. \ref{pa:docs}>>
- 	  // <<Parse operations, Pa. \ref{pa:docs}>>
-	}
+    // <<Parse operations, Pa. \ref{pa:docs}>>
+
+    content.Paths = append(content.Paths, newPath)
+  }
 #+end_src
 
-#+begin_src latex
-  As we dont differentiate between path level parameters and
+#+begin_export latex
+  As we don't differentiate between path level parameters and
   operation level parameters in our data structure we extract 
   the path parameters before creating the operations. We can use
   them later on by adding them to the list of the operation's 
-  parameters.
+  parameters. Parsing the operation's parameters later on follows
+  the same procedure. So creating a function for that seems
+  reasonable.
+#+end_export
+
+#+begin_src go <<Parse path parameters, Pa. \ref{pa:docs}>>=
+  pathParams := extractParameters(pathItem.Parameters)
 #+end_src
 
-#+begin_src go <<Parse path parameters, Pa. \ref{pa:docs}>>
-		var pathParams []Parameter
-		for _, parameter := range pathItem.Parameters {
-			schema, err := parameter.Schema.BuildSchema()
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
+func extractParameters(parameters []*v3.Parameter) []Parameter {
+	var parsed []Parameter
+	for _, parameter := range parameters {
+		schema, err := parameter.Schema.BuildSchema()
 
-			if err != nil {
-				panic(fmt.Sprintf("cannot build schema: %e", err))
+		if err != nil {
+			panic(fmt.Sprintf("cannot build schema: %e", err))
+		}
+
+		param := Parameter{
+			ParamType:   parameter.In,
+			Name:        parameter.Name,
+			Description: parameter.Description,
+		}
+
+		renderedSchema, err := schema.RenderInline()
+
+		if err != nil {
+			panic(fmt.Sprintf("cannot render schema: %e", err))
+		}
+
+		param.Schema = string(renderedSchema)
+
+		if parameter.Required != nil {
+			param.Required = *parameter.Required
+		}
+
+		if schema.Example != nil {
+			param.Example = schema.Example.Value
+		}
+
+		parsed = append(parsed, param)
+	}
+
+	return parsed
+}
+#+end_src
+
+#+begin_export latex
+  Parsing the operation is a four step process.
+  First we set the basic data like summary and the HTTP verb.
+  Then we parse the operation specific parameters and append the
+  path level parameters.
+  Using these parameters including their default and example value 
+  we construct an example query.
+  Lastly we parse the responses.
+#+end_export
+
+#+begin_src go <<Parse operations, Pa. \ref{pa:docs}>>=
+  for verb, operation := range pathItem.GetOperations().FromOldest() {
+    newOperation := Operation{
+			Verb:        verb,
+			Description: operation.Description,				
+      Tags:        operation.Tags,
+    }
+
+	  queryParams := extractParameters(operation.Parameters)
+	  newOperation.Parameters = append(newOperation.Parameters, queryParams...)
+	  newOperation.Parameters = append(newOperation.Parameters, pathParams...)
+
+    // <<Construct example, Pa. \ref{pa:docs}>>
+    // <<Parse Responses, Pa. \ref{pa:docs}>>
+  	newPath.Operations = append(newPath.Operations, newOperation)
+  }
+#+end_src
+
+#+begin_export latex
+  The example is made up of all the parameters that are defined for the operation
+  and provide an example field. We need to differentiate between path parameters
+  and query parameters, as path parameters replace the placeholder within the
+  url and query parameters are simply appended to it.
+#+end_export
+
+#+begin_src go <<Construct example, Pa. \ref{pa:docs}>>=
+	examplePath := newPath.Name
+	for _, param := range pathParams {
+		examplePath = strings.ReplaceAll(examplePath, param.Name, param.Example)
+	}
+
+	examplePath = strings.ReplaceAll(examplePath, "{", "")
+	examplePath = strings.ReplaceAll(examplePath, "}", "")
+  
+  // <<Append query parameters, Pa. \ref{pa:docs}>>
+
+#+end_src
+
+#+begin_export latex
+  Appending the query parameters is relatively straight forward.
+  If there are any query parameters, that have examples we append
+  a question mark. We then iterate over the parameters, if they 
+  have an example value we append their name followed by '=' 
+  and the example value. The discriminator is defined as '&'.
+#+end_export
+
+#+begin_src go <<Append query parameters, Pa. \ref{pa:docs}>>=
+
+	needsPlus := false
+	for _, param := range queryParams {
+		if param.Example != "" {
+			if needsPlus {
+				examplePath += "&"
+			} else {
+        examplePath += "?"
+				needsPlus = true
 			}
 
-			pathParams = append(pathParams, Parameter{
-				ParamType:   "Path",
-				Name:        parameter.Name,
-				Description: parameter.Description,
-				Example:     schema.Example.Value,
-				Required:    *parameter.Required,
-				Schema:      schema.Type[0],
-			})
+			examplePath += fmt.Sprintf("%s=%s", param.Name, param.Example)
 		}
+	}
 #+end_src
+
+#+begin_export latex
+  The response is made up of the primitively typed fields
+  \ty{Code} and \ty{Description} the \ty{Content}. 
+  As the response and response's \ty{Content} share a 1:1
+  relation we integrate the \ty{Content}'s fields into the
+  \ty{Response} type. To correctly render the schema we first
+  need to build a schema object. This follows the same procedure
+  as in the parameter extraction. 
+#+end_export
+
+#+begin_src go <<Parse Responses, Pa. \ref{pa:docs}>>=
+	for strCode, response := range operation.Responses.Codes.FromOldest() {
+		code, err := strconv.Atoi(strCode)
+		if err != nil {
+			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
+		}
+
+		if !response.Content.IsZero() {
+			responseContent := response.Content.First()
+
+			newResponse := Response{
+				Code:        code,
+				Description: response.Description,
+				Mime:        responseContent.Key(),
+			}
+
+			contentValue := responseContent.Value()
+			if contentValue != nil {
+				if contentValue.Example != nil {
+					newResponse.Example = contentValue.Example.Value
+				}
+
+		  	if contentValue.Schema != nil {
+			  	schema, err := contentValue.Schema.BuildSchema()
+			  	if err != nil {
+			  		panic(fmt.Sprintf("cannot build schema: %e", err))
+			  	}
+
+ 				  renderedSchema, err := schema.RenderInline()
+  			  if err != nil {
+	  		  	panic(fmt.Sprintf("cannot render schema: %e", err))
+		  	  }
+
+			    newResponse.Schema = string(renderedSchema)
+		    }
+		  }
+
+			newOperation.Responses = append(newOperation.Responses, newResponse)
+		}
+	}
+#+end_src
+
+#+begin_export latex 
+  We also need to add strconv to the imports as we used
+  it in the response parsing.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+  "strconv"
+#+end_src
+
+#+begin_export latex
+  The documentation frontend is a one pager. This means we only serve one route
+  and the HTML, CSS and JS takes care of all the rest. 
+#+end_export
+
+#+begin_src go <<Handle base route, Pa. \ref{pa:docs}>>=
+	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
+  func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
+    fmt.Println("served default")
+    tmpl.ExecuteTemplate(w, "app.html", content)
+  }
+#+end_src
+
+#+begin_export latex
+  As already mentioned the frontend relies on static files. Those
+  are mostly style sheets. Serving those requires a fileserver.
+  To improve url readability and conform to the given prefix
+  we make use of the stripprefix function, when registering
+  the handler.
+#+end_export
+
+#+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
+	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/static"))))
+#+end_src
+

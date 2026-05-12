@@ -17,12 +17,12 @@
       newEndpoint.style.display = "flex";
     }
 
-    const oldEndpoint = document.getElementById(oldId);
+  const oldEndpoint = document.getElementById(oldId);
     if (oldEndpoint) {
       oldEndpoint.style.display = "none";
     }
   });
 </script>
 
-{{range .Endpoints}} {{template "components/endpoint-card/endpoint-card" .}}
+{{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}}
 {{end}} {{end}}

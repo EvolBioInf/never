@@ -4,8 +4,11 @@
   href="/docs/v2/static/css/endpoint-card.css"
   media="screen"
 />
-<section class="endpoint-card" id="asdasd{{toCSSId .Route .RequestType}}">
-  {{template "components/endpoint-card/header" .}} {{template
-  "components/endpoint-card/detail" .}}
+{{$Name := .Name}}
+{{range .Operations}}
+<section class="endpoint-card" id="-{{toCSSId $Name .Verb}}">
+  {{template "components/endpoint-card/header" (dict "Name" $Name "Op" .)}} {{template
+  "components/endpoint-card/detail" (dict "Name" $Name "Op" .)}}
 </section>
+{{end}}
 {{end}}
