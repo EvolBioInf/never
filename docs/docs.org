@@ -212,12 +212,13 @@ type Path struct {
 }
 
 type Operation struct {
-	Verb        string
-	Description string
-	Tags        []string
-	Parameters  []Parameter
-	Responses   []Response
-	Example     string
+	Verb            string
+	Description     string
+	Tags            []string
+	PathParameters  []Parameter
+	QueryParameters []Parameter
+	Responses       []Response
+	Example         string
 }
 
 type Parameter struct {
@@ -339,13 +340,11 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  As we don't differentiate between path level parameters and
-  operation level parameters in our data structure we extract 
-  the path parameters before creating the operations. We can use
-  them later on by adding them to the list of the operation's 
-  parameters. Parsing the operation's parameters later on follows
-  the same procedure. So creating a function for that seems
-  reasonable.
+  As we save both the path level and operation level parameters 
+  within an operation, we need to extract the path parameters before 
+  creating the operations. Parsing the operation's parameters 
+  later on follows the same procedure. So creating a function 
+  for that seems reasonable.
 #+end_export
 
 #+begin_src go <<Parse path parameters, Pa. \ref{pa:docs}>>=
@@ -404,14 +403,14 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_src go <<Parse operations, Pa. \ref{pa:docs}>>=
   for verb, operation := range pathItem.GetOperations().FromOldest() {
     newOperation := Operation{
-			Verb:        verb,
+			Verb:        strings.ToUpper(verb),
 			Description: operation.Description,				
       Tags:        operation.Tags,
     }
+	  newOperation.PathParameters = append(newOperation.PathParameters, pathParams...)
 
 	  queryParams := extractParameters(operation.Parameters)
-	  newOperation.Parameters = append(newOperation.Parameters, queryParams...)
-	  newOperation.Parameters = append(newOperation.Parameters, pathParams...)
+	  newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
 
     // <<Construct example, Pa. \ref{pa:docs}>>
     // <<Parse Responses, Pa. \ref{pa:docs}>>
@@ -433,7 +432,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	}
 
 	examplePath = strings.ReplaceAll(examplePath, "{", "")
-	examplePath = strings.ReplaceAll(examplePath, "}", "")
+  newOperation.Example = strings.ReplaceAll(examplePath, "}", "")
   
   // <<Append query parameters, Pa. \ref{pa:docs}>>
 

@@ -37,12 +37,13 @@ type Path struct {
 }
 
 type Operation struct {
-	Verb        string
-	Description string
-	Tags        []string
-	Parameters  []Parameter
-	Responses   []Response
-	Example     string
+	Verb            string
+	Description     string
+	Tags            []string
+	PathParameters  []Parameter
+	QueryParameters []Parameter
+	Responses       []Response
+	Example         string
 }
 
 type Parameter struct {
@@ -84,6 +85,7 @@ func RegisterRoutes(prefix string) {
 
 			return joined
 		},
+
 		"dict": func(args ...any) map[string]any {
 			dict := make(map[string]any)
 			if len(args)%2 != 0 {
@@ -163,14 +165,14 @@ func retrieveData(filepath string) Content {
 
 		for verb, operation := range pathItem.GetOperations().FromOldest() {
 			newOperation := Operation{
-				Verb:        verb,
+				Verb:        strings.ToUpper(verb),
 				Description: operation.Description,
 				Tags:        operation.Tags,
 			}
+			newOperation.PathParameters = append(newOperation.PathParameters, pathParams...)
 
 			queryParams := extractParameters(operation.Parameters)
-			newOperation.Parameters = append(newOperation.Parameters, queryParams...)
-			newOperation.Parameters = append(newOperation.Parameters, pathParams...)
+			newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
 
 			examplePath := newPath.Name
 			for _, param := range pathParams {
@@ -178,7 +180,7 @@ func retrieveData(filepath string) Content {
 			}
 
 			examplePath = strings.ReplaceAll(examplePath, "{", "")
-			examplePath = strings.ReplaceAll(examplePath, "}", "")
+			newOperation.Example = strings.ReplaceAll(examplePath, "}", "")
 
 			needsPlus := false
 			for _, param := range queryParams {

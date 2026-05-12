@@ -1,6 +1,6 @@
 {{define "components/endpoint"}}
 <script type="text/javascript">
-  window.addEventListener("hashchange", ({ oldURL }) => {
+  const onHashUpdate = ({ oldURL }) => {
     const hashIndex = oldURL?.lastIndexOf("#") ?? -1;
     const oldHash =
       hashIndex !== -1 && oldURL?.length > hashIndex
@@ -21,7 +21,15 @@
     if (oldEndpoint) {
       oldEndpoint.style.display = "none";
     }
-  });
+  }
+
+  window.addEventListener("hashchange", onHashUpdate);
+  window.onload = () => {
+    onHashUpdate({oldURL: ""});
+    const newHash =
+      window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
+    document.getElementById("body-" + newHash).scrollIntoView();
+  }
 </script>
 
 {{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}}

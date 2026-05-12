@@ -1,9 +1,4 @@
 {{define "components/endpoint-card/endpoint-card"}}
-<link
-  rel="stylesheet"
-  href="/docs/v2/static/css/endpoint-card.css"
-  media="screen"
-/>
 {{$Name := .Name}}
 {{range .Operations}}
 <section class="endpoint-card" id="-{{toCSSId $Name .Verb}}">

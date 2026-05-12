@@ -1,45 +1,50 @@
 {{define "components/endpoint-card/detail"}}
-<!-- This is not the local address, I'm setting the link that is used in the web, as the file server changes urls -->
-<link
-  rel="stylesheet"
-  href="/docs/v2/static/css/endpoint-card-detail.css"
-  media="screen"
-/>
 <div
-  class="endpoint-card-body-{{.RequestType}}"
-  id='{{toCSSId "body" .Route .RequestType}}'
+  class="endpoint-card-body-{{.Op.Verb}}"
+  id='{{toCSSId "body" .Name .Op.Verb}}'
 >
   <div class="description">
-    <h3>{{.Description}}</h3>
-    <h4>Path Parameters</h4>
+    <h4>{{.Op.Description}}</h3>
     <div class="path-params">
-      {{$totalArgs := len .PathParams}} {{range $index, $item := .PathParams}}
-      <div class="single-argument">
-        <p class="argument-definition">
-          {{$item.Name}} {{$item.Datatype}} {{if $item.Required}}
-          Required{{end}} ex: {{$item.Example}}
-        </p>
-        <div class="argument-description">{{.Description}}</div>
+      <h4>Path Parameters</h4>
+        {{$totalArgs := len .Op.PathParameters}} 
+        {{range $index, $item := .Op.PathParameters}}
+          {{template "components/endpoint-card/parameter" (dict "index" $index "item" $item "totalArgs" $totalArgs) }}
+        {{end}}
+        {{if eq (len .Op.PathParameters) 0}}
+          <div class="single-argument">
+            <p class="argument-definition">
+              None
+            </p>
+          </div>
+        {{end}}
       </div>
-      {{if lt $index (sub $totalArgs 1)}}
-      <hr class="arg-divider" />
-      {{end}} {{end}}
-    </div>
     <div class="query-params">
-      {{if gt (len .QueryParams) 0}}
       <h4>Query Parameters</h4>
+      {{$totalArgs := len .Op.QueryParameters}} 
+      {{range $index, $item := .Op.QueryParameters}}
+        {{template "components/endpoint-card/parameter" (dict "index" $index "item" $item "totalArgs" $totalArgs) }}
       {{end}}
-    </div>
+      {{if eq (len .Op.QueryParameters) 0}}
+          <div class="single-argument">
+            <p class="argument-definition">
+              None
+            </p>
+          </div>
+      {{end}}
+      </div>
   </div>
   <div class="responses">
     <h4>Responses</h4>
     <div class="response-codes">
-      <button>Example</button>
-      {{$totalResponses := len .ResponseCodes}} {{range $index, $item :=
-      .ResponseCodes}}
-      <button>{{$item.Code}}</button>
+      <button class="response-code">Example</button>
+      {{$totalResponses := len .Op.Responses}}
+      {{range $index, $item := .Op.Responses}}
+      <button class="response-code">{{$item.Code}} {{$item.Description}}</button>
       {{end}}
     </div>
+    <input type="text" value="{{.Op.Example}}"/>
+    {{template "components/code-block"}}
   </div>
 </div>
 {{end}}

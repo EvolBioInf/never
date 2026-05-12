@@ -6,20 +6,22 @@
   padding-right: 15px;
   align-items: center;
   cursor: pointer;
+  background-color: color-mix(in srgb, var(--accent-color), white 90%);
+  z-index: 1;
 }
 
 .endpoint-card-header-GET:hover {
   animation-name: backgroundHover;
   animation-duration: 0.25s;
-  background-color: color-mix(in srgb, var(--accent-color), white 80%);
+  background-color: color-mix(in srgb, var(--accent-color), white 70%);
 }
 
 @keyframes backgroundHover {
   from {
-    background-color: var(--primary-color);
+    background-color: color-mix(in srgb, var(--accent-color), white 90%);
   }
   to {
-    background-color: color-mix(in srgb, var(--accent-color), white 80%);
+    background-color: color-mix(in srgb, var(--accent-color), white 70%);
   }
 }
 

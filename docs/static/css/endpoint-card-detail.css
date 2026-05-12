@@ -5,17 +5,12 @@
   margin-top: -10px;
   padding: 15px 0 10px 25px;
   display: none;
+  background-color: color-mix(in srgb, var(--accent-color), white 90%);
 }
 
 .description {
   width: 50%;
   border-right: 1px solid var(--accent-color);
-}
-
-.path-params {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
 }
 
 .arg-divider {
@@ -41,9 +36,16 @@
 
 .responses {
   padding-left: 25px;
+  width: 50%;
 }
 
 .response-codes {
   display: flex;
   overflow-x: scroll;
+  justify-content: flex-start;
+  margin-bottom: 15px;
+}
+
+.response-code {
+  margin-right: 15px;
 }
