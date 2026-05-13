@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -31,12 +32,13 @@ type Path struct {
 }
 
 type Operation struct {
-	Verb        string
-	Description string
-	Tags        []string
-	Parameters  []Parameter
-	Responses   []Response
-	Example     string
+	Verb            string
+	Description     string
+	Tags            []string
+	Parameters      []Parameter
+	Responses       []Response
+	Schema          string
+	ExampleResponse string
 }
 
 type Parameter struct {
@@ -52,13 +54,16 @@ type Response struct {
 	Code        int
 	Description string
 	Mime        string
-	Schema      string
 	Example     string
+}
+
+type WrappedJson struct {
+	value any
 }
 
 func main() {
 	fmt.Println("reading spec...")
-	spec, _ := os.ReadFile("api_spec.json")
+	spec, _ := os.ReadFile("../api_spec.json")
 
 	fmt.Println("read spec")
 
@@ -129,7 +134,6 @@ func main() {
 				code, err := strconv.Atoi(strCode)
 				if err != nil {
 					panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
-
 				}
 
 				if !response.Content.IsZero() {
@@ -139,24 +143,48 @@ func main() {
 						Code:        code,
 						Description: response.Description,
 						Mime:        responseContent.Key(),
-						Example:     responseContent.Value().Example.Value,
 					}
 
-					schema, err := responseContent.Value().Schema.BuildSchema()
-					if err != nil {
-						panic(fmt.Sprintf("cannot build schema: %e", err))
+					contentValue := responseContent.Value()
+					if newResponse.Code == 200 && contentValue != nil {
+
+						if contentValue.Examples.Len() > 0 {
+							ex := contentValue.Examples.First().Value()
+
+							marhshalled, err := ex.MarshalJSON()
+							if err != nil {
+								panic(fmt.Sprintf("cannot marshal example: %e", err))
+							}
+
+							var wrapped map[string]any
+							json.Unmarshal(marhshalled, &wrapped)
+							unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
+
+							if err != nil {
+								panic(fmt.Sprintf("cannot unwrap example: %e", err))
+							}
+
+							newOperation.ExampleResponse = string(unwrapped)
+						}
+
+						if contentValue.Schema != nil {
+							schema, err := contentValue.Schema.BuildSchema()
+							if err != nil {
+								panic(fmt.Sprintf("cannot build schema: %e", err))
+							}
+
+							renderedSchema, err := schema.MarshalJSONInline()
+							if err != nil {
+								panic(fmt.Sprintf("cannot render schema: %e", err))
+							}
+
+							newOperation.Schema = string(renderedSchema)
+						}
 					}
 
-					renderedSchema, err := schema.RenderInline()
-					if err != nil {
-						panic(fmt.Sprintf("cannot render schema: %e", err))
-					}
-
-					newResponse.Schema = string(renderedSchema)
 					newOperation.Responses = append(newOperation.Responses, newResponse)
 				}
 			}
-
 			newPath.Operations = append(newPath.Operations, newOperation)
 		}
 
@@ -192,7 +220,16 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 		}
 
 		if schema.Example != nil {
-			param.Example = schema.Example.Value
+			if schema.Example.Value != "" {
+				param.Example = schema.Example.Value
+			} else {
+				for i, c := range schema.Example.Content {
+					param.Example += c.Value
+					if i < len(schema.Example.Content)-1 {
+						param.Example += ","
+					}
+				}
+			}
 		}
 
 		parsed = append(parsed, param)

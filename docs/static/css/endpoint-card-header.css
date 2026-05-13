@@ -7,16 +7,15 @@
   align-items: center;
   cursor: pointer;
   background-color: color-mix(in srgb, var(--accent-color), white 90%);
-  z-index: 1;
 }
 
 .endpoint-card-header-GET:hover {
-  animation-name: backgroundHover;
+  animation-name: background-hover;
   animation-duration: 0.25s;
   background-color: color-mix(in srgb, var(--accent-color), white 70%);
 }
 
-@keyframes backgroundHover {
+@keyframes background-hover {
   from {
     background-color: color-mix(in srgb, var(--accent-color), white 90%);
   }

@@ -4,9 +4,10 @@
   id='{{toCSSId "body" .Name .Op.Verb}}'
 >
   <div class="description">
-    <h4>{{.Op.Description}}</h3>
+    <h3>Description</h3>
+    <p class="description-text">{{.Op.Description}}</p>
     <div class="path-params">
-      <h4>Path Parameters</h4>
+      <h3>Path Parameters</h3>
         {{$totalArgs := len .Op.PathParameters}} 
         {{range $index, $item := .Op.PathParameters}}
           {{template "components/endpoint-card/parameter" (dict "index" $index "item" $item "totalArgs" $totalArgs) }}
@@ -20,7 +21,7 @@
         {{end}}
       </div>
     <div class="query-params">
-      <h4>Query Parameters</h4>
+      <h3>Query Parameters</h3>
       {{$totalArgs := len .Op.QueryParameters}} 
       {{range $index, $item := .Op.QueryParameters}}
         {{template "components/endpoint-card/parameter" (dict "index" $index "item" $item "totalArgs" $totalArgs) }}
@@ -35,16 +36,35 @@
       </div>
   </div>
   <div class="responses">
-    <h4>Responses</h4>
+    <div class="response-upper">
+      <div class="response-example">
+        <input type="text" class="input-example" id='{{toCSSId "input" "example" .Name .Op.Verb}}' value="{{.Op.ExampleRequest}}"/>
+        <button class="run-example" id='{{toCSSId "run" "example" .Name .Op.Verb}}'>Run</button>
+        <script>
+          {const button = document.getElementById('{{toCSSId "run" "example" .Name .Op.Verb}}')
+          button.onclick = () => {
+            console.log("clicked buton", '{{toCSSId "run" "example" .Name .Op.Verb}}');
+            const input = document.getElementById('{{toCSSId "input" "example" .Name .Op.Verb}}')
+            const pre = document.getElementById('{{toCSSId "response" .Name .Op.Verb}}')
+            pre.innerHTML = input.value
+          }}
+        </script>
+      </div>
+      <h3 class="schema-title">Schema</h3>
+        {{template "components/code-block" (dict "Text" .Op.ExampleResponse "Id" (toCSSId "response" .Name .Op.Verb))}}
+        {{template "components/code-block" (dict "Text" .Op.Schema)}}
+    </div>
+    <hr class="arg-divider" />
+
     <div class="response-codes">
-      <button class="response-code">Example</button>
+      <h4 class="response-code-header">Code</h4>
+      <h4 class="response-code-header">Description</h4>
       {{$totalResponses := len .Op.Responses}}
       {{range $index, $item := .Op.Responses}}
-      <button class="response-code">{{$item.Code}} {{$item.Description}}</button>
+      <p class="response-code">{{$item.Code}}</p>
+      <p class="response-description">{{$item.Description}}</p>
       {{end}}
     </div>
-    <input type="text" value="{{.Op.Example}}"/>
-    {{template "components/code-block"}}
   </div>
 </div>
 {{end}}

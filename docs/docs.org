@@ -218,7 +218,9 @@ type Operation struct {
 	PathParameters  []Parameter
 	QueryParameters []Parameter
 	Responses       []Response
-	Example         string
+	ExampleRequest  string
+	ExampleResponse string
+  Schema          string
 }
 
 type Parameter struct {
@@ -234,8 +236,6 @@ type Response struct {
 	Code        int
 	Description string
 	Mime        string
-	Schema      string
-	Example     string
 }
 #+end_src
 
@@ -379,15 +379,36 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 			param.Required = *parameter.Required
 		}
 
-		if schema.Example != nil {
-			param.Example = schema.Example.Value
-		}
+    // <<Extract examples, Pa. \ref{pa:docs}>>
+	
 
 		parsed = append(parsed, param)
 	}
 
 	return parsed
 }
+#+end_src
+
+#+begin_export latex
+  The example is either stored in the schema example as a value or within the
+  example's content. If it's in its content, we need to loop over the content
+  elements and retrieve all the values by hand.
+#+end_export
+
+#+begin_src go <<Extract examples, Pa. \ref{pa:docs}>>=
+  if schema.Example != nil {
+	  if schema.Example.Value != "" {
+			param.Example = schema.Example.Value
+		} else {
+			for i, c := range schema.Example.Content {
+				param.Example += c.Value
+				if i < len(schema.Example.Content)-1 {
+					param.Example += ","
+				}
+			}
+		}
+	}
+
 #+end_src
 
 #+begin_export latex
@@ -426,13 +447,13 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Construct example, Pa. \ref{pa:docs}>>=
-	examplePath := newPath.Name
+	examplePath := content.ServerURL + newPath.Name
 	for _, param := range pathParams {
 		examplePath = strings.ReplaceAll(examplePath, param.Name, param.Example)
 	}
 
 	examplePath = strings.ReplaceAll(examplePath, "{", "")
-  newOperation.Example = strings.ReplaceAll(examplePath, "}", "")
+  examplePath = strings.ReplaceAll(examplePath, "}", "")
   
   // <<Append query parameters, Pa. \ref{pa:docs}>>
 
@@ -448,80 +469,160 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_src go <<Append query parameters, Pa. \ref{pa:docs}>>=
 
-	needsPlus := false
+	needsAnd := false
 	for _, param := range queryParams {
 		if param.Example != "" {
-			if needsPlus {
+			if needsAnd {
 				examplePath += "&"
 			} else {
         examplePath += "?"
-				needsPlus = true
+				needsAnd = true
 			}
 
 			examplePath += fmt.Sprintf("%s=%s", param.Name, param.Example)
 		}
 	}
+
+	newOperation.ExampleRequest = examplePath
 #+end_src
 
 #+begin_export latex
-  The response is made up of the primitively typed fields
-  \ty{Code} and \ty{Description} the \ty{Content}. 
-  As the response and response's \ty{Content} share a 1:1
-  relation we integrate the \ty{Content}'s fields into the
-  \ty{Response} type. To correctly render the schema we first
-  need to build a schema object. This follows the same procedure
-  as in the parameter extraction. 
+  The response contains different data depending on which
+  type of response we are currently handling. While all of 
+  them provide a code and description, it's just the response 
+  with code 200 that provides and example and schema.
 #+end_export
 
 #+begin_src go <<Parse Responses, Pa. \ref{pa:docs}>>=
 	for strCode, response := range operation.Responses.Codes.FromOldest() {
-		code, err := strconv.Atoi(strCode)
-		if err != nil {
-			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
+		var newResponse Response
+    if !response.Content.IsZero() {
+    // <<Read code and description, Pa. \ref{pa:docs}>>
+		// <<Act on response code, Pa. \ref{pa:docs}>>
+  
+  	newOperation.Responses = append(newOperation.Responses, newResponse)
 		}
-
-		if !response.Content.IsZero() {
-			responseContent := response.Content.First()
-
-			newResponse := Response{
-				Code:        code,
-				Description: response.Description,
-				Mime:        responseContent.Key(),
-			}
-
-			contentValue := responseContent.Value()
-			if contentValue != nil {
-				if contentValue.Example != nil {
-					newResponse.Example = contentValue.Example.Value
-				}
-
-		  	if contentValue.Schema != nil {
-			  	schema, err := contentValue.Schema.BuildSchema()
-			  	if err != nil {
-			  		panic(fmt.Sprintf("cannot build schema: %e", err))
-			  	}
-
- 				  renderedSchema, err := schema.RenderInline()
-  			  if err != nil {
-	  		  	panic(fmt.Sprintf("cannot render schema: %e", err))
-		  	  }
-
-			    newResponse.Schema = string(renderedSchema)
-		    }
-		  }
-
-			newOperation.Responses = append(newOperation.Responses, newResponse)
-		}
-	}
+  }
 #+end_src
 
-#+begin_export latex 
-  We also need to add strconv to the imports as we used
-  it in the response parsing.
+#+begin_export latex
+  The code is provided as the key for the current response.
+  As it is a string and we expect an integer, we need to convert it. 
+  To do that we import \ty{strconv} and later use it to call \ty{Atoi}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
   "strconv"
+#+end_src
+
+#+begin_src go <<Read code and description, Pa. \ref{pa:docs}>>=
+    code, err := strconv.Atoi(strCode)
+		if err != nil {
+			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
+		}
+
+		responseContent := response.Content.First()
+		newResponse.Code = code
+		newResponse.Description = response.Description
+		newResponse.Mime = responseContent.Key()
+#+end_src
+
+#+begin_export latex
+  To differentiate between response codes we first check whether it is of code
+  200. If it is we need to make sure that is has content.
+#+end_export
+
+#+begin_src go <<Act on response code, Pa. \ref{pa:docs}>>=
+	contentValue := responseContent.Value()
+	if newResponse.Code == 200 && contentValue != nil {
+      // <<Parse response example, Pa. \ref{pa:docs}>>
+      // <<Parse response schema, Pa. \ref{pa:docs}>>
+	 }
+#+end_src
+
+#+begin_export latex 
+  Parsing the example requires \ty{encoding/json}. This package provides
+  json specific utility functions. Most importantly it allows us to pretty print
+  using \ty{MarshalIndent}.
+  So we need to import the package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+  "encoding/json"
+#+end_src
+
+#+begin_export latex
+  To parse the example we first check, whether there is an example to begin with.
+  If there is an example we take it and marshal that. The example is, for some reason,
+  wrapped in an object called \ty{"value"}. Before turning it into our final json
+  representation, we need to unwrap the response, to comply with the underlying api.
+#+end_export
+
+#+begin_src go <<Parse response example, Pa. \ref{pa:docs}>>=
+	if contentValue.Examples.Len() > 0 {
+		ex := contentValue.Examples.First().Value()
+		marhshalled, err := ex.MarshalJSON()
+
+		if err != nil {
+			panic(fmt.Sprintf("cannot marshal example: %e", err))
+		}
+
+    // <<Unwrap response example, Pa. \ref{pa:docs}>>
+	}
+#+end_src
+
+#+begin_export latex
+  My idea of unwrapping an object consists of two steps:
+  The first one is to use the json string to create a json object, essentially unmarshalling it.
+  The second step is remarshalling it with the correct indentation using a deeper key.
+  I use this marshal and unmarshal strategy to get the json out of the libraries \ty{yaml.Node} format.
+  It might be possible to do all of this in one go, but I don't see how, given the example's node structure.
+#+end_export
+
+#+begin_src go <<Unwrap response example, Pa. \ref{pa:docs}>>=
+	var wrapped map[string]any
+	json.Unmarshal(marhshalled, &wrapped)
+	unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
+
+	if err != nil {
+		panic(fmt.Sprintf("cannot unwrap example: %e", err))
+	}
+
+	newOperation.ExampleResponse = string(unwrapped)  
+#+end_src
+
+#+begin_export latex
+  Parsing the schema consists of more steps than parsing the example.
+  The schema is in a nested structure consisting of two to three keys per object.
+  The first one is called title. That is going to be the key in our representation.
+
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+	"bytes"
+#+end_src
+
+#+begin_src go <<Parse response schema, Pa. \ref{pa:docs}>>=
+	if contentValue.Schema != nil {
+		schema, err := contentValue.Schema.BuildSchema()
+		if err != nil {
+			panic(fmt.Sprintf("cannot build schema: %e", err))
+		}
+
+ 	  marshalledSchema, err := schema.MarshalJSONInline()
+    if err != nil {
+		  	panic(fmt.Sprintf("cannot marshal render schema: %e", err))
+	  }
+
+    var indented bytes.Buffer
+
+    err = json.Indent(&indented, marshalledSchema, "", "  ")
+    if err != nil {
+      panic(fmt.Sprintln("cannot indent json string:", err))
+    }
+
+	  newOperation.Schema = indented.String()
+	}
 #+end_src
 
 #+begin_export latex

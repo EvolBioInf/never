@@ -13,6 +13,10 @@
   border-right: 1px solid var(--accent-color);
 }
 
+.description-text {
+  margin-left: 15px;
+}
+
 .arg-divider {
   height: 0;
   border-bottom: 0;
@@ -22,30 +26,66 @@
   width: 95%;
 }
 
-.single-argument {
-  margin-left: 15px;
-}
-
-.argument-definition {
-  margin-bottom: 0;
-}
-
-.argument-description {
-  font-size: small;
-}
-
 .responses {
   padding-left: 25px;
   width: 50%;
 }
 
-.response-codes {
+.response-upper {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  align-items: center;
+}
+
+.response-example {
   display: flex;
-  overflow-x: scroll;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  width: 90%;
+}
+
+.schema-title {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.run-example {
+  height: 2rem;
+  width: 5rem;
+  font-size: medium;
+  cursor: pointer;
+}
+
+.input-example {
+  height: 2rem;
+  width: 80%;
+  padding-left: 10px;
+  font-size: medium;
+}
+
+.response-codes {
+  display: grid;
+  grid-template-columns: 20% 80%;
+  width: 50%;
   margin-bottom: 15px;
 }
 
 .response-code {
   margin-right: 15px;
+  border: 2px solid var(--accent-color);
+  border-radius: 4px;
+  font-size: large;
+  justify-self: center;
+  font-weight: 500;
+  padding: 6px 15px 6px 15px;
+  justify-self: flex-start;
+}
+
+.response-description {
+    align-self: center;
+    font-size: large;
+}
+
+.response-code-header {
+  margin-bottom: 0;
 }

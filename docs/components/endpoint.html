@@ -1,5 +1,6 @@
 {{define "components/endpoint"}}
 <script type="text/javascript">
+  // This manages folding and expanding of the endpoint headers
   const onHashUpdate = ({ oldURL }) => {
     const hashIndex = oldURL?.lastIndexOf("#") ?? -1;
     const oldHash =
@@ -33,4 +34,14 @@
 </script>
 
 {{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}}
-{{end}} {{end}}
+{{end}} 
+
+<script>
+  // Scroll example inputs to right end, 
+  // so we can see more of the important part of the url.
+  const elements = document.getElementsByClassName("input-example");
+  for (const el of elements) {
+    el.scrollLeft = el.scrollWidth;
+  }
+</script>
+{{end}}

@@ -14,6 +14,10 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 
 	"strconv"
+
+	"encoding/json"
+
+	"bytes"
 )
 
 type Content struct {
@@ -43,7 +47,9 @@ type Operation struct {
 	PathParameters  []Parameter
 	QueryParameters []Parameter
 	Responses       []Response
-	Example         string
+	ExampleRequest  string
+	ExampleResponse string
+	Schema          string
 }
 
 type Parameter struct {
@@ -59,8 +65,6 @@ type Response struct {
 	Code        int
 	Description string
 	Mime        string
-	Schema      string
-	Example     string
 }
 
 func RegisterRoutes(prefix string) {
@@ -174,47 +178,63 @@ func retrieveData(filepath string) Content {
 			queryParams := extractParameters(operation.Parameters)
 			newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
 
-			examplePath := newPath.Name
+			examplePath := content.ServerURL + newPath.Name
 			for _, param := range pathParams {
 				examplePath = strings.ReplaceAll(examplePath, param.Name, param.Example)
 			}
 
 			examplePath = strings.ReplaceAll(examplePath, "{", "")
-			newOperation.Example = strings.ReplaceAll(examplePath, "}", "")
+			examplePath = strings.ReplaceAll(examplePath, "}", "")
 
-			needsPlus := false
+			needsAnd := false
 			for _, param := range queryParams {
 				if param.Example != "" {
-					if needsPlus {
+					if needsAnd {
 						examplePath += "&"
 					} else {
 						examplePath += "?"
-						needsPlus = true
+						needsAnd = true
 					}
 
 					examplePath += fmt.Sprintf("%s=%s", param.Name, param.Example)
 				}
 			}
 
+			newOperation.ExampleRequest = examplePath
+
 			for strCode, response := range operation.Responses.Codes.FromOldest() {
-				code, err := strconv.Atoi(strCode)
-				if err != nil {
-					panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
-				}
-
+				var newResponse Response
 				if !response.Content.IsZero() {
-					responseContent := response.Content.First()
-
-					newResponse := Response{
-						Code:        code,
-						Description: response.Description,
-						Mime:        responseContent.Key(),
+					code, err := strconv.Atoi(strCode)
+					if err != nil {
+						panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
 					}
 
+					responseContent := response.Content.First()
+					newResponse.Code = code
+					newResponse.Description = response.Description
+					newResponse.Mime = responseContent.Key()
+
 					contentValue := responseContent.Value()
-					if contentValue != nil {
-						if contentValue.Example != nil {
-							newResponse.Example = contentValue.Example.Value
+					if newResponse.Code == 200 && contentValue != nil {
+						if contentValue.Examples.Len() > 0 {
+							ex := contentValue.Examples.First().Value()
+							marhshalled, err := ex.MarshalJSON()
+
+							if err != nil {
+								panic(fmt.Sprintf("cannot marshal example: %e", err))
+							}
+
+							var wrapped map[string]any
+							json.Unmarshal(marhshalled, &wrapped)
+							unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
+
+							if err != nil {
+								panic(fmt.Sprintf("cannot unwrap example: %e", err))
+							}
+
+							newOperation.ExampleResponse = string(unwrapped)
+
 						}
 
 						if contentValue.Schema != nil {
@@ -223,13 +243,21 @@ func retrieveData(filepath string) Content {
 								panic(fmt.Sprintf("cannot build schema: %e", err))
 							}
 
-							renderedSchema, err := schema.RenderInline()
+							marshalledSchema, err := schema.MarshalJSONInline()
 							if err != nil {
-								panic(fmt.Sprintf("cannot render schema: %e", err))
+								panic(fmt.Sprintf("cannot marshal render schema: %e", err))
 							}
 
-							newResponse.Schema = string(renderedSchema)
+							var indented bytes.Buffer
+
+							err = json.Indent(&indented, marshalledSchema, "", "  ")
+							if err != nil {
+								panic(fmt.Sprintln("cannot indent json string:", err))
+							}
+
+							newOperation.Schema = indented.String()
 						}
+
 					}
 
 					newOperation.Responses = append(newOperation.Responses, newResponse)
@@ -274,7 +302,16 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 		}
 
 		if schema.Example != nil {
-			param.Example = schema.Example.Value
+			if schema.Example.Value != "" {
+				param.Example = schema.Example.Value
+			} else {
+				for i, c := range schema.Example.Content {
+					param.Example += c.Value
+					if i < len(schema.Example.Content)-1 {
+						param.Example += ","
+					}
+				}
+			}
 		}
 
 		parsed = append(parsed, param)

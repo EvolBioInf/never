@@ -193,7 +193,7 @@
             "$ref": "#/components/parameters/page-size"
           }
         ],
-        "description": "Get ranks of taxa filtered by taon IDs"
+        "description": "Get ranks of taxa filtered by taxon IDs"
       }
     },
     "/taxa": {
@@ -288,7 +288,8 @@
           {
             "schema": {
               "type": "string",
-              "default": "\"\""
+              "default": "\"\"",
+              "example": "dolph"
             },
             "in": "query",
             "name": "name",
@@ -311,460 +312,29 @@
             "description": "Whether to search for exactly that name or use the name as a pattern"
           },
           {
-            "$ref": "#/components/parameters/page"
+            "schema": {
+              "type": "integer",
+              "example": 2,
+              "default": 0,
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "page",
+            "description": "Current page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "schema": {
+              "type": "integer",
+              "example": 10,
+              "default": -1,
+              "minimum": -1
+            },
+            "in": "query",
+            "name": "page-size",
+            "description": "Amount of entries per page"
           }
         ],
         "description": "Get basic taxon data for taxa with the given name"
-      }
-    },
-    "/taxa/{taxon-id}/children": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon-id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons children",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Child"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "taxid": 741158,
-                        "name": "Homo sapiens subsp. 'Denisova'",
-                        "common_name": "Denisova hominin"
-                      },
-                      {
-                        "taxid": 63221,
-                        "name": "Homo sapiens neanderthalensis",
-                        "common_name": "Neandertal"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id",
-        "description": "Gets the children of a taxon given its id"
-      }
-    },
-    "/taxa/{taxon-id}/images": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon-id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons images",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Image"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-images",
-        "description": "Gets images associated with a taxon given its id"
-      }
-    },
-    "/taxa/{taxon-id}/genome-count": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 562
-          },
-          "name": "taxon-id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons genome count",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GenomeCount"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "level": "complete",
-                        "count": 7233
-                      },
-                      {
-                        "level": "chromosome",
-                        "count": 734
-                      },
-                      {
-                        "level": "scaffold",
-                        "count": 26118
-                      },
-                      {
-                        "level": "contig",
-                        "count": 356055
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-genome-count",
-        "description": "Gets the number of genomes across all assembly levels for a specific taxon given its id"
-      }
-    },
-    "/taxa/{taxon-id}/genome-count-recursive": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 562
-          },
-          "name": "taxon-id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons genome count recursive",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GenomeCount"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "level": "complete",
-                        "count": 7793
-                      },
-                      {
-                        "level": "chromosome",
-                        "count": 759
-                      },
-                      {
-                        "level": "scaffold",
-                        "count": 27888
-                      },
-                      {
-                        "level": "contig",
-                        "count": 362877
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-genome-count-recursive",
-        "description": "Gets the number of genomes across all assembly levels for the subtree of a taxon given its id"
-      }
-    },
-    "/taxa/{taxon-id}/parent": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon-id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons parent",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaxId"
-                },
-                "examples": {
-                  "Example": {
-                    "value": {
-                      "tax_id": 9605
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-parent",
-        "description": "Gets the parents taxon id of a given taxon"
-      }
-    },
-    "/taxa/{start-id}/path/{end-id}": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "start-id",
-          "in": "path",
-          "required": true,
-          "description": "id of start taxon, further from root"
-        },
-        {
-          "schema": {
-            "type": "integer",
-            "example": 40674
-          },
-          "name": "end-id",
-          "in": "path",
-          "required": true,
-          "description": "id of end taxon, closer to root"
-        }
-      ],
-      "get": {
-        "summary": "Get path between two taxa",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Taxon"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "taxid": 9606,
-                        "parent": 9605,
-                        "name": "Homo sapiens",
-                        "common_name": "human"
-                      },
-                      {
-                        "taxid": 9605,
-                        "parent": 207598,
-                        "name": "Homo",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 207598,
-                        "parent": 9604,
-                        "name": "Homininae",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 9604,
-                        "parent": 314295,
-                        "name": "Hominidae",
-                        "common_name": "great apes"
-                      },
-                      {
-                        "taxid": 314295,
-                        "parent": 9526,
-                        "name": "Hominoidea",
-                        "common_name": "apes"
-                      },
-                      {
-                        "taxid": 9526,
-                        "parent": 314293,
-                        "name": "Catarrhini",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 314293,
-                        "parent": 376913,
-                        "name": "Simiiformes",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 376913,
-                        "parent": 9443,
-                        "name": "Haplorrhini",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 9443,
-                        "parent": 314146,
-                        "name": "Primates",
-                        "common_name": "primates"
-                      },
-                      {
-                        "taxid": 314146,
-                        "parent": 1437010,
-                        "name": "Euarchontoglires",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 1437010,
-                        "parent": 9347,
-                        "name": "Boreoeutheria",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 9347,
-                        "parent": 32525,
-                        "name": "Eutheria",
-                        "common_name": "placentals"
-                      },
-                      {
-                        "taxid": 32525,
-                        "parent": 40674,
-                        "name": "Theria",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 40674,
-                        "parent": 32524,
-                        "name": "Mammalia",
-                        "common_name": "mammals"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-start-id-path-end-id",
-        "description": "Gets the path between a start taxon, that is further from root and an end taxon that is closer to root\nReturns an empty list if no path connects start and end"
-      }
-    },
-    "/taxa/{taxon-id}/subtree": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon-id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get subtree of taxon",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Taxon"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "taxid": 9606,
-                        "name": "Homo sapiens",
-                        "common_name": "human",
-                        "parent": 9605
-                      },
-                      {
-                        "taxid": 741158,
-                        "name": "Homo sapiens subsp. 'Denisova'",
-                        "common_name": "Denisova hominin",
-                        "parent": 9606
-                      },
-                      {
-                        "taxid": 63221,
-                        "name": "Homo sapiens neanderthalensis",
-                        "common_name": "Neandertal",
-                        "parent": 9606
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-subtree",
-        "description": "Gets the subtree of a taxon including itself"
       }
     },
     "/taxa-accessions": {
@@ -822,7 +392,7 @@
           }
         },
         "operationId": "get-taxa-accessions",
-        "description": "Gets the accessions associated with taxa filtered by taxon IDs",
+        "description": "Get the accessions associated with taxa filtered by taxon IDs",
         "parameters": [
           {
             "schema": {
@@ -883,72 +453,6 @@
         "description": "Get the number of taxa in the db",
         "tags": [
           "Taxon"
-        ]
-      }
-    },
-    "/taxa-names": {
-      "get": {
-        "summary": "Get taxa and their names",
-        "tags": [
-          "Taxon"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaxonName"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "tax_id": 9606,
-                        "name": "Homo sapiens",
-                        "common_name": "human"
-                      },
-                      {
-                        "tax_id": 9605,
-                        "name": "Homo",
-                        "common_name": ""
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-names",
-        "description": "Get taxa and their scientific and common names filtered by taxon IDs",
-        "parameters": [
-          {
-            "schema": {
-              "type": "array",
-              "example": [
-                9606,
-                9605
-              ],
-              "items": {
-                "type": "integer"
-              }
-            },
-            "in": "query",
-            "name": "taxon-ids",
-            "description": "IDs of taxa to filter for",
-            "explode": false,
-            "style": "form"
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/page-size"
-          }
         ]
       }
     },
@@ -1108,6 +612,598 @@
             "$ref": "#/components/parameters/page-size"
           }
         ]
+      }
+    },
+    "/taxa-names": {
+      "get": {
+        "summary": "Get taxa and their names",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaxonName"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "tax_id": 9606,
+                        "name": "Homo sapiens",
+                        "common_name": "human"
+                      },
+                      {
+                        "tax_id": 9605,
+                        "name": "Homo",
+                        "common_name": ""
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-names",
+        "description": "Get taxa and their scientific and common names filtered by taxon IDs",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "example": [
+                9606,
+                9605
+              ],
+              "items": {
+                "type": "integer"
+              }
+            },
+            "in": "query",
+            "name": "taxon-ids",
+            "description": "IDs of taxa to filter for",
+            "explode": false,
+            "style": "form"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page-size"
+          }
+        ]
+      }
+    },
+    "/taxa/{start-id}/path/{end-id}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "start-id",
+          "in": "path",
+          "required": true,
+          "description": "id of start taxon, further from root"
+        },
+        {
+          "schema": {
+            "type": "integer",
+            "example": 40674
+          },
+          "name": "end-id",
+          "in": "path",
+          "required": true,
+          "description": "id of end taxon, closer to root"
+        }
+      ],
+      "get": {
+        "summary": "Get path between two taxa",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Taxon"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "taxid": 9606,
+                        "parent": 9605,
+                        "name": "Homo sapiens",
+                        "common_name": "human"
+                      },
+                      {
+                        "taxid": 9605,
+                        "parent": 207598,
+                        "name": "Homo",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 207598,
+                        "parent": 9604,
+                        "name": "Homininae",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 9604,
+                        "parent": 314295,
+                        "name": "Hominidae",
+                        "common_name": "great apes"
+                      },
+                      {
+                        "taxid": 314295,
+                        "parent": 9526,
+                        "name": "Hominoidea",
+                        "common_name": "apes"
+                      },
+                      {
+                        "taxid": 9526,
+                        "parent": 314293,
+                        "name": "Catarrhini",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 314293,
+                        "parent": 376913,
+                        "name": "Simiiformes",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 376913,
+                        "parent": 9443,
+                        "name": "Haplorrhini",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 9443,
+                        "parent": 314146,
+                        "name": "Primates",
+                        "common_name": "primates"
+                      },
+                      {
+                        "taxid": 314146,
+                        "parent": 1437010,
+                        "name": "Euarchontoglires",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 1437010,
+                        "parent": 9347,
+                        "name": "Boreoeutheria",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 9347,
+                        "parent": 32525,
+                        "name": "Eutheria",
+                        "common_name": "placentals"
+                      },
+                      {
+                        "taxid": 32525,
+                        "parent": 40674,
+                        "name": "Theria",
+                        "common_name": ""
+                      },
+                      {
+                        "taxid": 40674,
+                        "parent": 32524,
+                        "name": "Mammalia",
+                        "common_name": "mammals"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-start-id-path-end-id",
+        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root\nReturns an empty list if no path connects start and end"
+      }
+    },
+    "/taxa/{taxon-id}/children": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "taxon-id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get taxons children",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Child"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "taxid": 741158,
+                        "name": "Homo sapiens subsp. 'Denisova'",
+                        "common_name": "Denisova hominin"
+                      },
+                      {
+                        "taxid": 63221,
+                        "name": "Homo sapiens neanderthalensis",
+                        "common_name": "Neandertal"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-id",
+        "description": "Get the children of a taxon given its id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page-size"
+          }
+        ]
+      }
+    },
+    "/taxa/{taxon-id}/images": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "taxon-id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get taxons images",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Image"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-id-images",
+        "description": "Get images associated with a taxon given its id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page-size"
+          }
+        ]
+      }
+    },
+    "/taxa/{taxon-id}/genome-count": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 562
+          },
+          "name": "taxon-id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get taxons genome count",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GenomeCount"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "level": "complete",
+                        "count": 7233
+                      },
+                      {
+                        "level": "chromosome",
+                        "count": 734
+                      },
+                      {
+                        "level": "scaffold",
+                        "count": 26118
+                      },
+                      {
+                        "level": "contig",
+                        "count": 356055
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-id-genome-count",
+        "description": "Get the number of genomes across all assembly levels for a specific taxon given its id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page-size"
+          }
+        ]
+      }
+    },
+    "/taxa/{taxon-id}/genome-count-recursive": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 562
+          },
+          "name": "taxon-id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get taxons genome count recursive",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GenomeCount"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "level": "complete",
+                        "count": 7793
+                      },
+                      {
+                        "level": "chromosome",
+                        "count": 759
+                      },
+                      {
+                        "level": "scaffold",
+                        "count": 27888
+                      },
+                      {
+                        "level": "contig",
+                        "count": 362877
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-id-genome-count-recursive",
+        "description": "Get the number of genomes across all assembly levels for the subtree of a taxon given its id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page-size"
+          }
+        ]
+      }
+    },
+    "/taxa/{taxon-id}/parent": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "taxon-id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get taxons parent",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxId"
+                },
+                "examples": {
+                  "Example": {
+                    "value": {
+                      "tax_id": 9605
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-id-parent",
+        "description": "Get the parents taxon id of a given taxon"
+      }
+    },
+    "/taxa/{taxon-id}/subtree": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "taxon-id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get subtree of taxon",
+        "tags": [
+          "Taxon"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Taxon"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "taxid": 9606,
+                        "name": "Homo sapiens",
+                        "common_name": "human",
+                        "parent": 9605
+                      },
+                      {
+                        "taxid": 741158,
+                        "name": "Homo sapiens subsp. 'Denisova'",
+                        "common_name": "Denisova hominin",
+                        "parent": 9606
+                      },
+                      {
+                        "taxid": 63221,
+                        "name": "Homo sapiens neanderthalensis",
+                        "common_name": "Neandertal",
+                        "parent": 9606
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-id-subtree",
+        "description": "Get the subtree of a taxon including itself",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page-size"
+          }
+        ]
+      }
+    },
+    "/taxa/{taxon-ids}/mrca": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "array",
+            "example": "9606,741158,63221"
+          },
+          "name": "taxon-ids",
+          "in": "path",
+          "required": true,
+          "description": "list of IDs which share a common ancestor"
+        }
+      ],
+      "get": {
+        "summary": "Get most recent common ancestor",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxId"
+                },
+                "examples": {
+                  "Example 1": {
+                    "value": {
+                      "tax_id": 9606
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-taxa-taxon-ids-mrca",
+        "description": "Get the most recent common ancestor of a list of taxa"
       }
     }
   },
@@ -1308,7 +1404,5 @@
         "style": "form"
       }
     }
-  },
-  "x-internal": false
+  }
 }
-

@@ -1,18 +1,18 @@
 {{define "components/endpoint-card/parameter"}}
 <div class="single-argument">
-    <p class="argument-definition">
-        {{.item.Name}} 
-        {{.item.Schema}}
-        {{if .item.Required}}
-            Required
-        {{end}} 
-        {{if .item.Example}}
-            ex: {{.item.Example}}
-        {{end}} 
-    </p>
-    <div class="argument-description">{{.item.Description}}</div>
+  <p>Name</p>
+  <p>{{.item.Name}}</p>
+  <p>Description</p>
+  <p>{{.item.Description}}</p>
+  <p>Type</p>
+  <p>{{.item.Schema}}</p>
+  <p>Required</p>
+  <p>{{.item.Required}}</p>
+  {{if .item.Example}}
+  <p>Example</p>
+  <p>{{.item.Example}}</p>
+  {{end}}
 </div>
 {{if lt .index (sub .totalArgs 1)}}
 <hr class="arg-divider" />
-{{end}}
-{{end}}
+{{end}} {{end}}
