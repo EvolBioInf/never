@@ -1,4 +1,4 @@
-.endpoint-card-body-GET {
+.endpoint-card-body-get {
   border: 2px solid var(--accent-color);
   border-top: 0px;
   border-radius: 0px 0px 12px 12px;
@@ -82,8 +82,8 @@
 }
 
 .response-description {
-    align-self: center;
-    font-size: large;
+  align-self: center;
+  font-size: large;
 }
 
 .response-code-header {

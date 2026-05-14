@@ -87,7 +87,7 @@ func RegisterRoutes(prefix string) {
 				joined = joined[1:]
 			}
 
-			return joined
+			return strings.ToLower(joined)
 		},
 
 		"dict": func(args ...any) map[string]any {
@@ -128,7 +128,6 @@ func RegisterRoutes(prefix string) {
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
 
 	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/static"))))
-
 }
 
 func retrieveData(filepath string) Content {

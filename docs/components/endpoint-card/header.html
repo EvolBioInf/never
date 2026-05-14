@@ -1,7 +1,10 @@
 {{define "components/endpoint-card/header"}}
-<div class="endpoint-card-header-{{.Op.Verb}}" id="header-{{.Name}}">
+<div
+  class='{{ toCSSId "endpoint" "card" "header" .Op.Verb }}'
+  id="header-{{.Name}}"
+>
   <div class="request-main-info">
-    <p class="request-type-block-{{.Op.Verb}}">{{.Op.Verb}}</p>
+    <p class='{{ toCSSId "request" "type" "block" .Op.Verb }}'>{{.Op.Verb}}</p>
     <p>{{.Name}}</p>
   </div>
   <p>{{.Op.Description}}</p>

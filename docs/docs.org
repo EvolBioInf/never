@@ -70,12 +70,12 @@
   Functions for the templating engine are provided by a function map.
   Every function defined within that map may be used inside the HTML
   via the templating syntax. We need three utility functions for the HTML.
-  The first is a simple subtraction. 
+  The first is a simple subtraction.
   \ty{toCSSId} is for rewriting the endpoints names.
   The endpoints are identified by their names in url syntax. Using those for
   css identifiers does not seem like a good idea, so we replace some characters
   to make them more css friendly.
-  \ty{dict} lets us create dictionaries inside HTML. We use this to bypass the 
+  \ty{dict} lets us create dictionaries inside HTML. We use this to bypass the
   single parameter rule sub-templates.
 #+end_export
 
@@ -94,7 +94,8 @@
   Now we define \ty{toCSSid}. The function is provided a variable
   amount of strings and returns a single joined string. To get
   rid of the hierarchical url structure of an endpoint we replace
-  every slash with a dash whichr results in strings in kebab-case notation.
+  every slash with a dash which results in strings in kebab-case notation, if
+  we make all characters lowercased  as well.
   Then we join the strings and delete leading dashes as well as dashes followed
   by another dash.
 #+end_export
@@ -111,18 +112,18 @@
 			joined = joined[1:]
 		}
 
-		return joined
+		return strings.ToLower(joined)
 	},
 #+end_src
 
 #+begin_export latex
-  As mentioned before, as of now go's html templating does not 
-  allow to pass multiple values from within a template to a 
+  As mentioned before, as of now go's html templating does not
+  allow to pass multiple values from within a template to a
   sub-template. To bypass this we use a dict function. This
   function takes a variable amount of arguments. It uses arguments
   with an even index as a key and the following argument with an odd
   index as a value. It should fail if the amount of arguments is not
-  even. 
+  even.
 #+end_export
 
 #+begin_src go <<Create dict from args, Pa. \ref{pa:docs}>>=
@@ -259,12 +260,12 @@ type Response struct {
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
   func retrieveData(filepath string) Content {
     // <<Create Model from library, Pa. \ref{pa:docs}>>
-    // <<Parse data to Content, Pa. \ref{pa:docs}>>  
+    // <<Parse data to Content, Pa. \ref{pa:docs}>>
   }
 #+end_src
 
 #+begin_export latex
-  We begin by reading the openAPI document. The library expects a 
+  We begin by reading the openAPI document. The library expects a
   byte slice in either yaml or json format. With that
   raw data we create a Document which lets us build the model.
 #+end_export
@@ -287,7 +288,7 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  Just like the openAPI spec allows for broad and immensely 
+  Just like the openAPI spec allows for broad and immensely
   detailed and broad specifications so does the model created by the library.
   This means the Model is too unspecific and powerful for our purpose.
   We now go through it and parse it bit by bit into our Content structure,
@@ -340,10 +341,10 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  As we save both the path level and operation level parameters 
-  within an operation, we need to extract the path parameters before 
-  creating the operations. Parsing the operation's parameters 
-  later on follows the same procedure. So creating a function 
+  As we save both the path level and operation level parameters
+  within an operation, we need to extract the path parameters before
+  creating the operations. Parsing the operation's parameters
+  later on follows the same procedure. So creating a function
   for that seems reasonable.
 #+end_export
 
@@ -380,7 +381,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 		}
 
     // <<Extract examples, Pa. \ref{pa:docs}>>
-	
+
 
 		parsed = append(parsed, param)
 	}
@@ -416,7 +417,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   First we set the basic data like summary and the HTTP verb.
   Then we parse the operation specific parameters and append the
   path level parameters.
-  Using these parameters including their default and example value 
+  Using these parameters including their default and example value
   we construct an example query.
   Lastly we parse the responses.
 #+end_export
@@ -425,7 +426,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   for verb, operation := range pathItem.GetOperations().FromOldest() {
     newOperation := Operation{
 			Verb:        strings.ToUpper(verb),
-			Description: operation.Description,				
+			Description: operation.Description,
       Tags:        operation.Tags,
     }
 	  newOperation.PathParameters = append(newOperation.PathParameters, pathParams...)
@@ -454,7 +455,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 	examplePath = strings.ReplaceAll(examplePath, "{", "")
   examplePath = strings.ReplaceAll(examplePath, "}", "")
-  
+
   // <<Append query parameters, Pa. \ref{pa:docs}>>
 
 #+end_src
@@ -462,8 +463,8 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_export latex
   Appending the query parameters is relatively straight forward.
   If there are any query parameters, that have examples we append
-  a question mark. We then iterate over the parameters, if they 
-  have an example value we append their name followed by '=' 
+  a question mark. We then iterate over the parameters, if they
+  have an example value we append their name followed by '='
   and the example value. The discriminator is defined as '&'.
 #+end_export
 
@@ -488,8 +489,8 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   The response contains different data depending on which
-  type of response we are currently handling. While all of 
-  them provide a code and description, it's just the response 
+  type of response we are currently handling. While all of
+  them provide a code and description, it's just the response
   with code 200 that provides and example and schema.
 #+end_export
 
@@ -499,7 +500,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
     if !response.Content.IsZero() {
     // <<Read code and description, Pa. \ref{pa:docs}>>
 		// <<Act on response code, Pa. \ref{pa:docs}>>
-  
+
   	newOperation.Responses = append(newOperation.Responses, newResponse)
 		}
   }
@@ -507,7 +508,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   The code is provided as the key for the current response.
-  As it is a string and we expect an integer, we need to convert it. 
+  As it is a string and we expect an integer, we need to convert it.
   To do that we import \ty{strconv} and later use it to call \ty{Atoi}.
 #+end_export
 
@@ -540,7 +541,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	 }
 #+end_src
 
-#+begin_export latex 
+#+begin_export latex
   Parsing the example requires \ty{encoding/json}. This package provides
   json specific utility functions. Most importantly it allows us to pretty print
   using \ty{MarshalIndent}.
@@ -588,7 +589,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 		panic(fmt.Sprintf("cannot unwrap example: %e", err))
 	}
 
-	newOperation.ExampleResponse = string(unwrapped)  
+	newOperation.ExampleResponse = string(unwrapped)
 #+end_src
 
 #+begin_export latex
@@ -627,7 +628,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   The documentation frontend is a one pager. This means we only serve one route
-  and the HTML, CSS and JS takes care of all the rest. 
+  and the HTML, CSS and JS takes care of all the rest.
 #+end_export
 
 #+begin_src go <<Handle base route, Pa. \ref{pa:docs}>>=
@@ -652,4 +653,3 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
 	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/static"))))
 #+end_src
-
