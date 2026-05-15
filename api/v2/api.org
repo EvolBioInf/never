@@ -137,12 +137,19 @@ type TaxonName struct {
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-  makeRoute(prefix + "/accessions", accessions, neidb)
-  makeRoute(prefix + "/taxa-accessions", taxaAccessions, neidb)
+  makeRoute(prefix + "/accessions", accessions, neidb) // formerly known as levels
+  makeRoute(prefix + "/assembly-levels", assemblyLevels, neidb) // new
+  makeRoute(prefix + "/taxa-accessions", taxaAccessions, neidb) // formerly known as accessions
+  makeRoute(prefix + "/ranks", ranks, neidb) // same as before
+  makeRoute(prefix + "/taxa", taxa, neidb) // formerly known as taxi
+
 #+end_src
+
+
 
 #+begin_export latex
   We begin implementing the function for the first endpoint, which is \ty{accessions}.
+  This endpoint used to be called levels.
   The following sections will closely resemble neverV1
   In our implementation of \ty{accessions} we extract the accessions, get
   their levels, and write the output.
@@ -158,6 +165,7 @@ type TaxonName struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Check Parameters, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
 	  //<<Extract accessions, Pa. \ref{pa:api}>>
 	  //<<Extract offset and size, Pa. \ref{pa:api}>>
@@ -167,11 +175,39 @@ type TaxonName struct {
 #+end_src
 
 #+begin_export latex
+  A lot of endpoints that we are defining here allow for or even require parameters.
+  We are going to define a function that a) checks whether the required parameters
+  exist and b) whether they are safe. In this context I consider a parameter to be safe if it
+  cannot be used for code injection.
+#+end_export
+
+#+begin_src go <<Check Parameters, Pa. \ref{pa:api}>>=
+  valid := checkParams(w, r, "accession-ids")
+  if !valid {
+    return
+  }
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
+    for _, arg := range args {
+		p := r.URL.Query().Get(arg)
+      if p == "" {
+        w.WriteHeader(http.StatusBadRequest)
+			  w.Write([]byte("Missing required parameter."))
+        return false
+      }
+    }
+
+    return true
+  }
+#+end_src
+
+#+begin_export latex
   The function we are using for the endpoints need to be variadic
   so in order to use the parameters passed to them in an orderly fashion
   we need to assign them and do a type assertion. In this block
   assign the db.
-#+end_export
 
 #+begin_src go <<Get db from args, Pa. \ref{pa:api}>>=
   neidb := args[0].(*tdb.TaxonomyDB)
@@ -246,7 +282,6 @@ type TaxonName struct {
   }
 #+end_src
 
-
 #+begin_export latex
   We look up the level of each accession and store it.
   Ensuring size and offset of the output would be easiest by
@@ -288,10 +323,87 @@ type TaxonName struct {
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 
+
+
 #+begin_export latex
-  Inside of \ty{taxaAccessions}, we get the taxa through a call to \ty{getTaxa}, which
-  we still need to implement. Then we get the corresponding accessions,
-  before we write the output.
+  \ty{assemblyLevels} gets every possible level from the db
+  and writes it to the response.
+
+  This is \ty{assemblyLevels}' io:
+  Params:
+    None
+  Writes:
+    []string
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func assemblyLevels(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := tdb.AssemblyLevels()
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  The function \ty{ranks} takes as argument a list of taxon IDs and
+  returns their ranks. We get the taxa through a call to \ty{getTaxa}, which
+  we still need to implement. We store the output in a slice with elements of
+  type \ty{Rank}.
+
+  This is \ty{ranks}' io:
+  Params:
+    Query:
+      taxon-ids []int
+      page []int
+      page-size []int
+  Writes:
+    []Rank
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func ranks(w http.ResponseWriter, r *http.Request, args ...any) {
+    valid := checkParams(w, r, "taxon-ids")
+    if !valid {
+      return
+    }
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Extract taxa, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Filter with getTaxa, Pa. \ref{pa:api}>>
+
+	  out := []Rank{}
+	  for i, taxon := range taxa {
+		  rank, err := neidb.Rank(taxon)
+		  util.Check(err)
+		  o := Rank{TaxId: taxa[i], Rank: rank}
+
+		  out = append(out, o)
+	  }
+
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The function \ty{getTaxa} takes as input a HTTP request, stores the
+  taxa passed, and returns them. The taxa arrive as the value of key \ty{t}.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func getTaxa(taxonIds []int, neidb *tdb.TaxonomyDB) []int {
+	  taxa := []int{}
+	  //<<Store taxa, Pa. \ref{pa:api}>>
+	  return taxa
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  Inside of \ty{taxaAccessions}, we get the taxa through a call to \ty{getTaxa}.
+  Then we get the corresponding accessions, before we write the output.
+  This endpoint used to be called accessions.
 
   This is \ty{taxaAccessions}' io:
   Params:
@@ -305,17 +417,29 @@ type TaxonName struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
+    valid := checkParams(w, r, "taxon-ids")
+    if !valid {
+      return
+    }
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Extract taxa, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
-    if size == -1 {
-      size = len(taxIds) - 1
-    }
-
-    taxa := getTaxa(w, r, taxIds[offset:min(size, len(taxIds)-1)], neidb)
+    //<<Filter with getTaxa, Pa. \ref{pa:api}>>
 	  //<<Get accessions, Pa. \ref{pa:api}>>
 	  //<<Write output, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  We call getTaxa with the limited and offset taxIds.
+#+end_export
+
+#+begin_src go <<Filter with getTaxa, Pa. \ref{pa:api}>>=
+  if size == -1 {
+		size = len(taxIds)
+  }
+
+	taxa := getTaxa(taxIds[offset:min(size, len(taxIds))], neidb)
 #+end_src
 
 #+begin_src go <<Extract taxa, Pa. \ref{pa:api}>>=
@@ -324,22 +448,9 @@ type TaxonName struct {
   var taxIds []int
   for _, strT := range strTaxa {
     t, err := strconv.Atoi(strT)
-    if err != nil {
+    if err == nil {
       taxIds = append(taxIds, t)
     }
-  }
-#+end_src
-
-#+begin_export latex
-  The function \ty{getTaxa} takes as input a HTTP request, stores the
-  taxa passed, and returns them. The taxa arrive as the value of key \ty{t}.
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func getTaxa(w http.ResponseWriter, r *http.Request, taxonIds []int, neidb *tdb.TaxonomyDB) []int {
-	  taxa := []int{}
-	  //<<Store taxa, Pa. \ref{pa:api}>>
-	  return taxa
   }
 #+end_src
 
@@ -404,5 +515,115 @@ adding their levels before storing them.
   children, err := neidb.Children(taxId)
   for _, child := range children {
 	  taxa = append(taxa, child)
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  The enpoint \ty{taxa} takes as input the name of a taxon, whether to use
+  the scientific name only, a matching mode, a page number
+  and a page size. It writes as response for each matching taxon the taxon ID,
+  its parent's taxon ID, its scientific name and or its common name.
+
+  This is \ty{taxa}'s io:
+  Params:
+    Query:
+      name string
+      scientific bool
+      exact bool
+      page []int
+      page-size []int
+  Writes:
+    []TaxonAccessions
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxa(w http.ResponseWriter, r *http.Request, args ...any) {
+    valid := checkParams(w, r, "name")
+    if !valid {
+      return
+    }
+
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract taxi query, Pr. \ref{pr:nev}>>
+	  //<<Execute taxi query, Pr. \ref{pr:nev}>>
+ 	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We extract the taxon name, whether or not we are matching in exact
+  mode and if we are looking for just the scientific name.
+  If we are \emph{not} matching in exact mode, we bracket the
+  name and the blanks it contains by wildcards.
+#+end_export
+#+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
+  name := r.URL.Query().Get("name")
+  strExact := r.URL.Query().Get("exact")
+  strScientific := r.URL.Query().Get("scientific")
+
+  exact, err := strconv.ParseBool(strExact)
+  if err != nil {
+    exact = false
+  }
+
+  scientific, err := strconv.ParseBool(strScientific)
+  if err != nil {
+    scientific = false
+  }
+
+  if !exact {
+	  name = strings.ReplaceAll(name, " ", "% %")
+	  name = "%" + name + "%"
+  }
+#+end_src
+
+#+begin_export latex
+  We iterate over the taxon IDs and for each one construct the taxon
+  output and store it in our slice of taxa.
+#+end_export
+#+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
+  var ids []int
+  if scientific {
+    ids, err = neidb.Taxids(name, size, offset)
+  } else {
+    ids, err = neidb.CommonTaxids(name, size, offset)
+  }
+
+  util.Check(err)
+  out := []Taxon{}
+  for _, id := range ids {
+	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
+	  //<<Store taxon output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We get the taxon's scientific and common names and parent. Then we
+  construct the corresponding taxon output.
+#+end_export
+
+#+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
+  sciName, err := neidb.Name(id)
+  util.Check(err)
+  comName, err := neidb.CommonName(id)
+  util.Check(err)
+  tout := Taxon{}
+  parent, err := neidb.Parent(id)
+  if err == nil {
+	  tout = Taxon{TaxId: id, Parent: parent,
+		  Name: sciName, CommonName: comName}
+  }
+#+end_src
+
+#+begin_export latex
+  If we just constructed an output item, we store it in the
+  corresponding slice.
+#+end_export
+#+begin_src go <<Store taxon output, Pr. \ref{pr:nev}>>=
+  if err == nil {
+	  out = append(out, tout)
   }
 #+end_src

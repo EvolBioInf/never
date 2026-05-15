@@ -11,7 +11,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 )
 
@@ -73,8 +72,11 @@ type TaxonName struct {
 func RegisterRoutes(prefix string) {
 	neidb := tdb.OpenTaxonomyDB("neidb")
 
-	makeRoute(prefix+"/accessions", accessions, neidb)
-	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)
+	makeRoute(prefix+"/accessions", accessions, neidb)          // formerly known as levels
+	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb) // new
+	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb) // formerly known as accessions
+	makeRoute(prefix+"/ranks", ranks, neidb)                    // same as before
+	makeRoute(prefix+"/taxa", taxa, neidb)                      // formerly known as taxi
 
 }
 
@@ -83,6 +85,11 @@ func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any),
 }
 
 func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
+	valid := checkParams(w, r, "accession-ids")
+	if !valid {
+		return
+	}
+
 	neidb := args[0].(*tdb.TaxonomyDB)
 
 	str := r.URL.Query().Get("accession-ids")
@@ -108,6 +115,19 @@ func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 
+}
+
+func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
+	for _, arg := range args {
+		p := r.URL.Query().Get(arg)
+		if p == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Missing required parameter."))
+			return false
+		}
+	}
+
+	return true
 }
 
 func extractPaging(r *http.Request) (offset, size int) {
@@ -138,7 +158,19 @@ func extractPaging(r *http.Request) (offset, size int) {
 	return
 }
 
-func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
+func assemblyLevels(w http.ResponseWriter, r *http.Request, args ...any) {
+	out := tdb.AssemblyLevels()
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func ranks(w http.ResponseWriter, r *http.Request, args ...any) {
+	valid := checkParams(w, r, "taxon-ids")
+	if !valid {
+		return
+	}
 	neidb := args[0].(*tdb.TaxonomyDB)
 
 	str := r.URL.Query().Get("taxon-ids")
@@ -146,7 +178,7 @@ func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
 	var taxIds []int
 	for _, strT := range strTaxa {
 		t, err := strconv.Atoi(strT)
-		if err != nil {
+		if err == nil {
 			taxIds = append(taxIds, t)
 		}
 	}
@@ -154,10 +186,63 @@ func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
 	offset, size := extractPaging(r)
 
 	if size == -1 {
-		size = len(taxIds) - 1
+		size = len(taxIds)
 	}
 
-	taxa := getTaxa(w, r, taxIds[offset:min(size, len(taxIds)-1)], neidb)
+	taxa := getTaxa(taxIds[offset:min(size, len(taxIds))], neidb)
+
+	out := []Rank{}
+	for i, taxon := range taxa {
+		rank, err := neidb.Rank(taxon)
+		util.Check(err)
+		o := Rank{TaxId: taxa[i], Rank: rank}
+
+		out = append(out, o)
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func getTaxa(taxonIds []int, neidb *tdb.TaxonomyDB) []int {
+	taxa := []int{}
+	for _, taxon := range taxonIds {
+		_, err := neidb.Name(taxon)
+		if err == nil {
+			taxa = append(taxa, taxon)
+		}
+	}
+
+	return taxa
+}
+
+func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
+	valid := checkParams(w, r, "taxon-ids")
+	if !valid {
+		return
+	}
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	str := r.URL.Query().Get("taxon-ids")
+	strTaxa := strings.Split(str, ",")
+	var taxIds []int
+	for _, strT := range strTaxa {
+		t, err := strconv.Atoi(strT)
+		if err == nil {
+			taxIds = append(taxIds, t)
+		}
+	}
+
+	offset, size := extractPaging(r)
+
+	if size == -1 {
+		size = len(taxIds)
+	}
+
+	taxa := getTaxa(taxIds[offset:min(size, len(taxIds))], neidb)
+
 	out := []TaxonAccessions{}
 	for len(taxa) > 0 {
 		taxId := taxa[0]
@@ -180,6 +265,7 @@ func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
 		for _, child := range children {
 			taxa = append(taxa, child)
 		}
+
 	}
 
 	b, err := json.MarshalIndent(out, "", "  ")
@@ -188,14 +274,63 @@ func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
 
 }
 
-func getTaxa(w http.ResponseWriter, r *http.Request, taxonIds []int, neidb *tdb.TaxonomyDB) []int {
-	taxa := []int{}
-	for _, taxon := range taxonIds {
-		_, err := neidb.Name(taxon)
+func taxa(w http.ResponseWriter, r *http.Request, args ...any) {
+	valid := checkParams(w, r, "name")
+	if !valid {
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	offset, size := extractPaging(r)
+
+	name := r.URL.Query().Get("name")
+	strExact := r.URL.Query().Get("exact")
+	strScientific := r.URL.Query().Get("scientific")
+
+	exact, err := strconv.ParseBool(strExact)
+	if err != nil {
+		exact = false
+	}
+
+	scientific, err := strconv.ParseBool(strScientific)
+	if err != nil {
+		scientific = false
+	}
+
+	if !exact {
+		name = strings.ReplaceAll(name, " ", "% %")
+		name = "%" + name + "%"
+	}
+
+	var ids []int
+	if scientific {
+		ids, err = neidb.Taxids(name, size, offset)
+	} else {
+		ids, err = neidb.CommonTaxids(name, size, offset)
+	}
+
+	util.Check(err)
+	out := []Taxon{}
+	for _, id := range ids {
+		sciName, err := neidb.Name(id)
+		util.Check(err)
+		comName, err := neidb.CommonName(id)
+		util.Check(err)
+		tout := Taxon{}
+		parent, err := neidb.Parent(id)
 		if err == nil {
-			taxa = append(taxa, taxon)
+			tout = Taxon{TaxId: id, Parent: parent,
+				Name: sciName, CommonName: comName}
+		}
+
+		if err == nil {
+			out = append(out, tout)
 		}
 	}
 
-	return taxa
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
 }
