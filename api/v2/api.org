@@ -32,7 +32,7 @@ First off we declare the types. This is an easy task as they are already
 defined within the openApi document.
 #+end_export
 
-#+begin_src go <<Types, Pa. \{ref:pa:api}>>=
+#+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Accession struct {
 	Accession string `json:"accession"`
 	Level     string `json:"level"`
@@ -107,9 +107,13 @@ type TaxonName struct {
   object for now.
 #+end_export
 
-#+begin_src go <<Functions, Pa. \{ref:pa:api}>>=
-  func makeRoute(path string, fn func(func(http.ResponseWriter, *http.Request, ...any)), args ...any) {
-    	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { fn(w, r, args...) })
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "net/http"
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
+    	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) { fn(w, r, args...) })
   }
 #+end_src
 
@@ -120,11 +124,285 @@ type TaxonName struct {
   all functions that need it.
 #+end_export
 
-#+begin_src go <<Register routes, Pa. \{ref:pa:api}>>=
-  initDb()
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "github.com/evolbioinf/neighbors/tdb"
 #+end_src
 
-#+begin_src go <<Functions, Pa. \{ref:pa:api}>>=
-  func initDb() {
+#+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
+  neidb := tdb.OpenTaxonomyDB("neidb")
+#+end_src
+
+#+begin_export latex
+  Having a connection to the database we may now register all the endpoints.
+#+end_export
+
+#+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
+  makeRoute(prefix + "/accessions", accessions, neidb)
+  makeRoute(prefix + "/taxa-accessions", taxaAccessions, neidb)
+#+end_src
+
+#+begin_export latex
+  We begin implementing the function for the first endpoint, which is \ty{accessions}.
+  The following sections will closely resemble neverV1
+  In our implementation of \ty{accessions} we extract the accessions, get
+  their levels, and write the output.
+  This is \ty{accessions}' io:
+  Params:
+    Query:
+      accession-ids []string
+      page []int
+      page-size []int
+  Writes:
+    []Accession
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+	  //<<Extract accessions, Pa. \ref{pa:api}>>
+	  //<<Extract offset and size, Pa. \ref{pa:api}>>
+	  //<<Look up levels, Pa. \ref{pa:api}>>
+	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The function we are using for the endpoints need to be variadic
+  so in order to use the parameters passed to them in an orderly fashion
+  we need to assign them and do a type assertion. In this block
+  assign the db.
+#+end_export
+
+#+begin_src go <<Get db from args, Pa. \ref{pa:api}>>=
+  neidb := args[0].(*tdb.TaxonomyDB)
+#+end_src
+
+
+#+begin_export latex
+  Accessions are passed as a comma-delimited string keyed by \ty{a}.
+#+end_export
+
+#+begin_src go <<Extract accessions, Pa. \ref{pa:api}>>=
+  str := r.URL.Query().Get("accession-ids")
+  accessions := strings.Split(str, ",")
+#+end_src
+
+#+begin_export latex
+  We also need to import \ty{strings} to use \ty{Split}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "strings"
+#+end_src
+
+#+begin_export latex
+  Extractig the offset and size about extracting the parameters page
+  and page size from the url and calculating the resulting offset.
+  As there are a lot of endpoints that provide these parameters, we
+  should make a function that does exactly that.
+#+end_export
+
+#+begin_src go <<Extract offset and size, Pa. \ref{pa:api}>>=
+  offset, size := extractPaging(r)
+#+end_src
+
+#+begin_export latex
+  Extracting the parameters is done just like any other query parameter.
+  We set default values if page or page size are not defined or invalid.
+  For conversion we need to import \ty{strconv}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "strconv"
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func extractPaging(r *http.Request) (offset, size int) {
+    strPage := r.URL.Query().Get("page")
+    strPageSize := r.URL.Query().Get("page-size")
+
+    if strPageSize != "" {
+      cSize, err := strconv.Atoi(strPageSize)
+      size = cSize
+      if err != nil {
+        size = -1
+      }
+    } else {
+        size = -1
+    }
+
+    if size != -1 && strPage != "" {
+      page, err := strconv.Atoi(strPage)
+      if err != nil {
+        offset = 0
+      } else {
+        offset = page * size
+      }
+    } else {
+      offset = 0
+    }
+
+  return
+  }
+#+end_src
+
+
+#+begin_export latex
+  We look up the level of each accession and store it.
+  Ensuring size and offset of the output would be easiest by
+  slicing the accessions at the end. I'm explicitly deciding against
+  doing that as using them in compution is more perfomant. Sadly the code
+  aesthetic suffers from that decision :(
+#+end_export
+
+#+begin_src go <<Look up levels, Pa. \ref{pa:api}>>=
+  out := []Accession{}
+
+  if size == -1 {
+    size = len(accessions)
+  }
+
+  for i := offset; i < min(offset + size, len(accessions)); i++ {
+    accession := accessions[i]
+	  level, err := neidb.Level(accession)
+	  if err == nil {
+		  out = append(out, Accession{Accession: accession, Level: level})
+	  }
+  }
+#+end_src
+
+#+begin_export latex
+  We convert our slice of accessions items to JSON and write it as our
+  response. For this we need to import a few packages.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "encoding/json"
+  "fmt"
+  "github.com/evolbioinf/never/util"
+#+end_src
+
+#+begin_src go <<Write output, Pa. \ref{pa:api}>>=
+  b, err := json.MarshalIndent(out, "", "  ")
+  util.Check(err)
+  fmt.Fprintf(w, "%s\n", string(b))
+#+end_src
+
+#+begin_export latex
+  Inside of \ty{taxaAccessions}, we get the taxa through a call to \ty{getTaxa}, which
+  we still need to implement. Then we get the corresponding accessions,
+  before we write the output.
+
+  This is \ty{taxaAccessions}' io:
+  Params:
+    Query:
+      taxon-ids []int
+      page []int
+      page-size []int
+  Writes:
+    []TaxonAccessions
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Extract taxa, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    if size == -1 {
+      size = len(taxIds) - 1
+    }
+
+    taxa := getTaxa(w, r, taxIds[offset:min(size, len(taxIds)-1)], neidb)
+	  //<<Get accessions, Pa. \ref{pa:api}>>
+	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_src go <<Extract taxa, Pa. \ref{pa:api}>>=
+  str := r.URL.Query().Get("taxon-ids")
+  strTaxa := strings.Split(str, ",")
+  var taxIds []int
+  for _, strT := range strTaxa {
+    t, err := strconv.Atoi(strT)
+    if err != nil {
+      taxIds = append(taxIds, t)
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  The function \ty{getTaxa} takes as input a HTTP request, stores the
+  taxa passed, and returns them. The taxa arrive as the value of key \ty{t}.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func getTaxa(w http.ResponseWriter, r *http.Request, taxonIds []int, neidb *tdb.TaxonomyDB) []int {
+	  taxa := []int{}
+	  //<<Store taxa, Pa. \ref{pa:api}>>
+	  return taxa
+  }
+#+end_src
+
+#+begin_export latex
+  If the taxon has no name, it doesn't exist and we also skip the rest
+  of the loop.
+#+end_export
+
+#+begin_src go <<Store taxa, Pa. \ref{pa:api}>>=
+  for _, taxon := range taxonIds {
+    _, err := neidb.Name(taxon)
+    if err == nil {
+  	  taxa = append(taxa, taxon)
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  We declare a slice of accessions for storing them. Then we iterate for
+  as long as our slice of taxa isn't empty. Inside the loop we remove
+  the first taxon from the slice and look up its accessions. If we get
+  at least one, we store it. Then we get the taxon's children.
+#+end_export
+
+#+begin_src go <<Get accessions, Pa. \ref{pa:api}>>=
+  out := []TaxonAccessions{}
+  for len(taxa) > 0 {
+	  taxId := taxa[0]
+	  taxa = taxa[1:]
+	  accs, err := neidb.Accessions(taxId)
+	  util.Check(err)
+	  if len(accs) > 0 {
+		  //<<Store accessions, Pa. \ref{pa:api}>>
+	  }
+	  //<<Get children, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+We make a variable of type \ty{TaxonAccessions} based on the taxId and
+store it in our output slice. Then we complete the taxon's accessions by
+adding their levels before storing them.
+#+end_export
+#+begin_src go <<Store accessions, Pa. \ref{pa:api}>>=
+  o := TaxonAccessions{TaxId: taxId}
+  for _, acc := range accs {
+	  level, err := neidb.Level(acc)
+	  util.Check(err)
+	  accession := Accession{Accession: acc, Level: level}
+	  o.Accessions = append(o.Accessions, accession)
+  }
+
+  out = append(out, o)
+#+end_src
+
+#+begin_export latex
+  We retrieve the children of the current taxon and store them in our
+  slice of taxa, ready for the next iteration.
+#+end_export
+
+#+begin_src go <<Get children, Pa. \ref{pa:api}>>=
+  children, err := neidb.Children(taxId)
+  for _, child := range children {
+	  taxa = append(taxa, child)
   }
 #+end_src
