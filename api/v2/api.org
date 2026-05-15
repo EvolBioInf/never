@@ -1,14 +1,130 @@
 #+begin_export latex
       \section{api}
       \ty{api} is the backend application for neverV2.
+      It implements all the endpoints defined in the
+      openApi document. The underlying logic will closely
+      resemble neverv1, as the backends don't differ too much.
 
       \subsection*{Implementation}
-
+      The api backend provides the global RegisterRoutes function just
+      like every standalone package used within neverV2.
       \bpr{api}{pr:api}
 #+end_export
 
 #+begin_src go <<api.go>>=
   package apiv2
 
+  import (
+    //<<Imports, Pa. \ref{pa:api}>>
+  )
 
+  //<<Types, Pa. \ref{pa:api}>>
+
+  func RegisterRoutes(prefix string) {
+    //<<Register routes, Pa. \ref{pa:api}>>
+  }
+
+  //<<Functions, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+First off we declare the types. This is an easy task as they are already
+defined within the openApi document.
+#+end_export
+
+#+begin_src go <<Types, Pa. \{ref:pa:api}>>=
+type Accession struct {
+	Accession string `json:"accession"`
+	Level     string `json:"level"`
+}
+
+type GenomeCount struct {
+	Level string `json:"level"`
+	Count int    `json:"count"`
+}
+
+type Image struct {
+	Id          int    `json:"id"`
+	Url         string `json:"url"`
+	Attribution string `json:"attribution"`
+}
+
+type Rank struct {
+	TaxId int    `json:"tax_id"`
+	Rank  string `json:"rank"`
+}
+
+type TaxonAccessions struct {
+	TaxId      int         `json:"tax_id"`
+	Accessions []Accession `json:"accessions"`
+}
+
+type TaxId struct {
+	TaxId int `json:"tax_id"`
+}
+
+type TaxInfo struct {
+	TaxId          int           `json:"tax_id"`
+	Parent         int           `json:"parent"`
+	IsLeaf         int           `json:"is_leaf"`
+	Name           string        `json:"name"`
+	CommonName     string        `json:"common_name"`
+	Rank           string        `json:"rank"`
+	RawGenomeCount []GenomeCount `json:"raw_genome_count"`
+	RecGenomeCount []GenomeCount `json:"rec_genome_count"`
+	Images         []Image       `json:"images"`
+}
+
+type Taxon struct {
+	TaxId      int    `json:"tax_id"`
+	Parent     int    `json:"parent"`
+	Name       string `json:"name"`
+	CommonName string `json:"common_name"`
+}
+
+type TaxonName struct {
+	TaxId      int    `json:"tax_id"`
+	Name       string `json:"name"`
+	CommonName string `json:"common_name"`
+}
+#+end_src
+
+#+begin_export latex
+  With the types declared we may begin defining the route registration.
+  The first step and main task of the route registration function is to define
+  neverV2's endpoints. Luckily they are declared within the openApi document
+  as well. But before pasting them into the RegisterRoutes function we need to think
+  about how registration should work. It is reasonable to create a function that handles
+  route registration, making things easier for us in the long run. Say we want to
+  add a parameter or some specific handling to all our endpoints, we can just add
+  it to the registration helper. We call this function \ty{makeRoute}. The function
+  needs to take a path, the one to register, then it needs a function \ty{fn} that is executed
+  when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
+  However it needs to accept at least the http writer and request. It may accept more
+  arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
+  to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
+  In \ty{makeRoute}'s body we simply register the path and function at the global http
+  object for now.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \{ref:pa:api}>>=
+  func makeRoute(path string, fn func(func(http.ResponseWriter, *http.Request, ...any)), args ...any) {
+    	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { fn(w, r, args...) })
+  }
+#+end_src
+
+#+begin_export latex
+  Pretty much all of the endpoints need access to the database, which is the whole
+  point of this api. So before registering the endpoints we open a connection to
+  the database using neighbors' tdb program. We will pass the connection to
+  all functions that need it.
+#+end_export
+
+#+begin_src go <<Register routes, Pa. \{ref:pa:api}>>=
+  initDb()
+#+end_src
+
+#+begin_src go <<Functions, Pa. \{ref:pa:api}>>=
+  func initDb() {
+  }
 #+end_src

@@ -21,7 +21,6 @@
   )
 
   //<<Types, Pa. \ref{pa:docs}>>
-
   //<<Functions, Pa. \ref{pa:docs}>>
 #+end_src
 
