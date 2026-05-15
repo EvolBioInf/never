@@ -1,7 +1,7 @@
 {{define "components/endpoint-card/detail"}}
 <div
-  class='{{ toCSSId "endpoint" "card" "body" .Op.Verb }}'
-  id='{{ toCSSId "body" .Name .Op.Verb }}'
+  class='{{ toKebab "endpoint" "card" "body" .Op.Verb }}'
+  id='{{ toKebab "body" .Name .Op.Verb }}'
 >
   <div class="description">
     <h3>Description</h3>
@@ -35,30 +35,30 @@
         <input
           type="text"
           class="input-example"
-          id='{{toCSSId "input" "example" .Name .Op.Verb}}'
+          id='{{toKebab "input" "example" .Name .Op.Verb}}'
           value="{{.Op.ExampleRequest}}"
         />
         <button
           class="run-example"
-          id='{{toCSSId "run" "example" .Name .Op.Verb}}'
+          id='{{toKebab "run" "example" .Name .Op.Verb}}'
         >
           Run
         </button>
         <script>
           {
             const button = document.getElementById(
-              '{{toCSSId "run" "example" .Name .Op.Verb}}',
+              '{{toKebab "run" "example" .Name .Op.Verb}}',
             );
             button.onclick = () => {
               console.log(
                 "clicked buton",
-                '{{toCSSId "run" "example" .Name .Op.Verb}}',
+                '{{toKebab "run" "example" .Name .Op.Verb}}',
               );
               const input = document.getElementById(
-                '{{toCSSId "input" "example" .Name .Op.Verb}}',
+                '{{toKebab "input" "example" .Name .Op.Verb}}',
               );
               const pre = document.getElementById(
-                '{{toCSSId "response" .Name .Op.Verb}}',
+                '{{toKebab "response" .Name .Op.Verb}}',
               );
               pre.innerHTML = input.value;
             };
@@ -67,7 +67,7 @@
       </div>
       <h3 class="schema-title">Schema</h3>
       {{template "components/code-block" (dict "Text" .Op.ExampleResponse "Id"
-      (toCSSId "response" .Name .Op.Verb))}} {{template "components/code-block"
+      (toKebab "response" .Name .Op.Verb))}} {{template "components/code-block"
       (dict "Text" .Op.Schema)}}
     </div>
     <hr class="arg-divider" />

@@ -1,4 +1,4 @@
-package docs
+package docsv2
 
 import (
 	"fmt"
@@ -76,7 +76,7 @@ func RegisterRoutes(prefix string) {
 		"sub": func(a, b int) int {
 			return a - b
 		},
-		"toCSSId": func(args ...string) string {
+		"toKebab": func(args ...string) string {
 			noSlash := make([]string, len(args))
 			for i, str := range args {
 				noSlash[i] = strings.ReplaceAll(str, "/", "-")
@@ -110,9 +110,9 @@ func RegisterRoutes(prefix string) {
 
 	fmt.Println("Reading files")
 	files := []string{
-		path.Join("docs", "pages", "*.html"),
-		path.Join("docs", "components", "*.html"),
-		path.Join("docs", "components", "*", "*.html"),
+		path.Join("docs", "v2", "pages", "*.html"),
+		path.Join("docs", "v2", "components", "*.html"),
+		path.Join("docs", "v2", "components", "*", "*.html"),
 	}
 
 	var err error
@@ -123,11 +123,11 @@ func RegisterRoutes(prefix string) {
 		}
 	}
 
-	content := retrieveData("docs/api_spec.json")
+	content := retrieveData("docs/v2/api_spec.json")
 
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
 
-	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/static"))))
+	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/v2/static"))))
 }
 
 func retrieveData(filepath string) Content {

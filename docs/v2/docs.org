@@ -1,6 +1,6 @@
 #+begin_export latex
       \section{docs}
-      \ty{docs} is the frontend application for never api/v2.
+      \ty{docs} is the frontend application for neverV2.
       It serves to document all endpoints, requests, responses and
       schemes provided by the api. Data is provided by a openAPI
       document in json format. While based on go's html templating
@@ -14,7 +14,7 @@
 #+end_export
 
 #+begin_src go <<docs.go>>=
-  package docs
+  package docsv2
 
   import (
     //<<Imports, Pa. \ref{pa:docs}>>
@@ -71,7 +71,7 @@
   Every function defined within that map may be used inside the HTML
   via the templating syntax. We need three utility functions for the HTML.
   The first is a simple subtraction.
-  \ty{toCSSId} is for rewriting the endpoints names.
+  \ty{toKebab} is for rewriting the endpoints names.
   The endpoints are identified by their names in url syntax. Using those for
   css identifiers does not seem like a good idea, so we replace some characters
   to make them more css friendly.
@@ -91,7 +91,7 @@
 #+end_export
 
 #+begin_export latex
-  Now we define \ty{toCSSid}. The function is provided a variable
+  Now we define \ty{toKebab}. The function is provided a variable
   amount of strings and returns a single joined string. To get
   rid of the hierarchical url structure of an endpoint we replace
   every slash with a dash which results in strings in kebab-case notation, if
@@ -101,7 +101,7 @@
 #+end_export
 
 #+begin_src go <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>=
-	"toCSSId": func(args ...string) string {
+	"toKebab": func(args ...string) string {
 		noSlash := make([]string, len(args))
 		for i, str := range args {
 			noSlash[i] = strings.ReplaceAll(str, "/", "-")
@@ -158,9 +158,9 @@
 #+begin_src go <<Read HTML files, Pa. \ref{pa:docs}>>=
   fmt.Println("Reading files")
   files:= []string{
-    path.Join("docs", "pages", "*.html"),
-    path.Join("docs", "components", "*.html"),
-    path.Join("docs", "components", "*", "*.html"),
+    path.Join("docs", "v2","pages", "*.html"),
+    path.Join("docs", "v2","components", "*.html"),
+    path.Join("docs", "v2","components", "*", "*.html"),
   }
 
   var err error
@@ -254,7 +254,7 @@ type Response struct {
 #+end_src
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
-  content := retrieveData("docs/api_spec.json")
+  content := retrieveData("docs/v2/api_spec.json")
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
@@ -651,5 +651,5 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
-	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/static"))))
+	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/v2/static"))))
 #+end_src

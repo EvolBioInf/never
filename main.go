@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"neverv2/docs"
+	docsv2 "neverv2/docs/v2"
 )
 
 func main() {
-	docs.RegisterRoutes("/docs/api/v2")
+	docsv2.RegisterRoutes("/docs/api/v2")
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
