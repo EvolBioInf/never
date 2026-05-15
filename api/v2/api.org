@@ -63,10 +63,10 @@ type TaxId struct {
 	TaxId int `json:"tax_id"`
 }
 
-type TaxInfo struct {
+type TaxonInfo struct {
 	TaxId          int           `json:"tax_id"`
 	Parent         int           `json:"parent"`
-	IsLeaf         int           `json:"is_leaf"`
+	IsLeaf         bool          `json:"is_leaf"`
 	Name           string        `json:"name"`
 	CommonName     string        `json:"common_name"`
 	Rank           string        `json:"rank"`
@@ -142,7 +142,8 @@ type TaxonName struct {
   makeRoute(prefix + "/taxa-accessions", taxaAccessions, neidb) // formerly known as accessions
   makeRoute(prefix + "/ranks", ranks, neidb) // same as before
   makeRoute(prefix + "/taxa", taxa, neidb) // formerly known as taxi
-
+  makeRoute(prefix + "/taxa-count", taxaCount, neidb) // new
+  makeRoute(prefix + "/taxa-info", taxaInfo, neidb) // same as before
 #+end_src
 
 
@@ -439,7 +440,7 @@ type TaxonName struct {
 		size = len(taxIds)
   }
 
-	taxa := getTaxa(taxIds[offset:min(size, len(taxIds))], neidb)
+	taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
 #+end_src
 
 #+begin_src go <<Extract taxa, Pa. \ref{pa:api}>>=
@@ -547,8 +548,8 @@ adding their levels before storing them.
 
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Extract taxi query, Pr. \ref{pr:nev}>>
-	  //<<Execute taxi query, Pr. \ref{pr:nev}>>
+    //<<Extract taxi query, Pa. \ref{pa:api}>>
+	  //<<Execute taxi query, Pa. \ref{pa:api}>>
  	  //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -559,7 +560,7 @@ adding their levels before storing them.
   If we are \emph{not} matching in exact mode, we bracket the
   name and the blanks it contains by wildcards.
 #+end_export
-#+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Extract taxi query, Pa. \ref{pa:api}>>=
   name := r.URL.Query().Get("name")
   strExact := r.URL.Query().Get("exact")
   strScientific := r.URL.Query().Get("scientific")
@@ -584,7 +585,7 @@ adding their levels before storing them.
   We iterate over the taxon IDs and for each one construct the taxon
   output and store it in our slice of taxa.
 #+end_export
-#+begin_src go <<Execute taxi query, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Execute taxi query, Pa. \ref{pa:api}>>=
   var ids []int
   if scientific {
     ids, err = neidb.Taxids(name, size, offset)
@@ -595,8 +596,8 @@ adding their levels before storing them.
   util.Check(err)
   out := []Taxon{}
   for _, id := range ids {
-	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
-	  //<<Store taxon output, Pr. \ref{pr:nev}>>
+	  //<<Construct taxon output, Pa. \ref{pa:api}>>
+	  //<<Store taxon output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -605,7 +606,7 @@ adding their levels before storing them.
   construct the corresponding taxon output.
 #+end_export
 
-#+begin_src go <<Construct taxon output, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
   sciName, err := neidb.Name(id)
   util.Check(err)
   comName, err := neidb.CommonName(id)
@@ -622,8 +623,186 @@ adding their levels before storing them.
   If we just constructed an output item, we store it in the
   corresponding slice.
 #+end_export
-#+begin_src go <<Store taxon output, Pr. \ref{pr:nev}>>=
+
+#+begin_src go <<Store taxon output, Pa. \ref{pa:api}>>=
   if err == nil {
 	  out = append(out, tout)
   }
+#+end_src
+
+
+
+#+begin_export latex
+  The enpoint \ty{taxa-count} writes the the amount
+  of taxa in the database.
+
+  This is \ty{taxa}'s io:
+  Params:
+    Query:
+      None
+  Writes:
+    {num_taxa: int}
+#+end_exports
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaCount(w http.ResponseWriter, r *http.Request, args ...any) {
+   //<<Get db from args, Pa. \ref{pa:api}>>
+    res, err:= neidb.NumTaxa()
+	  out := struct {
+		  NumTaxa int `json:"num_taxa"`
+	  }{NumTaxa: res}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa-info} takes as argument a string of
+  comma-delimited taxon IDs and returns the information available for
+  them. We get the taxon IDs and iterate over them to obtain and store
+  the corresponding information for each one. After the iteration we
+  print the output, which is stored as a slice of type \ty{TaxonInfo}.
+
+  This is \ty{taxa-info}'s io:
+  Params:
+    Query:
+      taxon-ids []int
+      page []int
+      page-size []int
+  Writes:
+    []TaxonInfo
+#+end_exports
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaInfo(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    valid := checkParams(w, r, "taxon-ids")
+    if !valid {
+      return
+    }
+
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract taxa, Pa. \ref{pa:api}>>
+
+    if size == -1 {
+      size = len(taxIds)
+    }
+
+   	taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
+
+  	out := []TaxonInfo{}
+	  for _, taxon := range taxa {
+		  //<<Get information, Pa. \ref{pa:api}>>
+		  //<<Store information, Pa. \ref{pa:api}>>
+	  }
+
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We get the parent, determine whether the taxon is a leaf, its names,
+  rank, genome counts, and images.
+#+end_export
+
+#+begin_src go <<Get information, Pa. \ref{pa:api}>>=
+  //<<Get parent, Pa. \ref{pa:api}>>
+  //<<Is the taxon a leaf? Pa. \ref{pa:api}>>
+  //<<Get names, Pa. \ref{pa:api}>>
+  //<<Get taxon rank, Pa. \ref{pa:api}>>
+  //<<Get genome counts, Pa. \ref{pa:api}>>
+  //<<Get images, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  We look up the parent taxon and check the error.
+#+end_export
+
+#+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
+  parent, err := neidb.Parent(taxon)
+  util.Check(err)
+#+end_src
+
+#+begin_export latex
+  We determine whether the taxon is a leaf.
+#+end_export
+
+#+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
+  isLeaf, err := neidb.IsLeaf(taxon)
+  util.Check(err)
+#+end_src
+
+#+begin_export latex
+  We get the rank of the taxon.
+#+end_export
+
+#+begin_src go <<Get taxon rank, Pa. \ref{pa:api}>>=
+  rank, err := neidb.Rank(taxon)
+  util.Check(err)
+#+end_src
+
+#+begin_export latex
+  We look up the taxon's scientific and common names with error
+  checking.
+#+end_export
+#+begin_src go <<Get names, Pa. \ref{pa:api}>>=
+  name, err := neidb.Name(taxon)
+  util.Check(err)
+  cname, err := neidb.CommonName(taxon)
+  util.Check(err)
+#+end_src
+#+begin_export latex
+  We look up the raw and recursive genome counts across the assembly
+  levels.
+#+end_export
+
+#+begin_src go <<Get genome counts, Pa. \ref{pa:api}>>=
+  var raw, rec []GenomeCount
+  for _, level := range tdb.AssemblyLevels() {
+	  count, err := neidb.NumGenomes(taxon, level)
+	  util.Check(err)
+	  gc := GenomeCount{Count: count, Level: level}
+	  raw = append(raw, gc)
+	  count, err = neidb.NumGenomesRec(taxon, level)
+	  util.Check(err)
+	  gc = GenomeCount{Count: count, Level: level}
+	  rec = append(rec, gc)
+  }
+#+end_src
+
+#+begin_export latex
+  We look up the images associated with the taxon.
+#+end_export
+
+#+begin_src go <<Get images, Pa. \ref{pa:api}>>=
+  var neiImages []Image
+  images, err := neidb.Images(taxon)
+  util.Check(err)
+  for _, image := range images {
+	  i := Image{Id: image.Id,
+		  Url: image.Url,
+		  Attribution: image.Attribution}
+	  neiImages = append(neiImages, i)
+  }
+#+end_src
+
+#+begin_export latex
+  We store the taxon ID and the information we just looked up for our
+  focal taxon.
+#+end_export
+#+begin_src go <<Store information, Pa. \ref{pa:api}>>=
+	o := TaxonInfo{
+		TaxId:          taxon,
+		Parent:         parent,
+		IsLeaf:         isLeaf,
+		Name:           name,
+		CommonName:     cname,
+		Rank:           rank,
+		RawGenomeCount: raw,
+		RecGenomeCount: rec,
+		Images:         neiImages,
+  }
+
+  out = append(out, o)
 #+end_src

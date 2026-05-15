@@ -44,10 +44,10 @@ type TaxId struct {
 	TaxId int `json:"tax_id"`
 }
 
-type TaxInfo struct {
+type TaxonInfo struct {
 	TaxId          int           `json:"tax_id"`
 	Parent         int           `json:"parent"`
-	IsLeaf         int           `json:"is_leaf"`
+	IsLeaf         bool          `json:"is_leaf"`
 	Name           string        `json:"name"`
 	CommonName     string        `json:"common_name"`
 	Rank           string        `json:"rank"`
@@ -77,6 +77,8 @@ func RegisterRoutes(prefix string) {
 	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb) // formerly known as accessions
 	makeRoute(prefix+"/ranks", ranks, neidb)                    // same as before
 	makeRoute(prefix+"/taxa", taxa, neidb)                      // formerly known as taxi
+	makeRoute(prefix+"/taxa-count", taxaCount, neidb)           // new
+	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)             // same as before
 
 }
 
@@ -189,7 +191,7 @@ func ranks(w http.ResponseWriter, r *http.Request, args ...any) {
 		size = len(taxIds)
 	}
 
-	taxa := getTaxa(taxIds[offset:min(size, len(taxIds))], neidb)
+	taxa := getTaxa(taxIds[offset:min(offset+size, len(taxIds))], neidb)
 
 	out := []Rank{}
 	for i, taxon := range taxa {
@@ -241,7 +243,7 @@ func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
 		size = len(taxIds)
 	}
 
-	taxa := getTaxa(taxIds[offset:min(size, len(taxIds))], neidb)
+	taxa := getTaxa(taxIds[offset:min(offset+size, len(taxIds))], neidb)
 
 	out := []TaxonAccessions{}
 	for len(taxa) > 0 {
@@ -327,6 +329,104 @@ func taxa(w http.ResponseWriter, r *http.Request, args ...any) {
 		if err == nil {
 			out = append(out, tout)
 		}
+
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaCount(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	res, err := neidb.NumTaxa()
+	out := struct {
+		NumTaxa int `json:"num_taxa"`
+	}{NumTaxa: res}
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaInfo(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	valid := checkParams(w, r, "taxon-ids")
+	if !valid {
+		return
+	}
+
+	offset, size := extractPaging(r)
+
+	str := r.URL.Query().Get("taxon-ids")
+	strTaxa := strings.Split(str, ",")
+	var taxIds []int
+	for _, strT := range strTaxa {
+		t, err := strconv.Atoi(strT)
+		if err == nil {
+			taxIds = append(taxIds, t)
+		}
+	}
+
+	if size == -1 {
+		size = len(taxIds)
+	}
+
+	taxa := getTaxa(taxIds[offset:min(offset+size, len(taxIds))], neidb)
+
+	out := []TaxonInfo{}
+	for _, taxon := range taxa {
+		parent, err := neidb.Parent(taxon)
+		util.Check(err)
+
+		isLeaf, err := neidb.IsLeaf(taxon)
+		util.Check(err)
+
+		name, err := neidb.Name(taxon)
+		util.Check(err)
+		cname, err := neidb.CommonName(taxon)
+		util.Check(err)
+		rank, err := neidb.Rank(taxon)
+		util.Check(err)
+
+		var raw, rec []GenomeCount
+		for _, level := range tdb.AssemblyLevels() {
+			count, err := neidb.NumGenomes(taxon, level)
+			util.Check(err)
+			gc := GenomeCount{Count: count, Level: level}
+			raw = append(raw, gc)
+			count, err = neidb.NumGenomesRec(taxon, level)
+			util.Check(err)
+			gc = GenomeCount{Count: count, Level: level}
+			rec = append(rec, gc)
+		}
+
+		var neiImages []Image
+		images, err := neidb.Images(taxon)
+		util.Check(err)
+		for _, image := range images {
+			i := Image{Id: image.Id,
+				Url:         image.Url,
+				Attribution: image.Attribution}
+			neiImages = append(neiImages, i)
+		}
+
+		o := TaxonInfo{
+			TaxId:          taxon,
+			Parent:         parent,
+			IsLeaf:         isLeaf,
+			Name:           name,
+			CommonName:     cname,
+			Rank:           rank,
+			RawGenomeCount: raw,
+			RecGenomeCount: rec,
+			Images:         neiImages,
+		}
+
+		out = append(out, o)
 	}
 
 	b, err := json.MarshalIndent(out, "", "  ")
