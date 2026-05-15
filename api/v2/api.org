@@ -34,58 +34,58 @@ defined within the openApi document.
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Accession struct {
-	Accession string `json:"accession"`
-	Level     string `json:"level"`
+  Accession string `json:"accession"`
+  Level     string `json:"level"`
 }
 
 type GenomeCount struct {
-	Level string `json:"level"`
-	Count int    `json:"count"`
+  Level string `json:"level"`
+  Count int    `json:"count"`
 }
 
 type Image struct {
-	Id          int    `json:"id"`
-	Url         string `json:"url"`
-	Attribution string `json:"attribution"`
+  Id          int    `json:"id"`
+  Url         string `json:"url"`
+  Attribution string `json:"attribution"`
 }
 
 type Rank struct {
-	TaxId int    `json:"tax_id"`
-	Rank  string `json:"rank"`
+  TaxId int    `json:"tax_id"`
+  Rank  string `json:"rank"`
 }
 
 type TaxonAccessions struct {
-	TaxId      int         `json:"tax_id"`
-	Accessions []Accession `json:"accessions"`
+  TaxId      int         `json:"tax_id"`
+  Accessions []Accession `json:"accessions"`
 }
 
 type TaxId struct {
-	TaxId int `json:"tax_id"`
+  TaxId int `json:"tax_id"`
 }
 
 type TaxonInfo struct {
-	TaxId          int           `json:"tax_id"`
-	Parent         int           `json:"parent"`
-	IsLeaf         bool          `json:"is_leaf"`
-	Name           string        `json:"name"`
-	CommonName     string        `json:"common_name"`
-	Rank           string        `json:"rank"`
-	RawGenomeCount []GenomeCount `json:"raw_genome_count"`
-	RecGenomeCount []GenomeCount `json:"rec_genome_count"`
-	Images         []Image       `json:"images"`
+  TaxId          int           `json:"tax_id"`
+  Parent         int           `json:"parent"`
+  IsLeaf         bool          `json:"is_leaf"`
+  Name           string        `json:"name"`
+  CommonName     string        `json:"common_name"`
+  Rank           string        `json:"rank"`
+  RawGenomeCount []GenomeCount `json:"raw_genome_count"`
+  RecGenomeCount []GenomeCount `json:"rec_genome_count"`
+  Images         []Image       `json:"images"`
 }
 
 type Taxon struct {
-	TaxId      int    `json:"tax_id"`
-	Parent     int    `json:"parent"`
-	Name       string `json:"name"`
-	CommonName string `json:"common_name"`
+  TaxId      int    `json:"tax_id"`
+  Parent     int    `json:"parent"`
+  Name       string `json:"name"`
+  CommonName string `json:"common_name"`
 }
 
 type TaxonName struct {
-	TaxId      int    `json:"tax_id"`
-	Name       string `json:"name"`
-	CommonName string `json:"common_name"`
+  TaxId      int    `json:"tax_id"`
+  Name       string `json:"name"`
+  CommonName string `json:"common_name"`
 }
 #+end_src
 
@@ -113,7 +113,7 @@ type TaxonName struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
-    	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) { fn(w, r, args...) })
+      http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) { fn(w, r, args...) })
   }
 #+end_src
 
@@ -144,6 +144,8 @@ type TaxonName struct {
   makeRoute(prefix + "/taxa", taxa, neidb) // formerly known as taxi
   makeRoute(prefix + "/taxa-count", taxaCount, neidb) // new
   makeRoute(prefix + "/taxa-info", taxaInfo, neidb) // same as before
+  makeRoute(prefix + "/taxa-names", taxaNames, neidb) // formerly known as names
+  makeRoute(prefix + "/taxa/{start_id}/path/{end_id}", taxaPath, neidb) // formerly just path
 #+end_src
 
 
@@ -157,9 +159,9 @@ type TaxonName struct {
   This is \ty{accessions}' io:
   Params:
     Query:
-      accession-ids []string
+      accession_ids []string
       page []int
-      page-size []int
+      page_size []int
   Writes:
     []Accession
 #+end_export
@@ -168,10 +170,10 @@ type TaxonName struct {
   func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Check Parameters, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
-	  //<<Extract accessions, Pa. \ref{pa:api}>>
-	  //<<Extract offset and size, Pa. \ref{pa:api}>>
-	  //<<Look up levels, Pa. \ref{pa:api}>>
-	  //<<Write output, Pa. \ref{pa:api}>>
+    //<<Extract accessions, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Look up levels, Pa. \ref{pa:api}>>
+    //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -183,7 +185,7 @@ type TaxonName struct {
 #+end_export
 
 #+begin_src go <<Check Parameters, Pa. \ref{pa:api}>>=
-  valid := checkParams(w, r, "accession-ids")
+  valid := checkParams(w, r, "accession_ids")
   if !valid {
     return
   }
@@ -192,10 +194,10 @@ type TaxonName struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
     for _, arg := range args {
-		p := r.URL.Query().Get(arg)
+    p := r.URL.Query().Get(arg)
       if p == "" {
         w.WriteHeader(http.StatusBadRequest)
-			  w.Write([]byte("Missing required parameter."))
+        w.Write([]byte("Missing required parameter."))
         return false
       }
     }
@@ -220,7 +222,7 @@ type TaxonName struct {
 #+end_export
 
 #+begin_src go <<Extract accessions, Pa. \ref{pa:api}>>=
-  str := r.URL.Query().Get("accession-ids")
+  str := r.URL.Query().Get("accession_ids")
   accessions := strings.Split(str, ",")
 #+end_src
 
@@ -256,7 +258,7 @@ type TaxonName struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func extractPaging(r *http.Request) (offset, size int) {
     strPage := r.URL.Query().Get("page")
-    strPageSize := r.URL.Query().Get("page-size")
+    strPageSize := r.URL.Query().Get("page_size")
 
     if strPageSize != "" {
       cSize, err := strconv.Atoi(strPageSize)
@@ -300,10 +302,10 @@ type TaxonName struct {
 
   for i := offset; i < min(offset + size, len(accessions)); i++ {
     accession := accessions[i]
-	  level, err := neidb.Level(accession)
-	  if err == nil {
-		  out = append(out, Accession{Accession: accession, Level: level})
-	  }
+    level, err := neidb.Level(accession)
+    if err == nil {
+      out = append(out, Accession{Accession: accession, Level: level})
+    }
   }
 #+end_src
 
@@ -355,16 +357,16 @@ type TaxonName struct {
   This is \ty{ranks}' io:
   Params:
     Query:
-      taxon-ids []int
+      taxon_ids []int
       page []int
-      page-size []int
+      page_size []int
   Writes:
     []Rank
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func ranks(w http.ResponseWriter, r *http.Request, args ...any) {
-    valid := checkParams(w, r, "taxon-ids")
+    valid := checkParams(w, r, "taxon_ids")
     if !valid {
       return
     }
@@ -373,14 +375,14 @@ type TaxonName struct {
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Filter with getTaxa, Pa. \ref{pa:api}>>
 
-	  out := []Rank{}
-	  for i, taxon := range taxa {
-		  rank, err := neidb.Rank(taxon)
-		  util.Check(err)
-		  o := Rank{TaxId: taxa[i], Rank: rank}
+    out := []Rank{}
+    for i, taxon := range taxa {
+      rank, err := neidb.Rank(taxon)
+      util.Check(err)
+      o := Rank{TaxId: taxa[i], Rank: rank}
 
-		  out = append(out, o)
-	  }
+      out = append(out, o)
+    }
 
     //<<Write output, Pa. \ref{pa:api}>>
   }
@@ -393,9 +395,9 @@ type TaxonName struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func getTaxa(taxonIds []int, neidb *tdb.TaxonomyDB) []int {
-	  taxa := []int{}
-	  //<<Store taxa, Pa. \ref{pa:api}>>
-	  return taxa
+    taxa := []int{}
+    //<<Store taxa, Pa. \ref{pa:api}>>
+    return taxa
   }
 #+end_src
 
@@ -409,16 +411,16 @@ type TaxonName struct {
   This is \ty{taxaAccessions}' io:
   Params:
     Query:
-      taxon-ids []int
+      taxon_ids []int
       page []int
-      page-size []int
+      page_size []int
   Writes:
     []TaxonAccessions
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
-    valid := checkParams(w, r, "taxon-ids")
+    valid := checkParams(w, r, "taxon_ids")
     if !valid {
       return
     }
@@ -426,8 +428,8 @@ type TaxonName struct {
     //<<Extract taxa, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Filter with getTaxa, Pa. \ref{pa:api}>>
-	  //<<Get accessions, Pa. \ref{pa:api}>>
-	  //<<Write output, Pa. \ref{pa:api}>>
+    //<<Get accessions, Pa. \ref{pa:api}>>
+    //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -437,14 +439,14 @@ type TaxonName struct {
 
 #+begin_src go <<Filter with getTaxa, Pa. \ref{pa:api}>>=
   if size == -1 {
-		size = len(taxIds)
+    size = len(taxIds)
   }
 
-	taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
+  taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
 #+end_src
 
 #+begin_src go <<Extract taxa, Pa. \ref{pa:api}>>=
-  str := r.URL.Query().Get("taxon-ids")
+  str := r.URL.Query().Get("taxon_ids")
   strTaxa := strings.Split(str, ",")
   var taxIds []int
   for _, strT := range strTaxa {
@@ -464,7 +466,7 @@ type TaxonName struct {
   for _, taxon := range taxonIds {
     _, err := neidb.Name(taxon)
     if err == nil {
-  	  taxa = append(taxa, taxon)
+      taxa = append(taxa, taxon)
     }
   }
 #+end_src
@@ -479,14 +481,14 @@ type TaxonName struct {
 #+begin_src go <<Get accessions, Pa. \ref{pa:api}>>=
   out := []TaxonAccessions{}
   for len(taxa) > 0 {
-	  taxId := taxa[0]
-	  taxa = taxa[1:]
-	  accs, err := neidb.Accessions(taxId)
-	  util.Check(err)
-	  if len(accs) > 0 {
-		  //<<Store accessions, Pa. \ref{pa:api}>>
-	  }
-	  //<<Get children, Pa. \ref{pa:api}>>
+    taxId := taxa[0]
+    taxa = taxa[1:]
+    accs, err := neidb.Accessions(taxId)
+    util.Check(err)
+    if len(accs) > 0 {
+      //<<Store accessions, Pa. \ref{pa:api}>>
+    }
+    //<<Get children, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -498,10 +500,10 @@ adding their levels before storing them.
 #+begin_src go <<Store accessions, Pa. \ref{pa:api}>>=
   o := TaxonAccessions{TaxId: taxId}
   for _, acc := range accs {
-	  level, err := neidb.Level(acc)
-	  util.Check(err)
-	  accession := Accession{Accession: acc, Level: level}
-	  o.Accessions = append(o.Accessions, accession)
+    level, err := neidb.Level(acc)
+    util.Check(err)
+    accession := Accession{Accession: acc, Level: level}
+    o.Accessions = append(o.Accessions, accession)
   }
 
   out = append(out, o)
@@ -515,7 +517,7 @@ adding their levels before storing them.
 #+begin_src go <<Get children, Pa. \ref{pa:api}>>=
   children, err := neidb.Children(taxId)
   for _, child := range children {
-	  taxa = append(taxa, child)
+    taxa = append(taxa, child)
   }
 #+end_src
 
@@ -534,7 +536,7 @@ adding their levels before storing them.
       scientific bool
       exact bool
       page []int
-      page-size []int
+      page_size []int
   Writes:
     []TaxonAccessions
 #+end_export
@@ -549,8 +551,8 @@ adding their levels before storing them.
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Extract taxi query, Pa. \ref{pa:api}>>
-	  //<<Execute taxi query, Pa. \ref{pa:api}>>
- 	  //<<Write output, Pa. \ref{pa:api}>>
+    //<<Execute taxi query, Pa. \ref{pa:api}>>
+     //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -576,8 +578,8 @@ adding their levels before storing them.
   }
 
   if !exact {
-	  name = strings.ReplaceAll(name, " ", "% %")
-	  name = "%" + name + "%"
+    name = strings.ReplaceAll(name, " ", "% %")
+    name = "%" + name + "%"
   }
 #+end_src
 
@@ -596,8 +598,8 @@ adding their levels before storing them.
   util.Check(err)
   out := []Taxon{}
   for _, id := range ids {
-	  //<<Construct taxon output, Pa. \ref{pa:api}>>
-	  //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Construct taxon output, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -614,8 +616,8 @@ adding their levels before storing them.
   tout := Taxon{}
   parent, err := neidb.Parent(id)
   if err == nil {
-	  tout = Taxon{TaxId: id, Parent: parent,
-		  Name: sciName, CommonName: comName}
+    tout = Taxon{TaxId: id, Parent: parent,
+      Name: sciName, CommonName: comName}
   }
 #+end_src
 
@@ -626,7 +628,7 @@ adding their levels before storing them.
 
 #+begin_src go <<Store taxon output, Pa. \ref{pa:api}>>=
   if err == nil {
-	  out = append(out, tout)
+    out = append(out, tout)
   }
 #+end_src
 
@@ -648,9 +650,9 @@ adding their levels before storing them.
   func taxaCount(w http.ResponseWriter, r *http.Request, args ...any) {
    //<<Get db from args, Pa. \ref{pa:api}>>
     res, err:= neidb.NumTaxa()
-	  out := struct {
-		  NumTaxa int `json:"num_taxa"`
-	  }{NumTaxa: res}
+    out := struct {
+      NumTaxa int `json:"num_taxa"`
+    }{NumTaxa: res}
     //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -667,9 +669,9 @@ adding their levels before storing them.
   This is \ty{taxa-info}'s io:
   Params:
     Query:
-      taxon-ids []int
+      taxon_ids []int
       page []int
-      page-size []int
+      page_size []int
   Writes:
     []TaxonInfo
 #+end_exports
@@ -677,7 +679,7 @@ adding their levels before storing them.
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaInfo(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
-    valid := checkParams(w, r, "taxon-ids")
+    valid := checkParams(w, r, "taxon_ids")
     if !valid {
       return
     }
@@ -689,13 +691,13 @@ adding their levels before storing them.
       size = len(taxIds)
     }
 
-   	taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
+     taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
 
-  	out := []TaxonInfo{}
-	  for _, taxon := range taxa {
-		  //<<Get information, Pa. \ref{pa:api}>>
-		  //<<Store information, Pa. \ref{pa:api}>>
-	  }
+    out := []TaxonInfo{}
+    for _, taxon := range taxa {
+      //<<Get information, Pa. \ref{pa:api}>>
+      //<<Store information, Pa. \ref{pa:api}>>
+    }
 
     //<<Write output, Pa. \ref{pa:api}>>
   }
@@ -760,14 +762,14 @@ adding their levels before storing them.
 #+begin_src go <<Get genome counts, Pa. \ref{pa:api}>>=
   var raw, rec []GenomeCount
   for _, level := range tdb.AssemblyLevels() {
-	  count, err := neidb.NumGenomes(taxon, level)
-	  util.Check(err)
-	  gc := GenomeCount{Count: count, Level: level}
-	  raw = append(raw, gc)
-	  count, err = neidb.NumGenomesRec(taxon, level)
-	  util.Check(err)
-	  gc = GenomeCount{Count: count, Level: level}
-	  rec = append(rec, gc)
+    count, err := neidb.NumGenomes(taxon, level)
+    util.Check(err)
+    gc := GenomeCount{Count: count, Level: level}
+    raw = append(raw, gc)
+    count, err = neidb.NumGenomesRec(taxon, level)
+    util.Check(err)
+    gc = GenomeCount{Count: count, Level: level}
+    rec = append(rec, gc)
   }
 #+end_src
 
@@ -780,10 +782,10 @@ adding their levels before storing them.
   images, err := neidb.Images(taxon)
   util.Check(err)
   for _, image := range images {
-	  i := Image{Id: image.Id,
-		  Url: image.Url,
-		  Attribution: image.Attribution}
-	  neiImages = append(neiImages, i)
+    i := Image{Id: image.Id,
+      Url: image.Url,
+      Attribution: image.Attribution}
+    neiImages = append(neiImages, i)
   }
 #+end_src
 
@@ -792,17 +794,223 @@ adding their levels before storing them.
   focal taxon.
 #+end_export
 #+begin_src go <<Store information, Pa. \ref{pa:api}>>=
-	o := TaxonInfo{
-		TaxId:          taxon,
-		Parent:         parent,
-		IsLeaf:         isLeaf,
-		Name:           name,
-		CommonName:     cname,
-		Rank:           rank,
-		RawGenomeCount: raw,
-		RecGenomeCount: rec,
-		Images:         neiImages,
+  o := TaxonInfo{
+    TaxId:          taxon,
+    Parent:         parent,
+    IsLeaf:         isLeaf,
+    Name:           name,
+    CommonName:     cname,
+    Rank:           rank,
+    RawGenomeCount: raw,
+    RecGenomeCount: rec,
+    Images:         neiImages,
   }
 
   out = append(out, o)
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa-names} takes a as argument a list of taxon IDs and
+  returns their scientific and common names. We store its output in the struct
+  \ty{TaxonName}.
+
+  This is \ty{taxa-names}'s io:
+  Params:
+    Query:
+      taxon_ids []int
+      page []int
+      page_size []int
+  Writes:
+    []TaxonName
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaNames(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    valid := checkParams(w, r, "taxon_ids")
+    if !valid {
+      return
+    }
+
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract taxa, Pa. \ref{pa:api}>>
+
+    if size == -1 {
+      size = len(taxIds)
+    }
+
+    taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
+
+    out := []TaxonName{}
+    for _, taxon := range taxa {
+      //<<Find name, Pa. \ref{pa:api}>>
+    }
+
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We look up the taxon's name and store it.
+#+end_export
+
+#+begin_src go <<Find name, Pa. \ref{pa:api}>>=
+  name, err := neidb.Name(taxon)
+  util.Check(err)
+  cname, err := neidb.CommonName(taxon)
+  util.Check(err)
+  o := TaxonName{TaxId: taxon, Name: name, CommonName: cname}
+  out = append(out, o)
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{path} takes as input the taxon IDs of a start and an
+  end node in the taxonomy, where the end is closer to the root than the
+  start. It returns the array of taxon IDs that form the path from the
+  start to the end. If no such path exists, an empty array is returned.
+
+  This is \ty{taxa/{start_id}/path/{end_id}}'s io:
+  Params:
+    Path:
+      start_id int
+      end_id int
+    Query:
+      page int
+      page_size int
+  Writes:
+    []Taxon
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaPath(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract start and end taxa, Pa. \ref{pa:api}>>
+  	//<<Add start node, Pa. \ref{pa:api}>>
+  	//<<Climb path, Pa. \ref{pa:api}>>
+    //<<Slice output to size/offset, Pa. \ref{pa:api}>>
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The start and end parameter are passed as path parameters.
+  We extract them via the \ty{PathValue} function. We still need
+  to convert them to integers.
+#+end_export
+
+#+begin_src go <<Extract start and end taxa, Pa. \ref{pa:api}>>=
+  strStartTaxon := r.PathValue("start_id")
+  start, err := strconv.Atoi(strStartTaxon)
+  if err != nil {
+    	w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Can't find parameter's taxa."))
+    return
+  }
+
+  strEndTaxon := r.PathValue("end_id")
+  end, err := strconv.Atoi(strEndTaxon)
+  if err != nil {
+    	w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Can't find parameter's taxa."))
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  We get the parent and check whether the start node is root. If not, we
+  add the taxon.
+#+end_export
+
+#+begin_src go <<Add start node, Pa. \ref{pa:api}>>=
+  parent, err := neidb.Parent(start)
+  util.Check(err)
+  out := []Taxon{}
+
+  //<<Is start node root?, Pa. \ref{pa:api}>>
+  name, err := neidb.Name(start)
+  util.Check(err)
+  cn, err := neidb.CommonName(start)
+  util.Check(err)
+  o := Taxon{
+    TaxId: start,
+    Parent: parent,
+    Name: name,
+    CommonName: cn,
+  }
+  out = append(out, o)
+#+end_src
+
+#+begin_export latex
+  If the start node \emph{is} root, we only add it if it is identical to
+  the end node. Otherwise, we again print the empty output and return.
+#+end_export
+
+#+begin_src go <<Is start node root?, Pa. \ref{pa:api}>>=
+  if parent == start && start != end {
+	  //<<Write output, Pa. \ref{pa:api}>>
+	  return
+  }
+#+end_src
+
+#+begin_export latex
+  We climb the path until we reach its end or the root, whichever comes
+  first. As we accomodate paging with this endpoint, we also stop if
+  go past the last entry of the current page. We need to begin at the start
+  node either way, because we cant't index the path by our offset .
+#+end_export
+
+#+begin_src go <<Climb path, Pa. \ref{pa:api}>>=
+  for i := 0; (i < offset + size || size == -1) && start != end; i++ {
+	  parent, err := neidb.Parent(start)
+	  util.Check(err)
+	  //<<Has the path reached the root?, Pa. \ref{pa:api}>>
+	  start = parent
+	  //<<Store new node on path, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  If the path has reached the root, we empty the output slice and break
+  from climbing the tree.
+#+end_export
+
+#+begin_src go <<Has the path reached the root?, Pa. \ref{pa:api}>>=
+  if start == parent {
+	  out = out[:0]
+	  break
+  }
+#+end_src
+
+#+begin_export latex
+  We construct and store the new node on the path.
+#+end_export
+
+#+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
+  name, err := neidb.Name(start)
+  util.Check(err)
+  cname, err := neidb.CommonName(start)
+  util.Check(err)
+  parent, err = neidb.Parent(start)
+  util.Check(err)
+  o := Taxon{
+    TaxId: start,
+    Parent: parent,
+    Name: name,
+	  CommonName: cname,
+  }
+
+  out = append(out, o)
+#+end_src
+
+#+begin_export latex
+  We've already covered the end so we only need to reslice front.
+#+end_export
+
+#+begin_src go <<Slice output to size/offset, Pa. \ref{pa:api}>>=
+  out = out[1:]
 #+end_src

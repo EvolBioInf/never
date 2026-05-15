@@ -11,6 +11,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/evolbioinf/never/util"
 )
 
@@ -72,13 +73,15 @@ type TaxonName struct {
 func RegisterRoutes(prefix string) {
 	neidb := tdb.OpenTaxonomyDB("neidb")
 
-	makeRoute(prefix+"/accessions", accessions, neidb)          // formerly known as levels
-	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb) // new
-	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb) // formerly known as accessions
-	makeRoute(prefix+"/ranks", ranks, neidb)                    // same as before
-	makeRoute(prefix+"/taxa", taxa, neidb)                      // formerly known as taxi
-	makeRoute(prefix+"/taxa-count", taxaCount, neidb)           // new
-	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)             // same as before
+	makeRoute(prefix+"/accessions", accessions, neidb)                  // formerly known as levels
+	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)         // new
+	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)         // formerly known as accessions
+	makeRoute(prefix+"/ranks", ranks, neidb)                            // same as before
+	makeRoute(prefix+"/taxa", taxa, neidb)                              // formerly known as taxi
+	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                   // new
+	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                     // same as before
+	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                   // formerly known as names
+	makeRoute(prefix+"/taxa/{start-id}/path/{end-id}", taxaPath, neidb) // formerly just path
 
 }
 
@@ -427,8 +430,130 @@ func taxaInfo(w http.ResponseWriter, r *http.Request, args ...any) {
 		}
 
 		out = append(out, o)
+
 	}
 
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaNames(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	valid := checkParams(w, r, "taxon-ids")
+	if !valid {
+		return
+	}
+
+	offset, size := extractPaging(r)
+
+	str := r.URL.Query().Get("taxon-ids")
+	strTaxa := strings.Split(str, ",")
+	var taxIds []int
+	for _, strT := range strTaxa {
+		t, err := strconv.Atoi(strT)
+		if err == nil {
+			taxIds = append(taxIds, t)
+		}
+	}
+
+	if size == -1 {
+		size = len(taxIds)
+	}
+
+	taxa := getTaxa(taxIds[offset:min(offset+size, len(taxIds))], neidb)
+
+	out := []TaxonName{}
+	for _, taxon := range taxa {
+		name, err := neidb.Name(taxon)
+		util.Check(err)
+		cname, err := neidb.CommonName(taxon)
+		util.Check(err)
+		o := TaxonName{TaxId: taxon, Name: name, CommonName: cname}
+		out = append(out, o)
+
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaPath(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	offset, size := extractPaging(r)
+
+	strStartTaxon := r.PathValue("start-id")
+	start, err := strconv.Atoi(strStartTaxon)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Can't find parameter's taxa."))
+		return
+	}
+
+	strEndTaxon := r.PathValue("end-id")
+	end, err := strconv.Atoi(strEndTaxon)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Can't find parameter's taxa."))
+		return
+	}
+
+	parent, err := neidb.Parent(start)
+	util.Check(err)
+	out := []Taxon{}
+
+	if parent == start && start != end {
+		b, err := json.MarshalIndent(out, "", "  ")
+		util.Check(err)
+		fmt.Fprintf(w, "%s\n", string(b))
+
+		return
+	}
+
+	name, err := neidb.Name(start)
+	util.Check(err)
+	cn, err := neidb.CommonName(start)
+	util.Check(err)
+	o := Taxon{
+		TaxId:      start,
+		Parent:     parent,
+		Name:       name,
+		CommonName: cn,
+	}
+	out = append(out, o)
+
+	for i := 0; (i < offset+size || size == -1) && start != end; i++ {
+		parent, err := neidb.Parent(start)
+		util.Check(err)
+		if start == parent {
+			out = out[:0]
+			break
+		}
+
+		start = parent
+		name, err := neidb.Name(start)
+		util.Check(err)
+		cname, err := neidb.CommonName(start)
+		util.Check(err)
+		parent, err = neidb.Parent(start)
+		util.Check(err)
+		o := Taxon{
+			TaxId:      start,
+			Parent:     parent,
+			Name:       name,
+			CommonName: cname,
+		}
+
+		out = append(out, o)
+
+	}
+
+	out = out[1:]
 	b, err := json.MarshalIndent(out, "", "  ")
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
