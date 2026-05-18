@@ -402,13 +402,15 @@ func subtree(w http.ResponseWriter, r *http.Request,
 }
 func taxids(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
-	name := r.URL.Query().Get("t")
 	out := []Taxid{}
-	taxids, err := neidb.CommonTaxids(name, -1, 0)
-	util.Check(err)
-	for _, taxid := range taxids {
-		o := Taxid{taxid}
-		out = append(out, o)
+	name := r.URL.Query().Get("t")
+	if name != "" {
+		taxids, err := neidb.CommonTaxids(name, -1, 0)
+		util.Check(err)
+		for _, taxid := range taxids {
+			o := Taxid{taxid}
+			out = append(out, o)
+		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.Check(err)

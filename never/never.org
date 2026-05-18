@@ -1354,21 +1354,31 @@ We also add \ty{subtree} to our list of services.
 \subsection{\ty{Taxids}}
 The function \ty{Taxids} takes as argument a taxon name and returns
 the corresponding taxon IDs. We implement the query in the function
-\ty{taxids} where we get the taxon name and store the corresponding
-taxon IDs before we print the output.
+\ty{taxids} where we get the taxon name. If that is the empty string,
+it matches every name, which creates a large and meaningless result
+set. So we only store the taxon IDs if the name is not the empty
+string. Then we print the output.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func taxids(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
-	  taxids, err := neidb.CommonTaxids(name, -1, 0)
-	  util.Check(err)
-	  for _, taxid := range taxids {
-		  o := Taxid{taxid}
-		  out = append(out, o)
+	  name := r.URL.Query().Get("t")
+	  if name != "" {
+		  //<<Store taxids, Pr. \ref{pr:nev}>>
 	  }
 	  //<<Print output, Pr. \ref{pr:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We get the taxon IDs from the database and store them.
+#+end_export
+#+begin_src go <<Store taxids, Pr. \ref{pr:nev}>>=
+  taxids, err := neidb.CommonTaxids(name, -1, 0)
+  util.Check(err)
+  for _, taxid := range taxids {
+	  o := Taxid{taxid}
+	  out = append(out, o)
   }
 #+end_src
 #+begin_export latex
