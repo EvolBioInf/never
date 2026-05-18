@@ -87,6 +87,7 @@ func RegisterRoutes(prefix string) {
 	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
 	makeRoute(prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
 	makeRoute(prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
+	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", taxaMRCA, neidb)                            // formerly just mrca
 
 }
 
@@ -758,9 +759,39 @@ func taxaSubtree(w http.ResponseWriter, r *http.Request, args ...any) {
 		if err != nil {
 			continue
 		}
+
 		o := Taxon{TaxId: taxon, Parent: parent, Name: name,
 			CommonName: cname}
 		out = append(out, o)
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaMRCA(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	out := TaxId{0}
+	strTaxonIds := r.PathValue("taxon_ids")
+	split := strings.Split(strTaxonIds, ",")
+	taxa := []int{}
+	for _, str := range split {
+		id, err := strconv.Atoi(str)
+		if err != nil {
+			return
+		}
+
+		taxa = append(taxa, id)
+	}
+	if len(taxa) > 0 {
+		mrca, err := neidb.MRCA(taxa)
+		if err == nil {
+			out = TaxId{mrca}
+		}
 	}
 
 	b, err := json.MarshalIndent(out, "", "  ")

@@ -152,6 +152,7 @@ type TaxonName struct {
   makeRoute(prefix + "/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
   makeRoute(prefix + "/taxa/{taxon_id}/parent", taxaParent, neidb) // formerly known as parent
   makeRoute(prefix + "/taxa/{taxon_id}/subtree", taxaSubtree, neidb) // formerly just subtree
+  makeRoute(prefix + "/taxa/{taxon_ids}/mrca", taxaMRCA, neidb) // formerly just mrca
 #+end_src
 
 
@@ -1389,5 +1390,53 @@ parent's taxon ID.
   util.Check(err)
   if err != nil {
 	  continue
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  \subsection{\ty{mrca}}
+  The service \ty{taxa/mrca} taks as argument a slice of taxon IDs and
+  returns their most recent common ancestor. We implement the service in
+  the function \ty{taxaMRCA}, where we get the taxon IDs, calculate their
+  most recent common ancestor, and write the output. If there is no most
+  recent common ancestor, we return taxid 0.
+
+  This is \ty{taxa/mrca}'s io:
+  Params:
+    Path:
+      taxon_ids []int
+  Writes:
+    TaxId
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaMRCA(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+ 	  out := TaxId{0}
+    //<<Exract taxonIds from path, Pa. \ref{pa:api}>>
+	  if len(taxa) > 0 {
+		  mrca, err := neidb.MRCA(taxa)
+		  if err == nil {
+			  out = TaxId{mrca}
+		  }
+	  }
+
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_src go <<Exract taxonIds from path, Pa. \ref{pa:api}>>=
+  strTaxonIds := r.PathValue("taxon_ids")
+  split := strings.Split(strTaxonIds, ",")
+  taxa := []int{}
+  for _, str := range split {
+    id, err := strconv.Atoi(str)
+    if err != nil {
+      return
+    }
+
+    taxa = append(taxa, id)
   }
 #+end_src
