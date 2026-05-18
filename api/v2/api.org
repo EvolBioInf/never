@@ -147,6 +147,11 @@ type TaxonName struct {
   makeRoute(prefix + "/taxa-names", taxaNames, neidb) // formerly known as names
   makeRoute(prefix + "/taxa/{start_id}/path/{end_id}", taxaPath, neidb) // formerly just path
   makeRoute(prefix + "/taxa/{taxon_id}/children", taxaChildren, neidb) // formerly just children
+  makeRoute(prefix + "/taxa/{taxon_id}/images", taxaImages, neidb) // new
+  makeRoute(prefix + "/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb) // formerly known as num_genomes
+  makeRoute(prefix + "/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
+  makeRoute(prefix + "/taxa/{taxon_id}/parent", taxaParent, neidb) // formerly known as parent
+  makeRoute(prefix + "/taxa/{taxon_id}/subtree", taxaSubtree, neidb) // formerly just subtree
 #+end_src
 
 
@@ -703,7 +708,7 @@ adding their levels before storing them.
       size = len(taxIds)
     }
 
-     taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
+    taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
 
     out := []TaxonInfo{}
     for _, taxon := range taxa {
@@ -793,6 +798,7 @@ adding their levels before storing them.
   var neiImages []Image
   images, err := neidb.Images(taxon)
   util.Check(err)
+
   for _, image := range images {
     i := Image{Id: image.Id,
       Url: image.Url,
@@ -1032,7 +1038,7 @@ adding their levels before storing them.
 #+begin_export latex
   The service \ty{taxa/children} takes as argument a taxon ID and returns its
   children as a slice of their taxon IDs.
-  We implement the service \ty{taxa/children} in the function \ty{taxa/children},
+  We implement the service \ty{taxa/children} in the function \ty{taxaChildren},
   where we get the taxon ID and the corresponding children. Then we
   iterate over the children and construct the output object for each
   one, before we write the output.
@@ -1052,11 +1058,17 @@ adding their levels before storing them.
   func taxaChildren(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get taxId from path, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
 
 	  children, err := neidb.Children(taxId)
 	  util.Check(err)
 	  out := []TaxonName{}
-	  for _, child := range children {
+    if size == -1 {
+      size = len(children)
+    }
+
+	  for i := offset; i < min(offset + size, len(children)); i++ {
+      child := children[i]
 		  //<<Construct child, Pa. \ref{pa:api}>>
 	  }
 	  //<<Write output, Pa. \ref{pa:api}>>
@@ -1084,4 +1096,298 @@ adding their levels before storing them.
   util.Check(err)
   o := TaxonName{child, name, cname}
   out = append(out, o)
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa/images} takes as argument a taxon ID and returns
+  the images associated with this taxon.
+  We implement the service \ty{taxa/images} in the function \ty{taxaImages},
+  where we get the taxon ID and the corresponding images. Then we
+  iterate over the images and construct the output object for each
+  one, before we write the output.
+
+  This is \ty{taxa/images}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      page int
+      page_size int
+  Writes:
+    []Image
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaImages(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get taxId from path, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    images, err := neidb.Images(taxId)
+	  util.Check(err)
+
+    if size == -1 {
+      size = len(images)
+    }
+
+	  out := []Image{}
+	  for i := offset; i < min(offset + size, len(images)); i++ {
+      image := images[i]
+      //<<Construct image, Pa. \ref{pa:api}>>
+	  }
+	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The Image types of the api and tdb differ slightly as the api
+  does not provide a list of taxIds with its images. In order
+  to conform to the api, we drop the taxIds before writing the output.
+#+end_export
+
+#+begin_src go <<Construct image, Pa. \ref{pa:api}>>=
+  o := Image{
+    Id: image.Id,
+    Url: image.Url,
+    Attribution: image.Attribution,
+  }
+  out = append(out, o)
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa/genomeCount} takes a taxon ID and returns the number
+  of genomes across all assembly levels. We store the genome counts in a
+  slice of type \ty{GenomeCount}, which holds the count for a given
+  level.
+
+  This is \ty{taxa/genomeCount}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      page int
+      page_size int
+  Writes:
+    []GenomeCount
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaGenomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+	  //<<Get raw genome counts, Pa. \ref{pa:api}>>
+    //<<Reslice to offset and limit, Pa. \ref{pa:api}>>
+	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We get the raw genome counts across all levels and store them.
+#+end_export
+
+#+begin_src go <<Get raw genome counts, Pa. \ref{pa:api}>>=
+  out := []GenomeCount{}
+  for _, level := range tdb.AssemblyLevels() {
+	  n, err := neidb.NumGenomes(taxId, level)
+	  if err == nil {
+		  o := GenomeCount{Count: n, Level: level}
+		  out = append(out, o)
+	  }
+  }
+#+end_src
+
+#+begin_export latex
+  Sadly we don't know the amount of \ty{GenomeCount} entries per level
+  before requesting them, which in turn makes efficient pagination
+  difficult. It would be possible to stop requesting new counts once we 
+  reach the size limit, but as we can't efficiently predict the starting point
+  using the offset anyways, I decided for a code friendly slicing post 
+  data requests.
+#+end_export
+
+#+begin_src go <<Reslice to offset and limit, Pa. \ref{pa:api}>>=
+  if size == -1 {
+    size = len(out)
+  }
+
+  out = out[offset:min(offset + size, len(out))]
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa/genomeCountRec} takes a taxon ID as input and
+  returns the recursive number of genomes for all assembly levels. We
+  get the taxon ID, get the recursive genome counts for it, and print
+  the output.
+
+  This is \ty{taxa/genomeCount}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      page int
+      page_size int
+  Writes:
+    []GenomeCount
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaGenomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+	  //<<Get recursive genome counts, Pa. \ref{pa:api}>>
+    //<<Reslice to offset and limit, Pa. \ref{pa:api}>>
+	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  Inside the function \ty{taxaGenomeCountRec} we get the recursive
+  genome counts across the levels and store them.
+#+end_export
+
+#+begin_src go <<Get recursive genome counts, Pa. \ref{pa:api}>>=
+  out := []GenomeCount{}
+  for _, level := range tdb.AssemblyLevels() {
+	  n, err := neidb.NumGenomesRec(taxId, level)
+	  if err == nil {
+		  o := GenomeCount{Count: n, Level: level}
+		  out = append(out, o)
+	  }
+  }
+#+end_src
+
+
+
+#+begin_export latex
+The service \ty{taxa/parent} takes as argument a taxon ID and returns the
+parent's taxon ID.
+
+  This is \ty{taxa/parent}'s io:
+  Params:
+    Path:
+      taxon_id int
+  Writes:
+    TaxId
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaParent(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+	  parent, err := neidb.Parent(taxId)
+	  out := TaxId{0}
+	  if err == nil {
+		  out = TaxId{parent}
+	  }
+
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa/subtree} returns all taxa in a subtree, including the
+  root. In the function \ty{taxaSubtree} we get the taxon ID, get and store
+  the corresponding subtree, and write the output. A subtree consists of
+  nodes, which are structs to hold a taxon ID, its name, its common
+  name, and the parent ID. We iterate over the taxa in the subtree 
+  and look up the parent for each one, except for the root, \ty{taxId}, 
+  whose parent is itself. From the current taxon, its parent, and 
+  its names we construct the new node, which we store in our output slice.
+
+  This is \ty{taxa/parent}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      page int
+      page_size int
+  Writes:
+    []Taxon
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaSubtree(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Get taxa in subtree, Pa. \ref{pa:api}>>
+	  //<<Construct nodes in subtree, Pa. \ref{pa:api}>>
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We obtain the taxa in the subtree rooted on the taxon with \ty{taxId}.
+#+end_export
+
+#+begin_src go <<Get taxa in subtree, Pa. \ref{pa:api}>>=
+  taxa, err := neidb.Subtree(taxId)
+  util.Check(err)
+#+end_src
+
+#+begin_export latex
+  We iterate over the taxa in the subtree and look up the parent for
+  each one, except for the root, \ty{taxId}, whose parent is
+  itself. From the current taxon, its parent, and its names we construct
+  the new node, which we store in our output slice.
+#+end_export
+
+#+begin_src go <<Construct nodes in subtree, Pa. \ref{pa:api}>>=
+  
+  if size == -1 {
+    size = len(taxa)
+  }
+
+  out := []Taxon{}
+  for i := offset; i < min(offset + size, len(taxa)); i++ {
+    taxon := taxa[i]
+	  parent := taxon
+	  //<<Get node parent, Pa. \ref{pa:api}>>
+	  name := ""
+	  cname := ""
+	  //<<Get node names, Pa. \ref{pa:api}>>
+	  o := Taxon{TaxId: taxon, Parent: parent, Name: name,
+		  CommonName: cname}
+	  out = append(out, o)
+  }
+#+end_src
+
+#+begin_export latex
+  We get the node's parent and skip the rest of the loop if we encounter
+  an error.
+#+end_export
+
+#+begin_src go <<Get node parent, Pa. \ref{pa:api}>>=
+  parent, err := neidb.Parent(taxon)
+  util.Check(err)
+  if err != nil {
+	  continue
+  }
+#+end_src
+
+#+begin_export latex
+  We get the node's scientific and common names and again skip to the
+  end of the loop if we encounter an error.
+#+end_export
+
+#+begin_src go <<Get node names, Pa. \ref{pa:api}>>=
+  name, err = neidb.Name(taxon)
+  util.Check(err)
+  if err != nil {
+	  continue
+  }
+  cname, err = neidb.CommonName(taxon)
+  util.Check(err)
+  if err != nil {
+	  continue
+  }
 #+end_src

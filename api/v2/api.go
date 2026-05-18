@@ -72,16 +72,21 @@ type TaxonName struct {
 func RegisterRoutes(prefix string) {
 	neidb := tdb.OpenTaxonomyDB("neidb")
 
-	makeRoute(prefix+"/accessions", accessions, neidb)                  // formerly known as levels
-	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)         // new
-	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)         // formerly known as accessions
-	makeRoute(prefix+"/ranks", ranks, neidb)                            // same as before
-	makeRoute(prefix+"/taxa", taxa, neidb)                              // formerly known as taxi
-	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                   // new
-	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                     // same as before
-	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                   // formerly known as names
-	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb) // formerly just path
-	makeRoute(prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)  // formerly just children
+	makeRoute(prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
+	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)                            // new
+	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)                            // formerly known as accessions
+	makeRoute(prefix+"/ranks", ranks, neidb)                                               // same as before
+	makeRoute(prefix+"/taxa", taxa, neidb)                                                 // formerly known as taxi
+	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                                      // new
+	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                                        // same as before
+	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                                      // formerly known as names
+	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb)                    // formerly just path
+	makeRoute(prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)                     // formerly just children
+	makeRoute(prefix+"/taxa/{taxon_id}/images", taxaImages, neidb)                         // new
+	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
+	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
+	makeRoute(prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
+	makeRoute(prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
 
 }
 
@@ -416,6 +421,7 @@ func taxaInfo(w http.ResponseWriter, r *http.Request, args ...any) {
 		var neiImages []Image
 		images, err := neidb.Images(taxon)
 		util.Check(err)
+
 		for _, image := range images {
 			i := Image{Id: image.Id,
 				Url:         image.Url,
@@ -577,17 +583,186 @@ func taxaChildren(w http.ResponseWriter, r *http.Request, args ...any) {
 	strTaxonId := r.PathValue("taxon_id")
 	taxId, _ := strconv.Atoi(strTaxonId)
 
+	offset, size := extractPaging(r)
+
 	children, err := neidb.Children(taxId)
 	util.Check(err)
 	out := []TaxonName{}
-	for _, child := range children {
+	if size == -1 {
+		size = len(children)
+	}
+
+	for i := offset; i < min(offset+size, len(children)); i++ {
+		child := children[i]
 		name, err := neidb.Name(child)
 		util.Check(err)
 		cname, err := neidb.CommonName(child)
 		util.Check(err)
 		o := TaxonName{child, name, cname}
 		out = append(out, o)
+
 	}
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaImages(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strTaxonId := r.PathValue("taxon_id")
+	taxId, _ := strconv.Atoi(strTaxonId)
+
+	offset, size := extractPaging(r)
+
+	images, err := neidb.Images(taxId)
+	util.Check(err)
+
+	if size == -1 {
+		size = len(images)
+	}
+
+	out := []Image{}
+	for i := offset; i < min(offset+size, len(images)); i++ {
+		image := images[i]
+		o := Image{
+			Id:          image.Id,
+			Url:         image.Url,
+			Attribution: image.Attribution,
+		}
+		out = append(out, o)
+
+	}
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaGenomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strTaxonId := r.PathValue("taxon_id")
+	taxId, _ := strconv.Atoi(strTaxonId)
+
+	offset, size := extractPaging(r)
+
+	out := []GenomeCount{}
+	for _, level := range tdb.AssemblyLevels() {
+		n, err := neidb.NumGenomes(taxId, level)
+		if err == nil {
+			o := GenomeCount{Count: n, Level: level}
+			out = append(out, o)
+		}
+	}
+
+	if size == -1 {
+		size = len(out)
+	}
+
+	out = out[offset:min(offset+size, len(out))]
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaGenomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strTaxonId := r.PathValue("taxon_id")
+	taxId, _ := strconv.Atoi(strTaxonId)
+
+	offset, size := extractPaging(r)
+
+	out := []GenomeCount{}
+	for _, level := range tdb.AssemblyLevels() {
+		n, err := neidb.NumGenomesRec(taxId, level)
+		if err == nil {
+			o := GenomeCount{Count: n, Level: level}
+			out = append(out, o)
+		}
+	}
+
+	if size == -1 {
+		size = len(out)
+	}
+
+	out = out[offset:min(offset+size, len(out))]
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaParent(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strTaxonId := r.PathValue("taxon_id")
+	taxId, _ := strconv.Atoi(strTaxonId)
+
+	parent, err := neidb.Parent(taxId)
+	out := TaxId{0}
+	if err == nil {
+		out = TaxId{parent}
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "%s\n", string(b))
+
+}
+
+func taxaSubtree(w http.ResponseWriter, r *http.Request, args ...any) {
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strTaxonId := r.PathValue("taxon_id")
+	taxId, _ := strconv.Atoi(strTaxonId)
+
+	offset, size := extractPaging(r)
+
+	taxa, err := neidb.Subtree(taxId)
+	util.Check(err)
+
+	if size == -1 {
+		size = len(taxa)
+	}
+
+	out := []Taxon{}
+	for i := offset; i < min(offset+size, len(taxa)); i++ {
+		taxon := taxa[i]
+		parent := taxon
+		parent, err := neidb.Parent(taxon)
+		util.Check(err)
+		if err != nil {
+			continue
+		}
+
+		name := ""
+		cname := ""
+		name, err = neidb.Name(taxon)
+		util.Check(err)
+		if err != nil {
+			continue
+		}
+		cname, err = neidb.CommonName(taxon)
+		util.Check(err)
+		if err != nil {
+			continue
+		}
+		o := Taxon{TaxId: taxon, Parent: parent, Name: name,
+			CommonName: cname}
+		out = append(out, o)
+	}
+
 	b, err := json.MarshalIndent(out, "", "  ")
 	util.Check(err)
 	w.Header().Set("Content-Type", "application/json")
