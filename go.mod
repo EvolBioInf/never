@@ -6,6 +6,7 @@ require (
 	github.com/evolbioinf/neighbors v0.0.0-20260508100631-677369428da4
 	github.com/evolbioinf/never v0.0.0-20260425075154-cdb50a8d1bb0
 	github.com/pb33f/libopenapi v0.36.3
+	github.com/rs/cors v1.11.1
 )
 
 require (

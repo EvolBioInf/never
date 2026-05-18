@@ -50,16 +50,13 @@
               '{{toKebab "run" "example" .Name .Op.Verb}}',
             );
             button.onclick = () => {
-              console.log(
-                "clicked buton",
-                '{{toKebab "run" "example" .Name .Op.Verb}}',
-              );
               const input = document.getElementById(
                 '{{toKebab "input" "example" .Name .Op.Verb}}',
               );
               const pre = document.getElementById(
                 '{{toKebab "response" .Name .Op.Verb}}',
               );
+              fetch(input.value).then((data) => {console.log(data)})
               pre.innerHTML = input.value;
             };
           }

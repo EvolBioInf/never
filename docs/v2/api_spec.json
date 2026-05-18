@@ -35,7 +35,9 @@
     "/accessions": {
       "get": {
         "summary": "Get accession levels",
-        "tags": ["Accession"],
+        "tags": [
+          "Accession"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -63,6 +65,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required parameter."
           }
         },
         "operationId": "get-accessions",
@@ -70,22 +75,26 @@
           {
             "schema": {
               "type": "array",
-              "example": ["GCF_000001405.40", "GCA_000002115.2"],
+              "example": [
+                "GCF_000001405.40",
+                "GCA_000002115.2"
+              ],
               "items": {
                 "type": "string"
               }
             },
             "in": "query",
-            "name": "accession-ids",
+            "name": "accession_ids",
             "description": "IDs of accessions to filter for",
             "explode": false,
-            "style": "form"
+            "style": "form",
+            "required": true
           },
           {
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ],
         "description": "Get accessions and their levels filtered by accession IDs"
@@ -107,7 +116,12 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": ["complete", "chromosome", "scaffold", "contig"]
+                    "value": [
+                      "complete",
+                      "chromosome",
+                      "scaffold",
+                      "contig"
+                    ]
                   }
                 }
               }
@@ -116,14 +130,18 @@
         },
         "operationId": "get-general-assembly-levels",
         "description": "Get all possible assembly levels",
-        "tags": ["Accession"]
+        "tags": [
+          "Accession"
+        ]
       },
       "parameters": []
     },
     "/ranks": {
       "get": {
         "summary": "Get ranks of taxa",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -151,6 +169,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required parameter."
           }
         },
         "operationId": "get-ranks",
@@ -158,22 +179,26 @@
           {
             "schema": {
               "type": "array",
-              "example": [9606, 9605],
+              "example": [
+                9606,
+                9605
+              ],
               "items": {
                 "type": "integer"
               }
             },
             "in": "query",
-            "name": "taxon-ids",
+            "name": "taxon_ids",
             "description": "IDs of taxa to filter for",
             "explode": false,
-            "style": "form"
+            "style": "form",
+            "required": true
           },
           {
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ],
         "description": "Get ranks of taxa filtered by taxon IDs"
@@ -182,7 +207,9 @@
     "/taxa": {
       "get": {
         "summary": "Get taxa by name",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -262,6 +289,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required parameter."
           }
         },
         "operationId": "get-taxa",
@@ -269,12 +299,12 @@
           {
             "schema": {
               "type": "string",
-              "default": "\"\"",
               "example": "dolph"
             },
             "in": "query",
             "name": "name",
-            "description": "Name or pattern of the taxa"
+            "description": "Name or pattern of the taxa",
+            "required": true
           },
           {
             "schema": {
@@ -286,7 +316,7 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "boolean"
             },
             "in": "query",
             "name": "exact",
@@ -311,7 +341,7 @@
               "minimum": -1
             },
             "in": "query",
-            "name": "page-size",
+            "name": "page_size",
             "description": "Amount of entries per page"
           }
         ],
@@ -321,7 +351,9 @@
     "/taxa-accessions": {
       "get": {
         "summary": "Get taxons accessions",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -368,6 +400,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required parameter."
           }
         },
         "operationId": "get-taxa-accessions",
@@ -376,22 +411,26 @@
           {
             "schema": {
               "type": "array",
-              "example": [278148, 602633],
+              "example": [
+                278148,
+                602633
+              ],
               "items": {
                 "type": "integer"
               }
             },
             "in": "query",
-            "name": "taxon-ids",
+            "name": "taxon_ids",
             "description": "IDs of taxa to filter for",
             "explode": false,
-            "style": "form"
+            "style": "form",
+            "required": true
           },
           {
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
@@ -427,13 +466,17 @@
         },
         "operationId": "taxa-count",
         "description": "Get the number of taxa in the db",
-        "tags": ["Taxon"]
+        "tags": [
+          "Taxon"
+        ]
       }
     },
     "/taxa-info": {
       "get": {
         "summary": "Get taxa info",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -442,7 +485,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TaxInfo"
+                    "$ref": "#/components/schemas/TaxonInfo"
                   }
                 },
                 "examples": {
@@ -555,6 +598,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required parameter."
           }
         },
         "operationId": "get-taxa-info",
@@ -563,22 +609,26 @@
           {
             "schema": {
               "type": "array",
-              "example": [562, 9606],
+              "example": [
+                562,
+                9606
+              ],
               "items": {
                 "type": "integer"
               }
             },
             "in": "query",
-            "name": "taxon-ids",
+            "name": "taxon_ids",
             "description": "IDs of taxa to filter for",
             "explode": false,
-            "style": "form"
+            "style": "form",
+            "required": true
           },
           {
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
@@ -586,7 +636,9 @@
     "/taxa-names": {
       "get": {
         "summary": "Get taxa and their names",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -616,6 +668,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing required parameter."
           }
         },
         "operationId": "get-taxa-names",
@@ -624,34 +679,38 @@
           {
             "schema": {
               "type": "array",
-              "example": [9606, 9605],
+              "example": [
+                9606,
+                9605
+              ],
               "items": {
                 "type": "integer"
               }
             },
             "in": "query",
-            "name": "taxon-ids",
+            "name": "taxon_ids",
             "description": "IDs of taxa to filter for",
             "explode": false,
-            "style": "form"
+            "style": "form",
+            "required": true
           },
           {
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
     },
-    "/taxa/{start-id}/path/{end-id}": {
+    "/taxa/{start_id}/path/{end_id}": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 9606
           },
-          "name": "start-id",
+          "name": "start_id",
           "in": "path",
           "required": true,
           "description": "id of start taxon, further from root"
@@ -661,7 +720,7 @@
             "type": "integer",
             "example": 40674
           },
-          "name": "end-id",
+          "name": "end_id",
           "in": "path",
           "required": true,
           "description": "id of end taxon, closer to root"
@@ -669,7 +728,9 @@
       ],
       "get": {
         "summary": "Get path between two taxa",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -773,20 +834,31 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Can't find parameter's taxa."
           }
         },
         "operationId": "get-taxa-start-id-path-end-id",
-        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root\nReturns an empty list if no path connects start and end"
+        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root\nReturns an empty list if no path connects start and end",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page_size"
+          }
+        ]
       }
     },
-    "/taxa/{taxon-id}/children": {
+    "/taxa/{taxon_id}/children": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 9606
           },
-          "name": "taxon-id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
           "description": "id of taxon"
@@ -794,7 +866,9 @@
       ],
       "get": {
         "summary": "Get taxons children",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -833,19 +907,19 @@
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
     },
-    "/taxa/{taxon-id}/images": {
+    "/taxa/{taxon_id}/images": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 9606
           },
-          "name": "taxon-id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
           "description": "id of taxon"
@@ -853,7 +927,9 @@
       ],
       "get": {
         "summary": "Get taxons images",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -876,19 +952,19 @@
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
     },
-    "/taxa/{taxon-id}/genome-count": {
+    "/taxa/{taxon_id}/genome-count": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 562
           },
-          "name": "taxon-id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
           "description": "id of taxon"
@@ -896,7 +972,9 @@
       ],
       "get": {
         "summary": "Get taxons genome count",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -941,19 +1019,19 @@
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
     },
-    "/taxa/{taxon-id}/genome-count-recursive": {
+    "/taxa/{taxon_id}/genome-count-recursive": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 562
           },
-          "name": "taxon-id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
           "description": "id of taxon"
@@ -961,7 +1039,9 @@
       ],
       "get": {
         "summary": "Get taxons genome count recursive",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1006,19 +1086,19 @@
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
     },
-    "/taxa/{taxon-id}/parent": {
+    "/taxa/{taxon_id}/parent": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 9606
           },
-          "name": "taxon-id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
           "description": "id of taxon"
@@ -1026,7 +1106,9 @@
       ],
       "get": {
         "summary": "Get taxons parent",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1050,14 +1132,14 @@
         "description": "Get the parents taxon id of a given taxon"
       }
     },
-    "/taxa/{taxon-id}/subtree": {
+    "/taxa/{taxon_id}/subtree": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 9606
           },
-          "name": "taxon-id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
           "description": "id of taxon"
@@ -1065,7 +1147,9 @@
       ],
       "get": {
         "summary": "Get subtree of taxon",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1112,22 +1196,26 @@
             "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page-size"
+            "$ref": "#/components/parameters/page_size"
           }
         ]
       }
     },
-    "/taxa/{taxon-ids}/mrca": {
+    "/taxa/{taxon_ids}/mrca": {
       "parameters": [
         {
           "schema": {
             "type": "array",
-            "example": [9606, 741158, 63221],
+            "example": [
+              9606,
+              741158,
+              63221
+            ],
             "items": {
               "type": "integer"
             }
           },
-          "name": "taxon-ids",
+          "name": "taxon_ids",
           "in": "path",
           "required": true,
           "description": "list of IDs which share a common ancestor"
@@ -1135,7 +1223,9 @@
       ],
       "get": {
         "summary": "Get most recent common ancestor",
-        "tags": ["Taxon"],
+        "tags": [
+          "Taxon"
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1237,8 +1327,8 @@
           }
         }
       },
-      "TaxInfo": {
-        "title": "TaxInfo",
+      "TaxonInfo": {
+        "title": "TaxonInfo",
         "type": "object",
         "properties": {
           "tax_id": {
@@ -1328,8 +1418,8 @@
         "description": "Current page",
         "style": "form"
       },
-      "page-size": {
-        "name": "page-size",
+      "page_size": {
+        "name": "page_size",
         "in": "query",
         "required": false,
         "schema": {

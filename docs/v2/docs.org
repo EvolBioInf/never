@@ -30,11 +30,13 @@
   the actual webserver. This allows the \ty{docs} to register
   all its routes and setup how to handle the different frontend
   endpoints. To prevent route clashing, the functions expects a prefix
-  that is prepended to all registered routes.
+  that is prepended to all registered routes. The server also provides
+  information on whether it is hosting locally and its port. We need 
+  this data later on to for the example requests. 
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
-  func RegisterRoutes(prefix string) {
+  func RegisterRoutes(prefix string, local bool, port int) {
     // <<Create template, Pa. \ref{pa:docs}>>
     // <<Add template functions, Pa. \ref{pa:docs}>>
     // <<Read HTML files, Pa. \ref{pa:docs}>>
@@ -96,7 +98,8 @@
   every slash with a dash which results in strings in kebab-case notation, if
   we make all characters lowercased  as well.
   Then we join the strings and delete leading dashes as well as dashes followed
-  by another dash.
+  by another dash. The path parameters are enclosed by curly brackets. We remove
+  those as well.
 #+end_export
 
 #+begin_src go <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>=
@@ -110,6 +113,9 @@
 		if len(joined) > 1 && joined[0] == '-' {
 			joined = joined[1:]
 		}
+
+    joined = strings.ReplaceAll(joined, "{", "")
+    joined = strings.ReplaceAll(joined, "}", "")
 
 		return strings.ToLower(joined)
 	},
@@ -253,11 +259,11 @@ type Response struct {
 #+end_src
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
-  content := retrieveData("docs/v2/api_spec.json")
+  content := retrieveData("docs/v2/api_spec.json", local, port)
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
-  func retrieveData(filepath string) Content {
+  func retrieveData(filepath string, local bool, port int) Content {
     // <<Create Model from library, Pa. \ref{pa:docs}>>
     // <<Parse data to Content, Pa. \ref{pa:docs}>>
   }
@@ -447,7 +453,12 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Construct example, Pa. \ref{pa:docs}>>=
-	examplePath := content.ServerURL + newPath.Name
+	examplePath := content.ServerURL 
+
+  // <<Opt. make local, Pa. \ref{pa:docs}>>
+
+  examplePath += newPath.Name
+
 	for _, param := range pathParams {
 		examplePath = strings.ReplaceAll(examplePath, param.Name, param.Example)
 	}
@@ -457,6 +468,16 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
   // <<Append query parameters, Pa. \ref{pa:docs}>>
 
+#+end_src
+
+#+begin_export latex
+  We need to change the base url, iff the server is hosted locally.
+#+end_export
+
+#+begin_src go <<Opt. make local, Pa. \ref{pa:docs}>>=
+  if local {
+    examplePath = fmt.Sprintf("localhost:%d/api/v2", port)
+  }
 #+end_src
 
 #+begin_export latex

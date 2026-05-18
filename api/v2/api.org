@@ -146,6 +146,7 @@ type TaxonName struct {
   makeRoute(prefix + "/taxa-info", taxaInfo, neidb) // same as before
   makeRoute(prefix + "/taxa-names", taxaNames, neidb) // formerly known as names
   makeRoute(prefix + "/taxa/{start_id}/path/{end_id}", taxaPath, neidb) // formerly just path
+  makeRoute(prefix + "/taxa/{taxon_id}/children", taxaChildren, neidb) // formerly just children
 #+end_src
 
 
@@ -320,9 +321,20 @@ type TaxonName struct {
   "github.com/evolbioinf/never/util"
 #+end_src
 
+#+begin_export latex
+  This code block is going to be used for writing the output 
+  of all of our services. Before printing the output we need
+  to prettify it, meaning convert it into pretty printed json.
+  This is pretty much just about setting the correct indentations.
+  Then before writing the response we should also specify
+  that we are writing in json format. We do this by setting
+  the \ty{Content-type} field of the response header.  
+#+end_export
+
 #+begin_src go <<Write output, Pa. \ref{pa:api}>>=
   b, err := json.MarshalIndent(out, "", "  ")
   util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
 
@@ -868,12 +880,12 @@ adding their levels before storing them.
 
 
 #+begin_export latex
-  The service \ty{path} takes as input the taxon IDs of a start and an
+  The service \ty{taxa/path} takes as input the taxon IDs of a start and an
   end node in the taxonomy, where the end is closer to the root than the
   start. It returns the array of taxon IDs that form the path from the
   start to the end. If no such path exists, an empty array is returned.
 
-  This is \ty{taxa/{start_id}/path/{end_id}}'s io:
+  This is \ty{taxa/path}'s io:
   Params:
     Path:
       start_id int
@@ -1013,4 +1025,63 @@ adding their levels before storing them.
 
 #+begin_src go <<Slice output to size/offset, Pa. \ref{pa:api}>>=
   out = out[1:]
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{taxa/children} takes as argument a taxon ID and returns its
+  children as a slice of their taxon IDs.
+  We implement the service \ty{taxa/children} in the function \ty{taxa/children},
+  where we get the taxon ID and the corresponding children. Then we
+  iterate over the children and construct the output object for each
+  one, before we write the output.
+
+  This is \ty{taxa/children}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      page int
+      page_size int
+  Writes:
+    []TaxonName
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxaChildren(w http.ResponseWriter, r *http.Request, args ...any) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get taxId from path, Pa. \ref{pa:api}>>
+
+	  children, err := neidb.Children(taxId)
+	  util.Check(err)
+	  out := []TaxonName{}
+	  for _, child := range children {
+		  //<<Construct child, Pa. \ref{pa:api}>>
+	  }
+	  //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  As we did in \ty{taxa/path} we again access the path parameters via
+  the \ty{PathValue} function and convert it to an integer.
+#+end_export
+
+#+begin_src go <<Get taxId from path, Pa. \ref{pa:api}>>=
+  strTaxonId := r.PathValue("taxon_id")
+  taxId, _ := strconv.Atoi(strTaxonId)
+#+end_src
+
+#+begin_export latex
+  We construct the child from its taxon ID and its names.
+#+end_export
+
+#+begin_src go <<Construct child, Pa. \ref{pa:api}>>=
+  name, err := neidb.Name(child)
+  util.Check(err)
+  cname, err := neidb.CommonName(child)
+  util.Check(err)
+  o := TaxonName{child, name, cname}
+  out = append(out, o)
 #+end_src

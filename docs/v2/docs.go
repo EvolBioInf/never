@@ -67,7 +67,7 @@ type Response struct {
 	Mime        string
 }
 
-func RegisterRoutes(prefix string) {
+func RegisterRoutes(prefix string, local bool, port int) {
 	fmt.Println("Creating template")
 	tmpl := template.New("app")
 
@@ -86,6 +86,9 @@ func RegisterRoutes(prefix string) {
 			if len(joined) > 1 && joined[0] == '-' {
 				joined = joined[1:]
 			}
+
+			joined = strings.ReplaceAll(joined, "{", "")
+			joined = strings.ReplaceAll(joined, "}", "")
 
 			return strings.ToLower(joined)
 		},
@@ -123,14 +126,14 @@ func RegisterRoutes(prefix string) {
 		}
 	}
 
-	content := retrieveData("docs/v2/api_spec.json")
+	content := retrieveData("docs/v2/api_spec.json", local, port)
 
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
 
 	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/v2/static"))))
 }
 
-func retrieveData(filepath string) Content {
+func retrieveData(filepath string, local bool, port int) Content {
 	fmt.Println("reading spec")
 	spec, _ := os.ReadFile(filepath)
 
@@ -177,7 +180,14 @@ func retrieveData(filepath string) Content {
 			queryParams := extractParameters(operation.Parameters)
 			newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
 
-			examplePath := content.ServerURL + newPath.Name
+			examplePath := content.ServerURL
+
+			if local {
+				examplePath = fmt.Sprintf("localhost:%d/api/v2", port)
+			}
+
+			examplePath += newPath.Name
+
 			for _, param := range pathParams {
 				examplePath = strings.ReplaceAll(examplePath, param.Name, param.Example)
 			}
