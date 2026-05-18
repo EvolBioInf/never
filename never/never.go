@@ -207,7 +207,9 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	}
 }
 func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
-	name := r.URL.Query().Get("t")
+	out := []Taxon{}
+	name := ""
+	name = r.URL.Query().Get("t")
 	sstr := r.URL.Query().Get("e")
 	page := r.URL.Query().Get("p")
 	size := r.URL.Query().Get("n")
@@ -215,32 +217,33 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 		name = strings.ReplaceAll(name, " ", "% %")
 		name = "%" + name + "%"
 	}
-	var limit, offset int
-	limit, err := strconv.Atoi(size)
-	if err != nil {
-		limit = 0
-	}
-	pageNum, err := strconv.Atoi(page)
-	if err != nil {
-		pageNum = 1
-	}
-	offset = (pageNum - 1) * limit
-	ids, err := neidb.CommonTaxids(name, limit, offset)
-	util.Check(err)
-	out := []Taxon{}
-	for _, id := range ids {
-		sciName, err := neidb.Name(id)
-		util.Check(err)
-		comName, err := neidb.CommonName(id)
-		util.Check(err)
-		tout := Taxon{}
-		parent, err := neidb.Parent(id)
-		if err == nil {
-			tout = Taxon{Taxid: id, Parent: parent,
-				Name: sciName, CommonName: comName}
+	if name != "" {
+		var limit, offset int
+		limit, err := strconv.Atoi(size)
+		if err != nil {
+			limit = 0
 		}
-		if err == nil {
-			out = append(out, tout)
+		pageNum, err := strconv.Atoi(page)
+		if err != nil {
+			pageNum = 1
+		}
+		offset = (pageNum - 1) * limit
+		ids, err := neidb.CommonTaxids(name, limit, offset)
+		util.Check(err)
+		for _, id := range ids {
+			sciName, err := neidb.Name(id)
+			util.Check(err)
+			comName, err := neidb.CommonName(id)
+			util.Check(err)
+			tout := Taxon{}
+			parent, err := neidb.Parent(id)
+			if err == nil {
+				tout = Taxon{Taxid: id, Parent: parent,
+					Name: sciName, CommonName: comName}
+			}
+			if err == nil {
+				out = append(out, tout)
+			}
 		}
 	}
 	b, err := json.MarshalIndent(out, "", "    ")

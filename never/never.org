@@ -752,12 +752,17 @@ name, and its common name. To store these four items, we declare the
 #+begin_export latex
 We write \ty{taxi} on the same pattern as \ty{index}.  Inside
 \ty{taxi}, we extract the query from the HTTP request, query the
-database, and write the result to the HTTP writer.
+database unless we were given the name passed is an empty string, and
+write the result to the HTTP writer.
 #+end_export
 #+begin_src go <<Functions, Pr. \ref{pr:nev}>>=
   func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
+	  out := []Taxon{}
+	  name := ""
 	  //<<Extract taxi query, Pr. \ref{pr:nev}>>
-	  //<<Execute taxi query, Pr. \ref{pr:nev}>>
+	  if name != "" {
+		  //<<Execute taxi query, Pr. \ref{pr:nev}>>
+	  }
 	  //<<Print taxi result, Pr. \ref{pr:nev}>>
   }
 #+end_src
@@ -768,7 +773,7 @@ exact mode, we bracket the name and the blanks it contains by wild
 cards.
 #+end_export
 #+begin_src go <<Extract taxi query, Pr. \ref{pr:nev}>>=
-  name := r.URL.Query().Get("t")
+  name = r.URL.Query().Get("t")
   sstr := r.URL.Query().Get("e")
   page := r.URL.Query().Get("p")
   size := r.URL.Query().Get("n")
@@ -791,7 +796,6 @@ taxa.
   //<<Calculate offset, Pr. \ref{pr:nev}>>
   ids, err := neidb.CommonTaxids(name, limit, offset)
   util.Check(err)
-  out := []Taxon{}
   for _, id := range ids {
 	  //<<Construct taxon output, Pr. \ref{pr:nev}>>
 	  //<<Store taxon output, Pr. \ref{pr:nev}>>
