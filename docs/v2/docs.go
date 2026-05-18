@@ -183,7 +183,7 @@ func retrieveData(filepath string, local bool, port int) Content {
 			examplePath := content.ServerURL
 
 			if local {
-				examplePath = fmt.Sprintf("localhost:%d/api/v2", port)
+				examplePath = fmt.Sprintf("http://localhost:%d/api/v2", port)
 			}
 
 			examplePath += newPath.Name

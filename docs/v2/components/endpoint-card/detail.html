@@ -56,8 +56,10 @@
               const pre = document.getElementById(
                 '{{toKebab "response" .Name .Op.Verb}}',
               );
-              fetch(input.value).then((data) => {console.log(data)})
-              pre.innerHTML = input.value;
+
+              fetch(input.value)
+                .then((response) => response.text())
+                .then((data) => pre.innerHTML = data)
             };
           }
         </script>

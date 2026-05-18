@@ -10,8 +10,6 @@ import (
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
 	"github.com/evolbioinf/never/util"
-
-	cors "github.com/rs/cors"
 )
 
 func main() {
@@ -23,21 +21,11 @@ func main() {
 		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
 	})
 
+	fmt.Printf("Starting server at Port %d...\n", port)
 	if local {
-		fmt.Println("Initializing cors middleware")
-		c := cors.New(cors.Options{
-			AllowedOrigins: []string{"http://localhost:8080"},
-			AllowedMethods: []string{http.MethodGet},
-			Debug:          true,
-
-			AllowCredentials: true,
-		})
-
-		fmt.Printf("Starting server at Port %d...\n", port)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), c.Handler(http.DefaultServeMux)))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 	} else {
-		fmt.Printf("Starting server at Port %d...\n", port)
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", port), "certificates/cert", "certificates/key", nil))
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", port), "certificates/cert.pem", "certificates/key.pem", nil))
 	}
 
 	fmt.Println("...Stopping server")

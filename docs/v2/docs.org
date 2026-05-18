@@ -476,7 +476,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_src go <<Opt. make local, Pa. \ref{pa:docs}>>=
   if local {
-    examplePath = fmt.Sprintf("localhost:%d/api/v2", port)
+    examplePath = fmt.Sprintf("http://localhost:%d/api/v2", port)
   }
 #+end_src
 
