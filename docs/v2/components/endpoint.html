@@ -1,0 +1,47 @@
+{{define "components/endpoint"}}
+<script type="text/javascript">
+  // This manages folding and expanding of the endpoint headers
+  const onHashUpdate = ({ oldURL }) => {
+    const hashIndex = oldURL?.lastIndexOf("#") ?? -1;
+    const oldHash =
+      hashIndex !== -1 && oldURL?.length > hashIndex
+        ? oldURL.substring(hashIndex + 1)
+        : "";
+    const newHash =
+      window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
+
+    const oldId = "body-" + oldHash;
+    const newId = "body-" + newHash;
+
+    const newEndpoint = document.getElementById(newId);
+    if (newEndpoint) {
+      newEndpoint.style.display = "flex";
+    }
+
+  const oldEndpoint = document.getElementById(oldId);
+    if (oldEndpoint) {
+      oldEndpoint.style.display = "none";
+    }
+  }
+
+  window.addEventListener("hashchange", onHashUpdate);
+  window.onload = () => {
+    onHashUpdate({oldURL: ""});
+    const newHash =
+      window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
+    document.getElementById("body-" + newHash).scrollIntoView();
+  }
+</script>
+
+{{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}}
+{{end}} 
+
+<script>
+  // Scroll example inputs to right end, 
+  // so we can see more of the important part of the url.
+  const elements = document.getElementsByClassName("input-example");
+  for (const el of elements) {
+    el.scrollLeft = el.scrollWidth;
+  }
+</script>
+{{end}}

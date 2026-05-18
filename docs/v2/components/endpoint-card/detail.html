@@ -1,0 +1,83 @@
+{{define "components/endpoint-card/detail"}}
+<div
+  class='{{ toKebab "endpoint" "card" "body" .Op.Verb }}'
+  id='{{ toKebab "body" .Name .Op.Verb }}'
+>
+  <div class="description">
+    <h3>Description</h3>
+    <p class="description-text">{{.Op.Description}}</p>
+    <div class="path-params">
+      <h3>Path Parameters</h3>
+      {{$totalArgs := len .Op.PathParameters}} {{range $index, $item :=
+      .Op.PathParameters}} {{template "components/endpoint-card/parameter" (dict
+      "index" $index "item" $item "totalArgs" $totalArgs) }} {{end}} {{if eq
+      (len .Op.PathParameters) 0}}
+      <div class="single-argument">
+        <p class="argument-definition">None</p>
+      </div>
+      {{end}}
+    </div>
+    <div class="query-params">
+      <h3>Query Parameters</h3>
+      {{$totalArgs := len .Op.QueryParameters}} {{range $index, $item :=
+      .Op.QueryParameters}} {{template "components/endpoint-card/parameter"
+      (dict "index" $index "item" $item "totalArgs" $totalArgs) }} {{end}} {{if
+      eq (len .Op.QueryParameters) 0}}
+      <div class="single-argument">
+        <p class="argument-definition">None</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  <div class="responses">
+    <div class="response-upper">
+      <div class="response-example">
+        <input
+          type="text"
+          class="input-example"
+          id='{{toKebab "input" "example" .Name .Op.Verb}}'
+          value="{{.Op.ExampleRequest}}"
+        />
+        <button
+          class="run-example"
+          id='{{toKebab "run" "example" .Name .Op.Verb}}'
+        >
+          Run
+        </button>
+        <script>
+          {
+            const button = document.getElementById(
+              '{{toKebab "run" "example" .Name .Op.Verb}}',
+            );
+            button.onclick = () => {
+              const input = document.getElementById(
+                '{{toKebab "input" "example" .Name .Op.Verb}}',
+              );
+              const pre = document.getElementById(
+                '{{toKebab "response" .Name .Op.Verb}}',
+              );
+              fetch(input.value).then((data) => {console.log(data)})
+              pre.innerHTML = input.value;
+            };
+          }
+        </script>
+      </div>
+      <h3 class="schema-title">Schema</h3>
+      {{template "components/code-block" (dict "Text" .Op.ExampleResponse "Id"
+      (toKebab "response" .Name .Op.Verb))}} {{template "components/code-block"
+      (dict "Text" .Op.Schema)}}
+    </div>
+    <hr class="arg-divider" />
+
+    <div class="response-codes">
+      <h4 class="response-code-header">Code</h4>
+      <h4 class="response-code-header">Description</h4>
+      {{$totalResponses := len .Op.Responses}} {{range $index, $item :=
+      .Op.Responses}}
+      <p class="response-code">{{$item.Code}}</p>
+      <p class="response-description">{{$item.Description}}</p>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}

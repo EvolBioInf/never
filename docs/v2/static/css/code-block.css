@@ -1,0 +1,11 @@
+.code-block {
+    background-color: var(--secondary-color);
+    border: 3px solid var(--secondary-color);
+    border-radius: 6px;
+    color: var(--primary-color);
+    overflow-x: scroll;
+    overflow-y: scroll;
+    height: 15rem;
+    width: 90%;
+}
+

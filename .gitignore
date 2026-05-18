@@ -25,4 +25,5 @@ never/never
 never/startLocal.sh
 never/template.doc
 
-web/
+web/certificates/
+neidb

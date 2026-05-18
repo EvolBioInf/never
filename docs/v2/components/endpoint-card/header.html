@@ -1,0 +1,23 @@
+{{define "components/endpoint-card/header"}}
+<div
+  class='{{ toKebab "endpoint" "card" "header" .Op.Verb }}'
+  id="header-{{.Name}}"
+>
+  <div class="request-main-info">
+    <p class='{{ toKebab "request" "type" "block" .Op.Verb }}'>{{.Op.Verb}}</p>
+    <p>{{.Name}}</p>
+  </div>
+  <p>{{.Op.Description}}</p>
+</div>
+
+<script>
+  document.getElementById("header-{{.Name}}").onclick = () => {
+    const id = "{{toKebab .Name .Op.Verb}}";
+    if (window.location.hash === "#" + id) {
+      location.href = "#";
+    } else {
+      location.href = "#" + id;
+    }
+  };
+</script>
+{{end}}

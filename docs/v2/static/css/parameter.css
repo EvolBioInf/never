@@ -1,0 +1,9 @@
+.single-argument {
+  display: grid;
+  grid-template-columns: 20% 30%;
+  margin-left: 15px;
+}
+
+.single-argument>p{
+  margin-bottom: 0;
+}

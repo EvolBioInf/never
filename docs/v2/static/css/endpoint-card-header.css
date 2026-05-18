@@ -1,0 +1,40 @@
+.endpoint-card-header-get {
+  display: flex;
+  justify-content: space-between;
+  border: 2px solid var(--accent-color);
+  border-radius: 12px;
+  padding-right: 15px;
+  align-items: center;
+  cursor: pointer;
+  background-color: color-mix(in srgb, var(--accent-color), white 90%);
+}
+
+.endpoint-card-header-get:hover {
+  animation-name: background-hover;
+  animation-duration: 0.25s;
+  background-color: color-mix(in srgb, var(--accent-color), white 70%);
+}
+
+@keyframes background-hover {
+  from {
+    background-color: color-mix(in srgb, var(--accent-color), white 90%);
+  }
+  to {
+    background-color: color-mix(in srgb, var(--accent-color), white 70%);
+  }
+}
+
+.request-main-info {
+  display: flex;
+  align-items: center;
+}
+
+.request-type-block-get {
+  color: var(--primary-color);
+  background-color: var(--accent-color);
+  justify-self: center;
+  padding: 6px 15px 6px 15px;
+  border-radius: 4px;
+  margin: 10px 15px 10px 15px;
+  user-select: none;
+}
