@@ -3,10 +3,11 @@ package util
 
 import (
 	"fmt"
-	"github.com/evolbioinf/clio"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/evolbioinf/clio"
 )
 
 var program string
@@ -38,8 +39,8 @@ func PrepLog(progName string) {
 
 // PrintInfo prints information about the version, the  author(s), and the license of never.
 func PrintInfo() {
-	authors := "Bernhard Haubold"
-	email := "haubold@evolbio.mpg.de"
+	authors := "Bernhard Haubold,Ben Bahnsen"
+	email := "haubold@evolbio.mpg.de,bahnsen@evolbio.mpg.de"
 	license := "Gnu General Public License, " +
 		"https://www.gnu.org/licenses/gpl.html"
 	clio.PrintInfo(program, version, date,

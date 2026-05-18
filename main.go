@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	apiv2 "neverv2/api/v2"
-	"neverv2/clui"
-	docsv2 "neverv2/docs/v2"
+
+	"github.com/evolbioinf/clio"
+	apiv2 "github.com/evolbioinf/never/api/v2"
+	docsv2 "github.com/evolbioinf/never/docs/v2"
+	"github.com/evolbioinf/never/util"
 
 	cors "github.com/rs/cors"
 )
@@ -42,7 +44,13 @@ func main() {
 }
 
 func ioHandling() (bool, int) {
-	flag.Usage = usage
+	util.PrepLog("never")
+	clio.Usage(
+		"-l",
+		"This is the webserver neverV2. It hosts the neighbors' REST API versions 1 and 2, "+
+			"as well as their documentations. New packages may be added in a simmilar fashion as seen "+
+			"in the main function. ",
+		"Starts the webserver in local mode, without https.")
 
 	lFlag := flag.Bool("l", false, "local mode")
 	pFlag := flag.Int("p", 8080, "port")
@@ -51,17 +59,8 @@ func ioHandling() (bool, int) {
 	flag.Parse()
 
 	if *vFlag {
-		clui.Info("2.0.0", "2026-05-18")
+		util.PrintInfo()
 	}
 
 	return *lFlag, *pFlag
-}
-
-func usage() {
-	clui.Usage(
-		"This is the webserver neverV2. It hosts the neighbors' REST API versions 1 and 2, "+
-			"as well as their documentations. New packages may be added in a simmilar fashion as seen "+
-			"in the main function. ",
-		"-l",
-		"Starts the webserver in local mode, without https.")
 }

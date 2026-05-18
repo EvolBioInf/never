@@ -4,12 +4,12 @@ github.com/buger/jsonparser v1.1.2 h1:frqHqw7otoVbk5M8LlE/L7HTnIq2v9RX6EJ48i9AxJ
 github.com/buger/jsonparser v1.1.2/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
+github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b h1:26/B3KZkdt/NzB5wuv/tDb1KPSJ5A17zxQbcoURo5WM=
 github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b/go.mod h1:S13GccNRJPbjEsLZ/yCLFRVhdTS4qUJ+mf9GtZja8do=
 github.com/evolbioinf/neighbors v0.0.0-20260508100631-677369428da4 h1:3NvTgtFjGi6lxknmdwoIsP+8LnzoXhdJdU2mBmbmRYk=
 github.com/evolbioinf/neighbors v0.0.0-20260508100631-677369428da4/go.mod h1:tkx8ax/AluGLO6myG1IMYykVmCv434TvvOpi9oO3I2M=
-github.com/evolbioinf/never v0.0.0-20260425075154-cdb50a8d1bb0 h1:UHrEBBcAEe1IocKnrdvUX7+QfsXAUfPCopQyE9VTzJc=
-github.com/evolbioinf/never v0.0.0-20260425075154-cdb50a8d1bb0/go.mod h1:48eiqpHw63tt51KkvcdAbtIZGK/7LvHIS+YaxHCigvk=
 github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
 github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/pb33f/jsonpath v0.8.2 h1:Ou4C7zjYClBm97dfZjDCjdZGusJoynv/vrtiEKNfj2Y=

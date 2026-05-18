@@ -93,8 +93,8 @@ We declare the variable \ty{program}.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func PrintInfo() {
-	    authors := "Bernhard Haubold"
-	    email := "haubold@evolbio.mpg.de"
+	    authors := "Bernhard Haubold,Ben Bahnsen"
+	    email := "haubold@evolbio.mpg.de,bahnsen@evolbio.mpg.de"
 	    license := "Gnu General Public License, " +
 		    "https://www.gnu.org/licenses/gpl.html"
 	    clio.PrintInfo(program, version, date,
