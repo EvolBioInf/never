@@ -16,28 +16,30 @@
     const newEndpoint = document.getElementById(newId);
     if (newEndpoint) {
       newEndpoint.style.display = "flex";
+      newEndpoint.scrollIntoView();
     }
 
-  const oldEndpoint = document.getElementById(oldId);
+    const oldEndpoint = document.getElementById(oldId);
     if (oldEndpoint) {
       oldEndpoint.style.display = "none";
     }
-  }
+  };
 
   window.addEventListener("hashchange", onHashUpdate);
   window.onload = () => {
-    onHashUpdate({oldURL: ""});
+    onHashUpdate({ oldURL: "" });
     const newHash =
       window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
-    document.getElementById("body-" + newHash).scrollIntoView();
-  }
+    if (newHash) {
+      document.getElementById("body-" + newHash).scrollIntoView();
+    }
+  };
 </script>
 
-{{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}}
-{{end}} 
+{{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}} {{end}}
 
 <script>
-  // Scroll example inputs to right end, 
+  // Scroll example inputs to right end,
   // so we can see more of the important part of the url.
   const elements = document.getElementsByClassName("input-example");
   for (const el of elements) {

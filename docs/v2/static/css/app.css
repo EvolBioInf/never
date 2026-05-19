@@ -5,6 +5,7 @@
   color: var(--secondary-color);
   background-color: var(--primary-color);
   font-family: "Roboto", Arial, sans-serif;
+  scroll-behavior: smooth;
 }
 
 body {
