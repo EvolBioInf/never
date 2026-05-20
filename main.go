@@ -15,7 +15,7 @@ import (
 
 func main() {
 	host, certificate, privateKey, port := ioHandling()
-	docsv2.RegisterRoutes("/docs/api/v3", host == "", port)
+	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
 	apiv2.RegisterRoutes("/api/v2")
 	neverv1.RegisterRoutes("/docs/api/v1")
 
