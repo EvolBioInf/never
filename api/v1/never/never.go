@@ -3,16 +3,15 @@ package neverV1
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dustin/go-humanize"
+	"github.com/evolbioinf/neighbors/tdb"
+	"github.com/evolbioinf/never/util"
 	"html/template"
 	"net/http"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/dustin/go-humanize"
-	"github.com/evolbioinf/neighbors/tdb"
-	"github.com/evolbioinf/never/util"
 )
 
 type PageData struct {

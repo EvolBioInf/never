@@ -563,7 +563,7 @@ function \ty{inc}.
   <tr>
     <td>{{inc $i}}</td>
     <td>{{.Name}}</td>
-    <td><a href="{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
+    <td><a href="/{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
   </tr>
   {{end}}
   {{end}}
