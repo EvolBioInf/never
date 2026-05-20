@@ -25,6 +25,7 @@ type Content struct {
 	Description string
 	ApiVersion  string
 	ServerURL   string
+	Prefix      string
 	Title       string
 	Tags        []Tag
 	Paths       []Path
@@ -68,10 +69,10 @@ type Response struct {
 }
 
 func RegisterRoutes(prefix string, local bool, port int) {
-	fmt.Println("Creating template")
+	fmt.Println("DocsV2: Creating template")
 	tmpl := template.New("app")
 
-	fmt.Println("Registering custom functions")
+	fmt.Println("DocsV2: Registering custom functions")
 	tmpl.Funcs(template.FuncMap{
 		"sub": func(a, b int) int {
 			return a - b
@@ -107,11 +108,12 @@ func RegisterRoutes(prefix string, local bool, port int) {
 
 				dict[key] = args[i+1]
 			}
+
 			return dict
 		},
 	})
 
-	fmt.Println("Reading files")
+	fmt.Println("DocsV2: Reading files")
 	files := []string{
 		path.Join("docs", "v2", "pages", "*.html"),
 		path.Join("docs", "v2", "components", "*.html"),
@@ -127,23 +129,26 @@ func RegisterRoutes(prefix string, local bool, port int) {
 	}
 
 	content := retrieveData("docs/v2/api_spec.json", local, port)
+	content.Prefix = prefix
 
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
 
-	http.Handle("/docs/v2/static/", http.StripPrefix("/docs/v2/static/", http.FileServer(http.Dir("docs/v2/static"))))
+	// The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
+	// The path before that are the ones I may use within the browser to ask for these files from the file server.
+	http.Handle(prefix+"/static/", http.StripPrefix(prefix+"/static/", http.FileServer(http.Dir("docs/v2/static"))))
 }
 
 func retrieveData(filepath string, local bool, port int) Content {
-	fmt.Println("reading spec")
+	fmt.Println("DocsV2: reading spec")
 	spec, _ := os.ReadFile(filepath)
 
-	fmt.Println("creating document")
+	fmt.Println("DocsV2: creating document")
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
 		panic(fmt.Sprintf("cannot create new document: %e", err))
 	}
 
-	fmt.Println("building model")
+	fmt.Println("DocsV2: building model")
 	docModel, err := document.BuildV3Model()
 	if err != nil {
 		panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
@@ -330,6 +335,6 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 }
 
 func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
-	fmt.Println("served default")
+	fmt.Println("DocsV2: served default")
 	tmpl.ExecuteTemplate(w, "app.html", content)
 }
