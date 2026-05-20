@@ -2,7 +2,7 @@
 \section{Preface}
 Eventhough the first iteration of never, i.e. this, should be left untouched
 by the update, it needs to be slightly adapted for integration purposes.
-The biggest change is that the old never, again this, is not a standalone software 
+The biggest change is that the old never, again this, is not a standalone software
 anymore, but a package of a new server. This means its code for hosting as well
 as its command line interface are removed. Please keep this in mind when reading this
 documentation.
@@ -64,10 +64,25 @@ end, so we begin with it.
 #+end_src
 #+begin_export latex
   \section{Back End}
-  In the back end we open the database.
+  In the back end we open the database. But first we need to check whether the db exists.
+  If not we print an Error and return instantly.
 #+end_export
 #+begin_src go <<Construct back end, Pa. \ref{pa:nev}>>=
-  neidb = tdb.OpenTaxonomyDB("neidb")
+  dbPath := "neidb"
+  if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
+    log.Fatal("neverV1: db does not exist")
+  } else {
+    neidb = tdb.OpenTaxonomyDB(dbPath)
+  }
+
+#+end_src
+#+begin_export latex
+  We also need to import the \ty{errors}, \ty{log} and \ty{os} to do this check.
+#+end_export
+#+begin_src go <<Imports, Pa. \ref{pa:nev}>>=
+  "errors"
+  "log"
+  "os"
 #+end_src
 #+begin_export latex
 We declare the variable \ty{neidb} global to make the database easily
@@ -93,6 +108,14 @@ We declare \ty{dateFile}.
 #+end_export
 #+begin_src go <<Variables, Pa. \ref{pa:nev}>>=
   var dateFile string = "updated.txt"
+#+end_src
+#+begin_export latex
+  We should also check whether this file exists, just like we did with the database.
+#+end_export
+#+begin_src go <<Construct back end, Pa. \ref{pa:nev}>>=
+  if _, err := os.Stat(dateFile); errors.Is(err, os.ErrNotExist) {
+    log.Fatal("neverV1: dateFile does not exist")
+  }
 #+end_src
 #+begin_export latex
 \section{Front End}
@@ -183,7 +206,7 @@ returned from executing the template.
 #+end_src
 #+begin_export latex
 As page data we set the title and the list of services offered, as awell as the
-assigned prefix. The list of services is potentially long, so we sort it. We also 
+assigned prefix. The list of services is potentially long, so we sort it. We also
 set the number of taxa and genomes, and when the database was last updated.
 #+end_export
 #+begin_src go <<Set index page data, Pa. \ref{pa:nev}>>=
@@ -412,7 +435,7 @@ database, and when it was last updated.
     //<<Describe the Neighbors method, Pa. \ref{pa:nev}>>
     //<<Give some background to Neighbors, Pa. \ref{pa:nev}>>
     //<<Print number of taxa and genomes in database, Pa. \ref{pa:nev}>>
-    //<<Print when database was last updated, Pa. \ref{pa:nev}>>	
+    //<<Print when database was last updated, Pa. \ref{pa:nev}>>
    </div>
   {{end}}
 #+end_src
@@ -1657,7 +1680,7 @@ start to the end. If no such path exists, an empty array is returned.
 We initialize the path calculation, add the start node, climb the rest
 of the path, and print the output.
 #+end_export
-#+begin_src go <<Functions, Pa. \ref{pa:nev}>>= 
+#+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
   func path(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
 	  taxa := getTaxa(w, r)

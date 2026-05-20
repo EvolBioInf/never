@@ -1,20 +1,26 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"log"
-	"net/http"
+	"github.com/evolbioinf/never/util"
 
 	"github.com/evolbioinf/clio"
+
+	"flag"
+	"os"
+
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
-	"github.com/evolbioinf/never/util"
+
+	"net/http"
+
+	"fmt"
+	"log"
 )
 
 func main() {
 	host, certificate, privateKey, port := ioHandling()
+
 	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
 	apiv2.RegisterRoutes("/api/v2")
 	neverv1.RegisterRoutes("/docs/api/v1")
@@ -36,15 +42,16 @@ func main() {
 
 func ioHandling() (string, string, string, int) {
 	util.PrepLog("never")
+
 	clio.Usage(
 		"-o 10.254.1.21 -p 443",
 		"This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
 			"as well as their respective documentation. "+
 			"New packages may be added in a simmilar fashion as seen "+
 			"in the main function.",
-		"Starts the webserver in local mode, without https.")
+		"Starts the webserver at specified address with given port.")
 
-	lFlag := flag.String("o", "", "local mode")
+	oFlag := flag.String("o", "", "host address")
 	cFlag := flag.String("c", "certificates/cert.pem", "certificate")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	pFlag := flag.Int("p", 8080, "port")
@@ -54,7 +61,9 @@ func ioHandling() (string, string, string, int) {
 
 	if *vFlag {
 		util.PrintInfo()
+		os.Exit(0)
 	}
 
-	return *lFlag, *cFlag, *kFlag, *pFlag
+	return *oFlag, *cFlag, *kFlag, *pFlag
+
 }

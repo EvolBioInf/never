@@ -5,6 +5,10 @@ import (
 
 	"github.com/evolbioinf/neighbors/tdb"
 
+	"errors"
+	"log"
+	"os"
+
 	"strings"
 
 	"strconv"
@@ -70,7 +74,13 @@ type TaxonName struct {
 }
 
 func RegisterRoutes(prefix string) {
-	neidb := tdb.OpenTaxonomyDB("neidb")
+	var neidb *tdb.TaxonomyDB
+	dbPath := "neidb"
+	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
+		log.Fatal("apiV2: db does not exist")
+	} else {
+		neidb = tdb.OpenTaxonomyDB(dbPath)
+	}
 
 	makeRoute(prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
 	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)                            // new

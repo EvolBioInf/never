@@ -1,16 +1,33 @@
+SUBDIRS := api/v1/never api/v2 docs/v2 fetch util
 version = $(shell bash scripts/getVersion.sh)
 date = $(shell bash scripts/getDate.sh)
 nw = $(shell which noweb)
 
-all: main 
+all: main $(SUBDIRS)
+
+.PHONY: all clean $(SUBDIRS)
 
 main: main.go
 	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" main.go
 
-main.go: main.org
+main.go: main.org $(SUBDIRS)
 	if [ "$(nw)" != "" ]; then\
 		bash scripts/org2nw main.org | notangle -Rmain.go | gofmt > main.go;\
 	fi
-tangle: main.go
-.PHONY: test
 
+api/v2: fetch util
+api/v1/never: fetch util
+docs/v2: util
+fetch: util
+
+tangle: main.go
+
+$(SUBDIRS):
+	$(MAKE) -C $@
+
+clean:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean; \
+	done
+	rm -rf main.go
+	rm -rf main

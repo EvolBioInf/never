@@ -1,0 +1,198 @@
+#+begin_export latex
+  This is the entry point for \ty{never} the webserver for the \ty{neighbors} package.
+  This webserver hosts the first iteration of \ty{never} \ty{api/v1}, the second iteration
+  and its docs, as well as \ty{Vitax}. The idea of this program is to build a basic server structure
+  that allows other packages to be registered to it. To begin implementing the server start off with a
+  basic program layout.
+#+end_export
+
+#+begin_src go <<main.go>>=
+package main
+
+import (
+ //<<Imports, Pr. \ref{pr:main}>>
+)
+
+//<<Functions, Pr. \ref{pr:main}>>
+#+end_src
+
+#+begin_export latex
+  We begin with the main function.
+  This should take care of any arguments passed when calling the program.
+  It should call the register functions of the packages. Define a default route
+  and finally start the server.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func main() {
+    //<<Handle io, Pr. \ref{pr:main}>>
+    //<<Register packages, Pr. \ref{pr:main}>>
+    //<<Define default route, Pr. \ref{pr:main}>>
+    //<<Start server, Pr. \ref{pr:main}>>
+  }
+#+end_src
+
+#+begin_export latex
+  Handling the input and output of this program should be done by a separate function.
+  Its easier to implement this before calling it in main, so we do that now.
+    We call this function \ty{ioHandling}. In this we prepare the log, implement a usage and parse
+  the call arguments. As we need to define the return tuple of this function in its head we need to
+  think about what arguments may be parsed and needed within the main function. Most importantly we
+  need be able to pass an address and a port for the server to run on. It would also be good if we could
+  define a path for the HTTP/TLS files i.e. the certificat and the private key. This results in three strings
+  and an integer as a return tuple.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func ioHandling() (string, string, string, int) {
+    //<<Prepare log, Pr. \ref{pr:main}>>
+    //<<Set usage, Pr. \ref{pr:main}>>
+    //<<Parse flags, Pr. \ref{pr:main}>>
+  }
+#+end_src
+
+#+begin_export latex
+  Preparing the log can be easily done via the \ty{util} package. But for this we need to import the
+  package first.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "github.com/evolbioinf/never/util"
+#+end_src
+
+#+begin_export latex
+  Now we may prepare the log
+#+end_export
+
+#+begin_src go <<Prepare log, Pr. \ref{pr:main}>>=
+  util.PrepLog("never")
+#+end_src
+
+#+begin_export latex
+  To set the usage we import the \ty{clio} package from evolbioinf
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+	"github.com/evolbioinf/clio"
+#+end_src
+
+#+begin_export latex
+  This usage function expects three arguments. One is an example call, then a
+  description of what the program is and does. Lastly a summary of what the example call results in.
+#+end_export
+
+#+begin_src go <<Set usage, Pr. \ref{pr:main}>>=
+  clio.Usage(
+    "-o 10.254.1.21 -p 443",
+    "This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
+      "as well as their respective documentation. "+
+      "New packages may be added in a simmilar fashion as seen "+
+      "in the main function.",
+    "Starts the webserver at specified address with given port.")
+#+end_src
+
+#+begin_export latex
+  Parsing the flags is best done using the \ty{flag} package.
+  We will also need the \ty{os} package.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "flag"
+  "os"
+#+end_src
+
+#+begin_export latex
+  We've already defined what flags we want to use. Now we just need to declare them programmatically.
+  As an extra we should declare a version flag. If the flag is passed, we print the program's version and stop the program.
+  In every other case we return the remaining flags.
+#+end_export
+
+#+begin_src go <<Parse flags, Pr. \ref{pr:main}>>=
+  oFlag := flag.String("o", "", "host address")
+  cFlag := flag.String("c", "certificates/cert.pem", "certificate")
+  kFlag := flag.String("k", "certificates/private_key.pem", "private key")
+  pFlag := flag.Int("p", 8080, "port")
+  vFlag := flag.Bool("v", false, "print progam info")
+
+  flag.Parse()
+
+  if *vFlag {
+    util.PrintInfo()
+    os.Exit(0)
+  }
+
+  return *oFlag, *cFlag, *kFlag, *pFlag
+#+end_src
+
+#+begin_export latex
+  Having implemented \ty{ioHandling} we know how to call it and what it returns. So let's do that.
+#+end_export
+
+#+begin_src go <<Handle io, Pr. \ref{pr:main}>>=
+	host, certificate, privateKey, port := ioHandling()
+#+end_src
+
+#+begin_export latex
+  The packages we want to register each provide their own register function called \ty{registerRoutes}.
+  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each others existances.
+  So this task falls to the managing part of the software, which is this server. The \ty{docsv2} also wants to know whether it is being hosted locally
+  and on what port.
+#+end_export
+
+#+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
+	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
+	apiv2.RegisterRoutes("/api/v2")
+	neverv1.RegisterRoutes("/docs/api/v1")
+#+end_src
+
+#+begin_export latex
+  We also need to import the registerd packages, as well as \ty{net/http}
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  neverv1 "github.com/evolbioinf/never/api/v1/never"
+	apiv2 "github.com/evolbioinf/never/api/v2"
+	docsv2 "github.com/evolbioinf/never/docs/v2"
+
+	"net/http"
+#+end_src
+
+#+begin_export latex
+  Whenever the server is called without any route it should redirect to the most current docs. At the moment
+  this is \ty{docsv2}. We do this in a well mannered fashion by using http redirect and setting the correct http status, which is 303.
+  Go changed its url matching strategies with version 1.22. Using \ty{\{$\}} at the end of a string defines that it should match exactly and only this string.
+#+end_export
+
+#+begin_src go <<Define default route, Pr. \ref{pr:main}>>=
+	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
+	})
+#+end_src
+
+#+begin_export latex
+  Now we are ready to start the server. If no host was provided we serve everything locally using http.
+  If a host was specified, we serve at that address using HTTPS/TLS. In either case we should report where we
+  are serving. Lastly it would be nice to print that we stopped serving, if for any reason we do so.
+  But we need to import \ty{fmt} and \ty{log} first.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "fmt"
+  "log"
+#+end_src
+
+#+begin_export latex
+  Now lets get into starting the server.
+#+begin_export latex
+
+#+begin_src go <<Start server, Pr. \ref{pr:main}>>=
+  if host == "" {
+    fmt.Printf("Starting server at http://localhost:%d ...\n", port)
+    log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+  } else {
+    fmt.Printf("Starting server at %s:%d ...\n", host, port)
+    log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, nil))
+  }
+
+  fmt.Println("...Stopping server")
+#+end_src

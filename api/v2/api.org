@@ -128,8 +128,29 @@ type TaxonName struct {
   "github.com/evolbioinf/neighbors/tdb"
 #+end_src
 
+#+begin_export latex
+  Before opening the database we need to check whether it exists.
+  If not we print an Error and return instantly.
+#+end_export
+
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-  neidb := tdb.OpenTaxonomyDB("neidb")
+  var neidb *tdb.TaxonomyDB
+  dbPath := "neidb"
+  if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
+    log.Fatal("apiV2: db does not exist")
+  } else {
+    neidb = tdb.OpenTaxonomyDB(dbPath)
+  }
+#+end_src
+
+#+begin_export latex
+  We also need to import the \ty{errors}, \ty{log} and \ty{os} to do this check.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "errors"
+  "log"
+  "os"
 #+end_src
 
 #+begin_export latex
@@ -328,13 +349,13 @@ type TaxonName struct {
 #+end_src
 
 #+begin_export latex
-  This code block is going to be used for writing the output 
+  This code block is going to be used for writing the output
   of all of our services. Before printing the output we need
   to prettify it, meaning convert it into pretty printed json.
   This is pretty much just about setting the correct indentations.
   Then before writing the response we should also specify
   that we are writing in json format. We do this by setting
-  the \ty{Content-type} field of the response header.  
+  the \ty{Content-type} field of the response header.
 #+end_export
 
 #+begin_src go <<Write output, Pa. \ref{pa:api}>>=
@@ -1179,7 +1200,7 @@ adding their levels before storing them.
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaGenomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Get taxId from path, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
 	  //<<Get raw genome counts, Pa. \ref{pa:api}>>
     //<<Reslice to offset and limit, Pa. \ref{pa:api}>>
@@ -1205,9 +1226,9 @@ adding their levels before storing them.
 #+begin_export latex
   Sadly we don't know the amount of \ty{GenomeCount} entries per level
   before requesting them, which in turn makes efficient pagination
-  difficult. It would be possible to stop requesting new counts once we 
+  difficult. It would be possible to stop requesting new counts once we
   reach the size limit, but as we can't efficiently predict the starting point
-  using the offset anyways, I decided for a code friendly slicing post 
+  using the offset anyways, I decided for a code friendly slicing post
   data requests.
 #+end_export
 
@@ -1241,7 +1262,7 @@ adding their levels before storing them.
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaGenomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Get taxId from path, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
 	  //<<Get recursive genome counts, Pa. \ref{pa:api}>>
     //<<Reslice to offset and limit, Pa. \ref{pa:api}>>
@@ -1282,7 +1303,7 @@ parent's taxon ID.
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaParent(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Get taxId from path, Pa. \ref{pa:api}>>
 	  parent, err := neidb.Parent(taxId)
 	  out := TaxId{0}
 	  if err == nil {
@@ -1300,9 +1321,9 @@ parent's taxon ID.
   root. In the function \ty{taxaSubtree} we get the taxon ID, get and store
   the corresponding subtree, and write the output. A subtree consists of
   nodes, which are structs to hold a taxon ID, its name, its common
-  name, and the parent ID. We iterate over the taxa in the subtree 
-  and look up the parent for each one, except for the root, \ty{taxId}, 
-  whose parent is itself. From the current taxon, its parent, and 
+  name, and the parent ID. We iterate over the taxa in the subtree
+  and look up the parent for each one, except for the root, \ty{taxId},
+  whose parent is itself. From the current taxon, its parent, and
   its names we construct the new node, which we store in our output slice.
 
   This is \ty{taxa/parent}'s io:
@@ -1319,7 +1340,7 @@ parent's taxon ID.
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxaSubtree(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>    
+    //<<Get taxId from path, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Get taxa in subtree, Pa. \ref{pa:api}>>
 	  //<<Construct nodes in subtree, Pa. \ref{pa:api}>>
@@ -1344,7 +1365,7 @@ parent's taxon ID.
 #+end_export
 
 #+begin_src go <<Construct nodes in subtree, Pa. \ref{pa:api}>>=
-  
+
   if size == -1 {
     size = len(taxa)
   }
@@ -1448,6 +1469,6 @@ parent's taxon ID.
 #+end_src
 
 #+begin_export latex
-  With the last endpoint implemented, we are done programming the 
+  With the last endpoint implemented, we are done programming the
   second iteration of never's api. Though we still need to test it.
 #+end_export

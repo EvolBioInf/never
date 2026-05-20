@@ -7,7 +7,7 @@ version = $(shell git describe)
 
 all: $(text).pdf $(SRC1) $(SRC2)
 %.tex:	../*/%.org
-	bash ../scripts/org2nw $< | awk -f ../scripts/preWeave.awk | noweave -n -x | sed 's/_test/\\_test/g' > $@
+	bash ../../../scripts/org2nw $< | awk -f ../../../scripts/preWeave.awk | noweave -n -x | sed 's/_test/\\_test/g' > $@
 $(text).pdf: $(text).tex $(SRC1) $(SRC2)
 	echo $(date) | tr '_' ' ' > date.txt
 	echo $(version) | tr '-' ' ' | awk '{printf "%s", $$1; if ($$2) printf "-%s", $$2; printf "\n"}' > version.txt
@@ -23,4 +23,4 @@ publish: $(text).pdf
 	fi
 
 clean:
-	rm -f $(text).pdf $(text).ps $(text).dvi $(text).aux $(SRC1) 
+	rm -f $(text).pdf $(text).ps $(text).dvi $(text).aux $(SRC1)

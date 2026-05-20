@@ -3,11 +3,10 @@ package util
 
 import (
 	"fmt"
+	"github.com/evolbioinf/clio"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/evolbioinf/clio"
 )
 
 var program string

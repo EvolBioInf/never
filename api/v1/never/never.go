@@ -2,11 +2,13 @@ package neverV1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/evolbioinf/neighbors/tdb"
 	"github.com/evolbioinf/never/util"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"slices"
@@ -581,7 +583,16 @@ func path(w http.ResponseWriter, r *http.Request,
 }
 func RegisterRoutes(pref string) {
 	prefix = pref
-	neidb = tdb.OpenTaxonomyDB("neidb")
+	dbPath := "neidb"
+	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
+		log.Fatal("neverV1: db does not exist")
+	} else {
+		neidb = tdb.OpenTaxonomyDB(dbPath)
+	}
+
+	if _, err := os.Stat(dateFile); errors.Is(err, os.ErrNotExist) {
+		log.Fatal("neverV1: dateFile does not exist")
+	}
 	staticFiles := http.FileServer(http.Dir("api/v1/never/static"))
 	http.Handle(prefix+"/static/", http.StripPrefix(prefix+"/static/",
 		staticFiles))

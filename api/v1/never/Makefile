@@ -1,11 +1,7 @@
-version = $(shell bash ../../../scripts/getVersion.sh)
-date = $(shell bash ../../../scripts/getDate.sh)
 nw = $(shell which noweb)
 
-all: never static/templates.html
+all: never.go static/templates.html
 
-never: never.go
-	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" never.go
 never.go: never.org
 	if [ "$(nw)" != "" ]; then\
 		bash ../../../scripts/org2nw never.org | notangle -Rnever.go | gofmt > never.go;\

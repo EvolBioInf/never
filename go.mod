@@ -7,7 +7,6 @@ require (
 	github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b
 	github.com/evolbioinf/neighbors v0.0.0-20260508100631-677369428da4
 	github.com/pb33f/libopenapi v0.36.3
-	github.com/rs/cors v1.11.1
 )
 
 require (

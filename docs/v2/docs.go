@@ -69,10 +69,10 @@ type Response struct {
 }
 
 func RegisterRoutes(prefix string, local bool, port int) {
-	fmt.Println("DocsV2: Creating template")
+	fmt.Println("docsV2: Creating template")
 	tmpl := template.New("app")
 
-	fmt.Println("DocsV2: Registering custom functions")
+	fmt.Println("docsV2: Registering custom functions")
 	tmpl.Funcs(template.FuncMap{
 		"sub": func(a, b int) int {
 			return a - b
@@ -113,7 +113,7 @@ func RegisterRoutes(prefix string, local bool, port int) {
 		},
 	})
 
-	fmt.Println("DocsV2: Reading files")
+	fmt.Println("docsV2: Reading files")
 	files := []string{
 		path.Join("docs", "v2", "pages", "*.html"),
 		path.Join("docs", "v2", "components", "*.html"),
@@ -139,16 +139,16 @@ func RegisterRoutes(prefix string, local bool, port int) {
 }
 
 func retrieveData(filepath string, local bool, port int) Content {
-	fmt.Println("DocsV2: reading spec")
+	fmt.Println("docsV2: reading spec")
 	spec, _ := os.ReadFile(filepath)
 
-	fmt.Println("DocsV2: creating document")
+	fmt.Println("docsV2: creating document")
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
 		panic(fmt.Sprintf("cannot create new document: %e", err))
 	}
 
-	fmt.Println("DocsV2: building model")
+	fmt.Println("docsV2: building model")
 	docModel, err := document.BuildV3Model()
 	if err != nil {
 		panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
@@ -335,6 +335,6 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 }
 
 func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
-	fmt.Println("DocsV2: served default")
+	fmt.Println("docsV2: served default")
 	tmpl.ExecuteTemplate(w, "app.html", content)
 }
