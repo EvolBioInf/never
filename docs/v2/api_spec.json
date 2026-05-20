@@ -4,21 +4,19 @@
     "title": "Neighbors REST API",
     "version": "2.0",
     "license": {
-      "name": "Ex",
-      "url": "www.example.com"
+      "name": "Gnu General Public License",
+      "url": "https://www.gnu.org/licenses/gpl.html"
     },
-    "description": "Ex",
+    "description": "The Neighbors REST API gives access to genome sequences via the taxonomy of sequenced life.\nStarting from one or more target organisms, the accessions of their genomes can be looked up.\nIn addition, the genome accessions of the targets' closest relatives, their neighbors, can be looked up.\nSuch pairs of samples of target and neighbor genomes make good starting material for developing diagnostic markers.",
     "contact": {
-      "url": "www.example.com",
-      "name": "Ex",
-      "email": "sample@example.com"
-    },
-    "termsOfService": "www.example.com"
+      "url": "https://www.evolbio.mpg.de/16023/group_bioinformatics",
+      "name": "Bernhard Haubold",
+      "email": "haubold@evolbio.mpg.de"
+    }
   },
   "servers": [
     {
-      "url": "https://neighbors.evolbio.mpg.de/api/v2",
-      "description": ""
+      "url": "https://neighbors.evolbio.mpg.de/api/v2"
     }
   ],
   "tags": [
@@ -939,6 +937,17 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Image"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": [
+                      {
+                        "id": 64784,
+                        "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/422",
+                        "attribution": "All of Us Initiative"
+                      }
+                    ]
                   }
                 }
               }

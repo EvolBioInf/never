@@ -14,7 +14,7 @@ test: api_test.go api.go
 	go test -v
 api_test.go: api.org
 	if [ "$(nw)" != "" ]; then\
-		awk -f ../../scripts/preTangle.awk api.org | bash ../../scripts/org2nw | notangle -Rapi_test.go | gofmt > api_test.go;\
+		awk -f ../../scripts/preTangle.awk testApi.org | bash ../../scripts/org2nw | notangle -Rapi_test.go | gofmt > api_test.go;\
 	fi
 
 clean:

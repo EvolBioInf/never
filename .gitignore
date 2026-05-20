@@ -15,11 +15,15 @@ api/v1/doc/fetch.tex
 api/v1/doc/never.tex
 api/v1/doc/testNever.tex
 api/v1/doc/util.tex
+fetch.tex
+util.tex
 api/v1/doc/version.txt
 
-api/v1/fetch/fetch
-api/v1/fetch/inspectRes.sh
-api/v1/fetch/makeRes.sh
+fetch/fetch
+fetch/inspectRes.sh
+fetch/makeRes.sh
+
+bin/
 
 api/v1/never/never
 api/v1/never/startLocal.sh

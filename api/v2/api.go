@@ -51,16 +51,16 @@ type TaxonInfo struct {
 	Name           string        `json:"name"`
 	CommonName     string        `json:"common_name"`
 	Rank           string        `json:"rank"`
-	RawGenomeCount []GenomeCount `json:"raw_genome_count"`
-	RecGenomeCount []GenomeCount `json:"rec_genome_count"`
+	RawGenomeCount []GenomeCount `json:"raw_genome_counts"`
+	RecGenomeCount []GenomeCount `json:"rec_genome_counts"`
 	Images         []Image       `json:"images"`
 }
 
 type Taxon struct {
 	TaxId      int    `json:"tax_id"`
-	Parent     int    `json:"parent"`
 	Name       string `json:"name"`
 	CommonName string `json:"common_name"`
+	Parent     int    `json:"parent"`
 }
 
 type TaxonName struct {
@@ -541,6 +541,7 @@ func taxaPath(w http.ResponseWriter, r *http.Request, args ...any) {
 		Name:       name,
 		CommonName: cn,
 	}
+
 	out = append(out, o)
 
 	for i := 0; (i < offset+size || size == -1) && start != end; i++ {
@@ -569,7 +570,7 @@ func taxaPath(w http.ResponseWriter, r *http.Request, args ...any) {
 
 	}
 
-	out = out[1:]
+	out = out[offset:]
 
 	b, err := json.MarshalIndent(out, "", "  ")
 	util.Check(err)
@@ -760,8 +761,13 @@ func taxaSubtree(w http.ResponseWriter, r *http.Request, args ...any) {
 			continue
 		}
 
-		o := Taxon{TaxId: taxon, Parent: parent, Name: name,
-			CommonName: cname}
+		o := Taxon{
+			TaxId:      taxon,
+			Name:       name,
+			CommonName: cname,
+			Parent:     parent,
+		}
+
 		out = append(out, o)
 	}
 
@@ -787,6 +793,7 @@ func taxaMRCA(w http.ResponseWriter, r *http.Request, args ...any) {
 
 		taxa = append(taxa, id)
 	}
+
 	if len(taxa) > 0 {
 		mrca, err := neidb.MRCA(taxa)
 		if err == nil {

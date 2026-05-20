@@ -1,0 +1,18 @@
+[
+  {
+    "level": "complete",
+    "count": 7814
+  },
+  {
+    "level": "chromosome",
+    "count": 759
+  },
+  {
+    "level": "scaffold",
+    "count": 28079
+  },
+  {
+    "level": "contig",
+    "count": 364876
+  }
+]

@@ -35,9 +35,10 @@ func ioHandling() (bool, int) {
 	util.PrepLog("never")
 	clio.Usage(
 		"-l",
-		"This is the webserver neverV2. It hosts the neighbors' REST API versions 1 and 2, "+
-			"as well as their documentations. New packages may be added in a simmilar fashion as seen "+
-			"in the main function. ",
+		"This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
+			"as well as their respective documentation. "+
+			"New packages may be added in a simmilar fashion as seen "+
+			"in the main function.",
 		"Starts the webserver in local mode, without https.")
 
 	lFlag := flag.Bool("l", false, "local mode")

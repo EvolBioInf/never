@@ -70,16 +70,16 @@ type TaxonInfo struct {
   Name           string        `json:"name"`
   CommonName     string        `json:"common_name"`
   Rank           string        `json:"rank"`
-  RawGenomeCount []GenomeCount `json:"raw_genome_count"`
-  RecGenomeCount []GenomeCount `json:"rec_genome_count"`
+  RawGenomeCount []GenomeCount `json:"raw_genome_counts"`
+  RecGenomeCount []GenomeCount `json:"rec_genome_counts"`
   Images         []Image       `json:"images"`
 }
 
 type Taxon struct {
   TaxId      int    `json:"tax_id"`
-  Parent     int    `json:"parent"`
   Name       string `json:"name"`
   CommonName string `json:"common_name"`
+  Parent     int    `json:"parent"`
 }
 
 type TaxonName struct {
@@ -961,6 +961,7 @@ adding their levels before storing them.
     Name: name,
     CommonName: cn,
   }
+
   out = append(out, o)
 #+end_src
 
@@ -1031,7 +1032,7 @@ adding their levels before storing them.
 #+end_export
 
 #+begin_src go <<Slice output to size/offset, Pa. \ref{pa:api}>>=
-  out = out[1:]
+  out = out[offset:]
 #+end_src
 
 
@@ -1356,8 +1357,13 @@ parent's taxon ID.
 	  name := ""
 	  cname := ""
 	  //<<Get node names, Pa. \ref{pa:api}>>
-	  o := Taxon{TaxId: taxon, Parent: parent, Name: name,
-		  CommonName: cname}
+	  o := Taxon{
+      TaxId: taxon,
+      Name: name,
+		  CommonName: cname,
+      Parent: parent,
+    }
+
 	  out = append(out, o)
   }
 #+end_src
@@ -1440,3 +1446,8 @@ parent's taxon ID.
     taxa = append(taxa, id)
   }
 #+end_src
+
+#+begin_export latex
+  With the last endpoint implemented, we are done programming the 
+  second iteration of never's api. Though we still need to test it.
+#+end_export
