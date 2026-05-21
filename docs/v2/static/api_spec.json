@@ -33,9 +33,7 @@
     "/accessions": {
       "get": {
         "summary": "Get accession levels",
-        "tags": [
-          "Accession"
-        ],
+        "tags": ["Accession"],
         "responses": {
           "200": {
             "description": "OK",
@@ -73,10 +71,7 @@
           {
             "schema": {
               "type": "array",
-              "example": [
-                "GCF_000001405.40",
-                "GCA_000002115.2"
-              ],
+              "example": ["GCF_000001405.40", "GCA_000002115.2"],
               "items": {
                 "type": "string"
               }
@@ -114,12 +109,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": [
-                      "complete",
-                      "chromosome",
-                      "scaffold",
-                      "contig"
-                    ]
+                    "value": ["complete", "chromosome", "scaffold", "contig"]
                   }
                 }
               }
@@ -128,18 +118,14 @@
         },
         "operationId": "get-general-assembly-levels",
         "description": "Get all possible assembly levels",
-        "tags": [
-          "Accession"
-        ]
+        "tags": ["Accession"]
       },
       "parameters": []
     },
     "/ranks": {
       "get": {
         "summary": "Get ranks of taxa",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -177,10 +163,7 @@
           {
             "schema": {
               "type": "array",
-              "example": [
-                9606,
-                9605
-              ],
+              "example": [9606, 9605],
               "items": {
                 "type": "integer"
               }
@@ -205,9 +188,7 @@
     "/taxa": {
       "get": {
         "summary": "Get taxa by name",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -349,9 +330,7 @@
     "/taxa-accessions": {
       "get": {
         "summary": "Get taxons accessions",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -409,10 +388,7 @@
           {
             "schema": {
               "type": "array",
-              "example": [
-                278148,
-                602633
-              ],
+              "example": [278148, 602633],
               "items": {
                 "type": "integer"
               }
@@ -464,17 +440,13 @@
         },
         "operationId": "taxa-count",
         "description": "Get the number of taxa in the db",
-        "tags": [
-          "Taxon"
-        ]
+        "tags": ["Taxon"]
       }
     },
     "/taxa-info": {
       "get": {
         "summary": "Get taxa info",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -607,10 +579,7 @@
           {
             "schema": {
               "type": "array",
-              "example": [
-                562,
-                9606
-              ],
+              "example": [562, 9606],
               "items": {
                 "type": "integer"
               }
@@ -634,9 +603,7 @@
     "/taxa-names": {
       "get": {
         "summary": "Get taxa and their names",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -677,10 +644,7 @@
           {
             "schema": {
               "type": "array",
-              "example": [
-                9606,
-                9605
-              ],
+              "example": [9606, 9605],
               "items": {
                 "type": "integer"
               }
@@ -726,9 +690,7 @@
       ],
       "get": {
         "summary": "Get path between two taxa",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -838,7 +800,7 @@
           }
         },
         "operationId": "get-taxa-start-id-path-end-id",
-        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root\nReturns an empty list if no path connects start and end",
+        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root.\nReturns an empty list if no path connects start and end",
         "parameters": [
           {
             "$ref": "#/components/parameters/page"
@@ -864,9 +826,7 @@
       ],
       "get": {
         "summary": "Get taxons children",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -925,9 +885,7 @@
       ],
       "get": {
         "summary": "Get taxons images",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -981,9 +939,7 @@
       ],
       "get": {
         "summary": "Get taxons genome count",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1048,9 +1004,7 @@
       ],
       "get": {
         "summary": "Get taxons genome count recursive",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1115,9 +1069,7 @@
       ],
       "get": {
         "summary": "Get taxons parent",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1156,9 +1108,7 @@
       ],
       "get": {
         "summary": "Get subtree of taxon",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1215,11 +1165,7 @@
         {
           "schema": {
             "type": "array",
-            "example": [
-              9606,
-              741158,
-              63221
-            ],
+            "example": [9606, 741158, 63221],
             "items": {
               "type": "integer"
             }
@@ -1232,9 +1178,7 @@
       ],
       "get": {
         "summary": "Get most recent common ancestor",
-        "tags": [
-          "Taxon"
-        ],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",

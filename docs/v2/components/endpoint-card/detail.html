@@ -42,7 +42,7 @@
           class="run-example"
           id='{{toKebab "run" "example" .Name .Op.Verb}}'
         >
-          Run
+          Try now
         </button>
         <script>
           {
@@ -59,7 +59,7 @@
 
               fetch(input.value)
                 .then((response) => response.text())
-                .then((data) => pre.innerHTML = data)
+                .then((data) => (pre.innerHTML = data));
             };
           }
         </script>

@@ -13,35 +13,75 @@
     <link rel="stylesheet" href="{{.Prefix}}/static/css/endpoint-card.css" media="screen"/>
     <link rel="stylesheet" href="{{.Prefix}}/static/css/parameter.css" media="screen"/>
     <link rel="stylesheet" href="{{.Prefix}}/static/css/sidebar.css" media="screen" />
-    {{template "components/sidebar"}}
-    <main>
-      <header>
-        <h1>Welcome to the Neighbors REST API</h1>
-        <p class="api-description">
-          The Neighbors REST API gives access to genome sequences via the taxonomy
-          of sequenced life. <br />
-          <br />
-          Starting from one or more target organisms, the accessions of their
-        genomes can be looked up. In addition, the genome accessions of the
-        targets' closest relatives, their neighbors, can be looked up. Such
-        pairs of samples of target and neighbor genomes make good starting
-        material for developing diagnostic markers. <br />
-        <br />
-        We use the taxonomy and genome data supplied by the NCBI to build a
-        custom database. The compressed files we used for the construction of
-        the current database can be downloaded from here, the much larger sqlite
-        database itself is here. Our REST API for querying this database is
-        implemented in the Neighbors server, never, developed by the Research
-        Group Bioinformatics at the Max-Planck-Institute for Evolutionary
-        Biology using our Neighbors package. For more details on genetic marker
-        discovery from whole genome sequences with Neighbors and related
-        software, please read our publication.
-      </p>
-      <p>Version: {{.Version}}</p>
-      <p>Server: {{.ServerURL}}</p>
+    <header>
+      <h1>Never</h1>
+      <hr class="section-divider" />
     </header>
+    <main>
+      <section>
+        <h1>Welcome to the Neighbors REST API</h1>
+        <p>
+          The Neighbors REST API gives access to genome sequences via the taxonomy
+          of sequenced life. 
+          <br />
+          <br />
+          
+          Starting from one or more target organisms, the accessions of their
+          genomes can be looked up. In addition, the genome accessions of the
+          targets' closest relatives, their neighbors, can be looked up. Such
+          pairs of samples of target and neighbor genomes make good starting
+          material for developing diagnostic markers. 
+          <br />
+          <br />
+          
+          We use the
+          <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy">taxonomy</a>
+           and
+          <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome data</a>
+           supplied by the 
+          <a href=https://www.ncbi.nlm.nih.gov>NCBI</a>
+            to build a custom database. The compressed files we used for the construction of the
+          current database can be downloaded from
+          <a href="https://neighbors.evolbio.mpg.de/data/neidbData.tgz">here</a>
+          , the much larger sqlite database itself is
+          <a href="https://neighbors.evolbio.mpg.de/data/neidb">here</a>.
+          <br />
+          
+          Our REST API for querying this database is implemented in
+          the Neighbors server,
+          <a href="https://github.com/evolbioinf/never">never</a>,
+           developed by the 
+          <a href="https://evolbioinf.github.io/">Research Group Bioinformatics</a>
+           at the 
+          <a href="https://www.evolbio.mpg.de">Max-Planck-Institute for Evolutionary Biology</a>
+           using our 
+          <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
+           package.
+          For more details on genetic marker discovery from whole genome
+          sequences with Neighbors and related software, please read
+          our 
+          <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+      </p>
+    </section>
+    <hr class="section-divider" />
     <section>
-      <h1>Services</h1>
+      <p>
+        API Version: {{.Version}}
+        <br/>
+        Base url: {{.ServerURL}}
+        <br/>
+        <br/>
+        OpenAPI version: {{.ApiVersion}}
+        <br/>
+        OpenAPI document: 
+        <a href="{{.Prefix}}/static/api_spec.json">{{.Prefix}}/static/api_spec.json</a>
+        </p>
+     </div>
+
+    </section>
+    <hr class="section-divider" />
+    <section>
+      <h1>Endpoints</h1>
       
       {{template "components/endpoint" .}}
     </main>

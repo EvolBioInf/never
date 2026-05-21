@@ -265,7 +265,7 @@ type Response struct {
 #+end_export
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
-  content := retrieveData("docs/v2/api_spec.json", local, port)
+  content := retrieveData("docs/v2/static/api_spec.json", local, port)
   content.Prefix = prefix
 #+end_src
 

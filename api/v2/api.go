@@ -73,9 +73,8 @@ type TaxonName struct {
 	CommonName string `json:"common_name"`
 }
 
-func RegisterRoutes(prefix string) {
+func RegisterRoutes(prefix, dbPath string) {
 	var neidb *tdb.TaxonomyDB
-	dbPath := "neidb"
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("apiV2: db does not exist")
 	} else {

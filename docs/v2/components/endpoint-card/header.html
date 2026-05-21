@@ -7,7 +7,11 @@
     <p class='{{ toKebab "request" "type" "block" .Op.Verb }}'>{{.Op.Verb}}</p>
     <p>{{.Name}}</p>
   </div>
-  <p>{{.Op.Description}}</p>
+  <p class="header-description">{{.Op.Description}}</p>
+  <div class="header-arrow">
+    <div class="arrow-left"></div>
+    <div class="arrow-right"></div>
+  </div>
 </div>
 
 <script>

@@ -91,7 +91,7 @@ type Image struct {
 
 var prefix string
 var neidb *tdb.TaxonomyDB
-var dateFile string = "updated.txt"
+var dateFile string
 var services []Service
 var templates = template.New("templates")
 var templateFuncs = make(template.FuncMap)
@@ -581,15 +581,15 @@ func path(w http.ResponseWriter, r *http.Request,
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func RegisterRoutes(pref string) {
+func RegisterRoutes(pref, dbPath, dateFilePath string) {
 	prefix = pref
-	dbPath := "neidb"
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("neverV1: db does not exist")
 	} else {
 		neidb = tdb.OpenTaxonomyDB(dbPath)
 	}
 
+	dateFile = dateFilePath
 	if _, err := os.Stat(dateFile); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("neverV1: dateFile does not exist")
 	}

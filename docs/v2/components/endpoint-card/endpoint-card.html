@@ -1,6 +1,6 @@
 {{define "components/endpoint-card/endpoint-card"}} {{$Name := .Name}} {{range
 .Operations}}
-<section class="endpoint-card" id="-{{toKebab $Name .Verb}}">
+<section class="endpoint-card" id="card-{{toKebab $Name .Verb}}">
   {{template "components/endpoint-card/header" (dict "Name" $Name "Op" .)}}
   {{template "components/endpoint-card/detail" (dict "Name" $Name "Op" .)}}
 </section>

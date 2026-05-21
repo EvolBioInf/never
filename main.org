@@ -38,13 +38,14 @@ import (
     We call this function \ty{ioHandling}. In this we prepare the log, implement a usage and parse
   the call arguments. As we need to define the return tuple of this function in its head we need to
   think about what arguments may be parsed and needed within the main function. Most importantly we
-  need be able to pass an address and a port for the server to run on. It would also be good if we could
-  define a path for the HTTP/TLS files i.e. the certificat and the private key. This results in three strings
-  and an integer as a return tuple.
+  need be able to pass an address and a port for the server to run on. It would be nice if we could also
+  define a path for the HTTP/TLS files i.e. the certificate and the private key. Providing extra options
+  for the database path and the date file results in a more flexible setup. 
+  This results in five strings and an integer as a return tuple.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-  func ioHandling() (string, string, string, int) {
+  func ioHandling() ( string,string, string, string, string, int) {
     //<<Prepare log, Pr. \ref{pr:main}>>
     //<<Set usage, Pr. \ref{pr:main}>>
     //<<Parse flags, Pr. \ref{pr:main}>>
@@ -108,10 +109,13 @@ import (
 #+end_export
 
 #+begin_src go <<Parse flags, Pr. \ref{pr:main}>>=
-  oFlag := flag.String("o", "", "host address")
   cFlag := flag.String("c", "certificates/cert.pem", "certificate")
+  dbFlag := flag.String("db", "neidb", "path to database from execution position")
+  dFlag := flag.String("d", "updated.txt", "path to dateFile from execution position")
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
+  oFlag := flag.String("o", "", "host address")
   pFlag := flag.Int("p", 8080, "port")
+
   vFlag := flag.Bool("v", false, "print progam info")
 
   flag.Parse()
@@ -121,7 +125,7 @@ import (
     os.Exit(0)
   }
 
-  return *oFlag, *cFlag, *kFlag, *pFlag
+  return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag
 #+end_src
 
 #+begin_export latex
@@ -129,20 +133,22 @@ import (
 #+end_export
 
 #+begin_src go <<Handle io, Pr. \ref{pr:main}>>=
-	host, certificate, privateKey, port := ioHandling()
+	certificate, dbPath, dateFilePath, privateKey, host, port := ioHandling()
 #+end_src
 
 #+begin_export latex
   The packages we want to register each provide their own register function called \ty{registerRoutes}.
   We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each others existances.
-  So this task falls to the managing part of the software, which is this server. The \ty{docsv2} also wants to know whether it is being hosted locally
-  and on what port.
+  So this task falls to the managing part of the software, which is this server. 
+  Additionally to the prefix \ty{apiv2} needs to know where the database is located. The same goes for \ty{neverv1}, but this needs to
+  get an extra filepath for the \ty{dateFile}.
+  The \ty{docsv2} wants to know whether it is being hosted locally and on what port, so we need to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
 	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
-	apiv2.RegisterRoutes("/api/v2")
-	neverv1.RegisterRoutes("/docs/api/v1")
+	apiv2.RegisterRoutes("/api/v2", dbPath)
+	neverv1.RegisterRoutes("/docs/api/v1", dbPath, dateFilePath)
 #+end_src
 
 #+begin_export latex

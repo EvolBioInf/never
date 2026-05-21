@@ -128,7 +128,7 @@ func RegisterRoutes(prefix string, local bool, port int) {
 		}
 	}
 
-	content := retrieveData("docs/v2/api_spec.json", local, port)
+	content := retrieveData("docs/v2/static/api_spec.json", local, port)
 	content.Prefix = prefix
 
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })

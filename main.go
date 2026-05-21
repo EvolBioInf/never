@@ -19,11 +19,11 @@ import (
 )
 
 func main() {
-	host, certificate, privateKey, port := ioHandling()
+	certificate, dbPath, dateFilePath, privateKey, host, port := ioHandling()
 
 	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
-	apiv2.RegisterRoutes("/api/v2")
-	neverv1.RegisterRoutes("/docs/api/v1")
+	apiv2.RegisterRoutes("/api/v2", dbPath)
+	neverv1.RegisterRoutes("/docs/api/v1", dbPath, dateFilePath)
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
@@ -40,7 +40,7 @@ func main() {
 	fmt.Println("...Stopping server")
 }
 
-func ioHandling() (string, string, string, int) {
+func ioHandling() (string, string, string, string, string, int) {
 	util.PrepLog("never")
 
 	clio.Usage(
@@ -51,10 +51,13 @@ func ioHandling() (string, string, string, int) {
 			"in the main function.",
 		"Starts the webserver at specified address with given port.")
 
-	oFlag := flag.String("o", "", "host address")
 	cFlag := flag.String("c", "certificates/cert.pem", "certificate")
+	dbFlag := flag.String("db", "neidb", "path to database from execution position")
+	dFlag := flag.String("d", "updated.txt", "path to dateFile from execution position")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
+	oFlag := flag.String("o", "", "host address")
 	pFlag := flag.Int("p", 8080, "port")
+
 	vFlag := flag.Bool("v", false, "print progam info")
 
 	flag.Parse()
@@ -64,6 +67,6 @@ func ioHandling() (string, string, string, int) {
 		os.Exit(0)
 	}
 
-	return *oFlag, *cFlag, *kFlag, *pFlag
+	return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag
 
 }

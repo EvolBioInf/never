@@ -10,14 +10,24 @@
 
 body {
   display: flex;
+  flex-direction: column;
 }
 
-main {
-  padding: 0 20px 0 20px;
+.section-divider {
+  height: 0;
+  border-bottom: 0;
+  margin-left: 0;
+  margin-bottom: 0;
+  stroke: var(--secondary-color);
+}
+
+section {
+  margin: 0 auto 2rem auto;
+  max-width: 80rem;
   overflow-anchor: none;
-
 }
 
-.api-description {
-  width: 50%;
+a:link,
+a:visited {
+  color: var(--secondary-color);
 }

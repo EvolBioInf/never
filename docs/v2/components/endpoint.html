@@ -16,8 +16,9 @@
     const newEndpoint = document.getElementById(newId);
     if (newEndpoint) {
       newEndpoint.style.display = "flex";
-      newEndpoint.scrollIntoView();
     }
+    const endpointCard = document.getElementById("card-" + newHash);
+    endpointCard?.scrollIntoView();
 
     const oldEndpoint = document.getElementById(oldId);
     if (oldEndpoint) {
@@ -26,14 +27,7 @@
   };
 
   window.addEventListener("hashchange", onHashUpdate);
-  window.onload = () => {
-    onHashUpdate({ oldURL: "" });
-    const newHash =
-      window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
-    if (newHash) {
-      document.getElementById("body-" + newHash).scrollIntoView();
-    }
-  };
+  window.onload = () => onHashUpdate({ oldURL: "" });
 </script>
 
 {{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}} {{end}}
