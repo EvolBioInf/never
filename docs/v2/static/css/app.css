@@ -8,9 +8,54 @@
   scroll-behavior: smooth;
 }
 
+header {
+  background-color: color-mix(in srgb, var(--secondary-color), white 90%);
+  border-bottom: 1px solid var(--secondary-color);
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 75%;
+  margin: 0 auto 0 auto;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-links > a {
+  text-decoration: none;
+}
+
+/* modified version of https://tobiasahlin.com/blog/css-trick-animating-link-underlines/ */
+.nav-links > a::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: var(--secondary-color);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.nav-links > a:hover::after {
+  transform: scaleX(1);
+}
+/* +++++++++++++++++++++++++++++++++++ */
+
+.sever-info {
+  background-color: color-mix(in srgb, var(--secondary-color), white 95%);
+  padding: 0.5rem 0 0.5rem 0;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--secondary-color), white 75%);
+}
+
 body {
   display: flex;
   flex-direction: column;
+  margin: 0;
 }
 
 .section-divider {
@@ -23,6 +68,8 @@ body {
 
 section {
   margin: 0 auto 2rem auto;
+  padding-left: 8px;
+  padding-right: 8px;
   max-width: 80rem;
   overflow-anchor: none;
 }

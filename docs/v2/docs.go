@@ -257,19 +257,20 @@ func retrieveData(filepath string, local bool, port int) Content {
 								panic(fmt.Sprintf("cannot build schema: %e", err))
 							}
 
-							marshalledSchema, err := schema.MarshalJSONInline()
+							schemaMarshalled, err := schema.MarshalJSONInline()
 							if err != nil {
-								panic(fmt.Sprintf("cannot marshal render schema: %e", err))
+								panic(fmt.Sprintf("cannot marshal schema: %e", err))
 							}
+
+							var rawSchema map[string]any
+							json.Unmarshal(schemaMarshalled, &rawSchema)
+
+							parsed := parseResponseSchema(rawSchema)
 
 							var indented bytes.Buffer
-
-							err = json.Indent(&indented, marshalledSchema, "", "  ")
-							if err != nil {
-								panic(fmt.Sprintln("cannot indent json string:", err))
-							}
-
+							json.Indent(&indented, []byte(parsed), "", "  ")
 							newOperation.Schema = indented.String()
+
 						}
 
 					}
@@ -292,7 +293,6 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	var parsed []Parameter
 	for _, parameter := range parameters {
 		schema, err := parameter.Schema.BuildSchema()
-
 		if err != nil {
 			panic(fmt.Sprintf("cannot build schema: %e", err))
 		}
@@ -303,16 +303,22 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 			Description: parameter.Description,
 		}
 
-		renderedSchema, err := schema.RenderInline()
-
-		if err != nil {
-			panic(fmt.Sprintf("cannot render schema: %e", err))
-		}
-
-		param.Schema = string(renderedSchema)
-
 		if parameter.Required != nil {
 			param.Required = *parameter.Required
+		}
+
+		if len(schema.Type) > 0 {
+			if schema.Type[0] == "array" {
+				if schema.Items != nil && schema.Items.A != nil {
+					t := schema.Items.A.Schema().Type
+					if len(t) > 0 {
+						param.Schema = t[0] + "[]"
+					}
+				}
+
+			} else {
+				param.Schema = schema.Type[0]
+			}
 		}
 
 		if schema.Example != nil {
@@ -332,6 +338,65 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	}
 
 	return parsed
+}
+
+func parseResponseSchema(t map[string]any) string {
+	r, ok := t["type"]
+	if !ok {
+		panic("Error while parsing the schema. Key \"type\" does not exist.")
+	}
+
+	c, ok := r.(string)
+	if !ok {
+		panic("Error while parsing the schema. Value of key \"type\" is not a string.")
+	}
+
+	var res string
+	switch c {
+	case "array":
+		i, ok := t["items"]
+		if !ok {
+			panic("Error while parsing the schema. Array is missing \"items\" sibling.")
+		}
+
+		n, ok := i.(map[string]any)
+		if !ok {
+			panic("Error while parsing the schema. Value of array item is not a map.")
+		}
+
+		res = fmt.Sprintf("[%s]", parseResponseSchema(n))
+
+	case "object":
+		p, ok := t["properties"]
+		if !ok {
+			panic("Error while parsing the schema. Object is missing \"properties\" sibling.")
+		}
+
+		dt, ok := p.(map[string]any)
+		if !ok {
+			panic("Error while parsing the schema. Value of object property is not a map.")
+		}
+
+		res = "{"
+		for k, v := range dt {
+			pv, ok := v.(map[string]any)
+			if !ok {
+				panic("Error while parsing the schema. Value of nested object property is not a map.")
+			}
+
+			res += fmt.Sprintf("\"%s\":%s,", k, parseResponseSchema(pv))
+		}
+
+		res = res[:len(res)-1]
+		res += "}"
+
+	default:
+		res = fmt.Sprintf("\"%s\"", c)
+
+	}
+
+	return res
+
 }
 
 func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {

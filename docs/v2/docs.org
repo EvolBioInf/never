@@ -236,6 +236,7 @@ type Parameter struct {
 	Name        string
 	Description string
 	Required    bool
+  Extra       string
 	Example     string
 	Schema      string
 }
@@ -364,37 +365,22 @@ type Response struct {
   pathParams := extractParameters(pathItem.Parameters)
 #+end_src
 
+#+begin_export latex
+  In this funciton we iterate over all the parameters.
+  We need to build the schema, to access the parameters specification.
+  Then we retrieve basic information about the parameter, write down
+  the actual schema, possible extra information and extract examples.
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
 func extractParameters(parameters []*v3.Parameter) []Parameter {
 	var parsed []Parameter
 	for _, parameter := range parameters {
-		schema, err := parameter.Schema.BuildSchema()
-
-		if err != nil {
-			panic(fmt.Sprintf("cannot build schema: %e", err))
-		}
-
-		param := Parameter{
-			ParamType:   parameter.In,
-			Name:        parameter.Name,
-			Description: parameter.Description,
-		}
-
-		renderedSchema, err := schema.RenderInline()
-
-		if err != nil {
-			panic(fmt.Sprintf("cannot render schema: %e", err))
-		}
-
-		param.Schema = string(renderedSchema)
-
-		if parameter.Required != nil {
-			param.Required = *parameter.Required
-		}
-
-    // <<Extract examples, Pa. \ref{pa:docs}>>
-
-
+		//<<Build parameter schema, Pa. \ref{pa:docs}>>
+    //<<Retrieve basic parameter info, Pa. \ref{pa:docs}>>
+    //<<Extract parameter schema, Pa. \ref{pa:docs}>>
+    //<<Get extra information, Pa. \ref{pa:docs}>>
+    //<<Extract examples, Pa. \ref{pa:docs}>>
 		parsed = append(parsed, param)
 	}
 
@@ -402,11 +388,99 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 }
 #+end_src
 
+
+#+begin_export latex
+  Building the schema is a preparation step. We do this by
+  invoking the \ty{BuildSchema} function. We propagate any errors
+  that might occur.
+#+end_export
+
+#+begin_src go <<Build parameter schema, Pa. \ref{pa:docs}>>=
+  schema, err := parameter.Schema.BuildSchema()
+	if err != nil {
+		panic(fmt.Sprintf("cannot build schema: %e", err))
+	}
+#+end_src
+
+#+begin_export latex
+  There is basic data that describes the parameter,
+  opposed to the examples or the actual schema we'll need to display.
+  This data is the parameter's type as in whether it's a query or path parameter,
+  the parameter's name and its description. Checking if the parameter is required
+  is also trivial.
+#+end_export
+
+#+begin_src go <<Retrieve basic parameter info, Pa. \ref{pa:docs}>>=
+  param := Parameter{
+		ParamType:   parameter.In,
+		Name:        parameter.Name,
+		Description: parameter.Description,
+	}
+
+	if parameter.Required != nil {
+		param.Required = *parameter.Required
+	}
+#+end_src
+
+#+begin_export latex
+  Now extracting the schema we want to display later on is a bit more tricky.
+  Schemas may be arbitrarily complex in theory, which makes parsing a little complex.
+  We will encounter this problem later on, right we can simplify our problem. Right now 
+  we are working with url parameters. There schemas are quite shallow. Their datatype is
+  either a primitive like an integer, string or boolean, or an arry composed of primitives.
+  So in order to extract the parameter's schema we decide whether we are looking at an
+  array or a primitive and handle those individually. But first we need to get the
+  schema into a datastructure one can actually work with. 
+#+end_export
+
+#+begin_src go <<Extract parameter schema, Pa. \ref{pa:docs}>>=
+  if len(schema.Type) > 0 {
+    if schema.Type[0] == "array" {
+      //<<Handle array parameter schema, Pa. \ref{pa:docs}>>
+    } else {
+      param.Schema = schema.Type[0]
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  The underlying type of an array is for some reason deeply nested
+  within this schema structure. Honestly I don't quite get what they are trying
+  to do. No matter their ideas, I've found the value I'm looking for within
+  the \ty{items} property under \ty{schema.Items.A.Schema().Type} using the debugger.
+  This \ty{yaml.Node} structure is immensely complicated and as of now I don't know why.
+  Sadly I could not find a propper documentation either. Well for further interactions
+  with this we will rework the representation into something manageable. As for now we need 
+  to check whether this subnode \ty{A} exists and query it for its value.
+#+end_export
+
+#+begin_src go <<Handle array parameter schema, Pa. \ref{pa:docs}>>=
+		if schema.Items != nil && schema.Items.A != nil {
+			t := schema.Items.A.Schema().Type
+			if len(t) > 0 {
+				param.Schema = t[0] + "[]"
+			}
+		}
+#+end_src
+
 #+begin_export latex
   The example is either stored in the schema example as a value or within the
   example's content. If it's in its content, we need to loop over the content
   elements and retrieve all the values by hand.
 #+end_export
+
+#+begin_export latex
+  Some parameters have extra information like default values or minima and maxima.
+  As I can't find them with the node structure, I'll extract them from the rendered
+  string using regex. This isn't safe nor stable, but this information is, as the 
+  name suggests extra, so not necessarily needed when just checking the api. Also
+  I'm just lacking a better way of doing it. Until I find that, it seems that we 
+  need to stick with the regex.
+#+end_export
+
+#+begin_src go <<Get extra information, Pa. \ref{pa:docs}>>=
+  INSERT REGEX HERE.
+#+end_src
 
 #+begin_src go <<Extract examples, Pa. \ref{pa:docs}>>=
   if schema.Example != nil {
@@ -620,40 +694,215 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  Parsing the schema consists of more steps than parsing the example.
-  The schema is in a nested structure consisting of two to three keys per object.
-  The first one is called title. That is going to be the key in our representation.
+  Parsing the schema is a bit more complex. So we divide the problem into multiple steps.
+  Step one is building the schema. Then we need to get a better representation.
+  The next step is to parse the new representation. Lastly we need to write the
+  result into our \ty{Operation} type.
+#+end_export
 
+#+begin_src go <<Parse response schema, Pa. \ref{pa:docs}>>=
+	if contentValue.Schema != nil {
+    //<<Build response schema, Pa. \ref{pa:docs}>>
+    //<<Change schema representation, Pa. \ref{pa:docs}>>
+    //<<Parse new schema representation, Pa. \ref{pa:docs}>>
+    //<<Write result to operation, Pa. \ref{pa:docs}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We've already seen how to build the schema for the parametes.
+  Building it for the response schema is the same.
+#+end_export
+
+#+begin_src go <<Build response schema, Pa. \ref{pa:docs}>>=
+	schema, err := contentValue.Schema.BuildSchema()
+		if err != nil {
+			panic(fmt.Sprintf("cannot build schema: %e", err))
+		}
+#+end_src
+
+#+begin_export latex
+  To get this schema in a more manageable representation we use the
+  \ty{Marshal}, \ty{Unmarshal} approach again.
+#+end_export
+
+#+begin_src go <<Change schema representation, Pa. \ref{pa:docs}>>=
+	schemaMarshalled, err := schema.MarshalJSONInline()
+	if err != nil {
+		panic(fmt.Sprintf("cannot marshal schema: %e", err))
+	}
+
+	var rawSchema map[string]any
+	json.Unmarshal(schemaMarshalled, &rawSchema)
+#+end_src
+
+#+begin_export latex
+  Now to the complex part: parsing the new representation.
+  We do this in a separate Function called \ty{parseResponseSchema}.
+  This function takes the map we just created and returns a string in json format.
+  To best handle the possibly deeply nested representation, \ty{parseResponseSchema}
+  will work recursively. 
+  Depending on the type we are currently working with, there are three different 
+  cases to differentiate.
+  The first one is an array, which has one subtype. The second one is an object
+  which has arbitrary subtypes. Lastly there are primitive datatypes, which are the easiest.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
+  func parseResponseSchema(t map[string]any) string {
+    //<<Get Type, Pa. \ref{pa:docs}>>
+    //<<Handle cases, Pa. \ref{pa:docs}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The type is always stored in the key "type". There is something wrong if it is not.
+  We need to report that and might aswell do that by throwing an error. This type is
+  a string. Again if it is not we throw an error.
+#+end_export
+
+#+begin_src go <<Get Type, Pa. \ref{pa:docs}>>=
+	  r, ok := t["type"]
+	  if !ok {
+	  	panic("Error while parsing the schema. Key \"type\" does not exist.")
+	  }
+
+    c, ok := r.(string)
+	  if !ok {
+	    panic("Error while parsing the schema. Value of key \"type\" is not a string.")
+	  }
+#+end_src
+
+#+begin_export latex
+  We handle the cases by using a semantically fitting switch/case statement.
+#+end_export
+
+#+begin_src go <<Handle cases, Pa. \ref{pa:docs}>>=
+	var res string
+	switch c {
+	  case "array":
+	    //<<Handle array case, Pa. \ref{pa:docs}>>
+	
+    case "object":
+      //<<Handle object case, Pa. \ref{pa:docs}>>
+	
+    default:
+      //<<Handle default case, Pa. \ref{pa:docs}>>
+	}
+
+	return res
+#+end_src
+
+#+begin_export latex
+  An array has a sibling called \ty{items} which tells us what kind of
+  type is used within that array. We extract that type and call \ty{parseResponseSchema}
+  on that again. To represent that this type is used within an array we pre- and postpend
+  square brackets. If something goes wrong along the way, type assertions or missing keys, we just 
+  throw errors again.
+#+end_export
+
+#+begin_src go <<Handle array case, Pa. \ref{pa:docs}>>=
+		i, ok := t["items"]
+		if !ok {
+	  	panic("Error while parsing the schema. Array is missing \"items\" sibling.")
+		}
+
+		n, ok := i.(map[string]any)
+		if !ok {
+	  	panic("Error while parsing the schema. Value of array item is not a map.")
+		}
+
+		res = fmt.Sprintf("[%s]", parseResponseSchema(n))
+#+end_src
+
+#+begin_export latex
+  An object has a sibling called \ty{properties}. \ty{properties} is again a map
+  where each key is the name of a property. The value of on of those keys is the
+  type of that property. We begin similarly to the array, in that we extract the 
+  sibling and do a type assertion, throwing error when encountering invalid data, 
+  as always.
+#+end_export
+
+#+begin_src go <<Handle object case, Pa. \ref{pa:docs}>>=
+		p, ok := t["properties"]
+		if !ok {
+	  	panic("Error while parsing the schema. Object is missing \"properties\" sibling.")
+		}
+
+		dt, ok := p.(map[string]any)
+		if !ok {
+	  	panic("Error while parsing the schema. Value of object property is not a map.")
+		}
+
+    //<<Parse object to string, Pa. \ref{pa:docs}>>
+#+end_src
+
+#+begin_export latex
+  Again just like we did with the array, we need to pre- and postpend symbols 
+  for a valid object notation. In this case it's curly brackets. Parsing the individual
+  properties begins with writing down their names. The values are again obtained by calling
+  \ty{parseResponseSchema} on them.
+  Each property needs to be separated by a comma. To remove the trailing comma we reslice 
+  the string. This probably is not super performant, but I believe that the amount of 
+  data we're handling allows us to do so.
+#+end_export
+
+#+begin_src go <<Parse object to string, Pa. \ref{pa:docs}>>=
+	res = "{"
+		for k, v := range dt {
+			pv, ok := v.(map[string]any)
+			if !ok {
+	  	  panic("Error while parsing the schema. Value of nested object property is not a map.")
+			}
+
+			res += fmt.Sprintf("\"%s\":%s,", k, parseResponseSchema(pv))
+		}
+
+		res = res[:len(res)-1]
+		res += "}"
+#+end_src
+
+#+begin_export latex
+  Lastly we handle the default case. This is by far the easiest.
+  All we need to do is take the given type and put it into a string literal 
+  notation i.e. pre- and postpend quotation marks.
+#+end_export
+
+#+begin_src go <<Handle default case, Pa. \ref{pa:docs}>>=
+  res = fmt.Sprintf("\"%s\"", c)
+#+end_src
+
+#+begin_export latex
+  With the schema parsing function done we return to parsing the operation. Here 
+  we need to call the function we just created and use the json module to correctly indent it.
+  The \ty{indent} function expects a buffer from the bytes package. So we need to import that
+  first.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
 	"bytes"
 #+end_src
 
-#+begin_src go <<Parse response schema, Pa. \ref{pa:docs}>>=
-	if contentValue.Schema != nil {
-		schema, err := contentValue.Schema.BuildSchema()
-		if err != nil {
-			panic(fmt.Sprintf("cannot build schema: %e", err))
-		}
+#+begin_export latex
+  Now we are ready to call the parse function
+#+end_export
 
- 	  marshalledSchema, err := schema.MarshalJSONInline()
-    if err != nil {
-		  	panic(fmt.Sprintf("cannot marshal render schema: %e", err))
-	  }
-
-    var indented bytes.Buffer
-
-    err = json.Indent(&indented, marshalledSchema, "", "  ")
-    if err != nil {
-      panic(fmt.Sprintln("cannot indent json string:", err))
-    }
-
-	  newOperation.Schema = indented.String()
-	}
+#+begin_src go <<Parse new schema representation, Pa. \ref{pa:docs}>>=
+  parsed := parseResponseSchema(rawSchema)
 #+end_src
 
 #+begin_export latex
+  And write its result.
+#+end_export
+
+#+begin_src go <<Write result to operation, Pa. \ref{pa:docs}>>=
+  var indented bytes.Buffer
+	json.Indent(&indented, []byte(parsed), "", "  ")
+	newOperation.Schema = indented.String()
+#+end_src
+
+#+begin_export latex
+  We are now done retrieving the data. Which means we can start adding handlers.
   The documentation frontend is a one pager. This means we only serve one route
   and the HTML, CSS and JS takes care of all the rest.
 #+end_export

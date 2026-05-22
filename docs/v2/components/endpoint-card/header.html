@@ -8,10 +8,15 @@
     <p>{{.Name}}</p>
   </div>
   <p class="header-description">{{.Op.Description}}</p>
-  <div class="header-arrow">
-    <div class="arrow-left"></div>
-    <div class="arrow-right"></div>
-  </div>
+  <svg class="header-arrow" width="20" height="10" viewBox="0 0 20 9">
+    <polyline
+      points="1,2 9.5,8 19,2"
+      fill="none"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
 </div>
 
 <script>

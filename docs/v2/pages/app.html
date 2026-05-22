@@ -14,12 +14,20 @@
     <link rel="stylesheet" href="{{.Prefix}}/static/css/parameter.css" media="screen"/>
     <link rel="stylesheet" href="{{.Prefix}}/static/css/sidebar.css" media="screen" />
     <header>
-      <h1>Never</h1>
-      <hr class="section-divider" />
+      <nav>
+        <h1>Never</h1>
+        <div class="nav-links">
+          <a href="/docs/api/v1">APIv1</a>
+          <a href="https://github.com/evolbioinf/never">Source Code</a>
+          <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
+          <a href="https://doi.org/10.1093/bioadv/vbae113">Publication</a>
+          <a href="https://evolbioinf.github.io/">Research Group</a>
+        </div>
+      </nav>
     </header>
     <main>
       <section>
-        <h1>Welcome to the Neighbors REST API</h1>
+        <h2>Welcome to the Neighbors REST API</h2>
         <p>
           The Neighbors REST API gives access to genome sequences via the taxonomy
           of sequenced life. 
@@ -63,25 +71,24 @@
           <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
       </p>
     </section>
-    <hr class="section-divider" />
-    <section>
-      <p>
-        API Version: {{.Version}}
-        <br/>
-        Base url: {{.ServerURL}}
-        <br/>
-        <br/>
-        OpenAPI version: {{.ApiVersion}}
-        <br/>
-        OpenAPI document: 
-        <a href="{{.Prefix}}/static/api_spec.json">{{.Prefix}}/static/api_spec.json</a>
+    <div class="sever-info">
+      <section>
+        <p>
+          API Version: {{.Version}}
+          <br/>
+          Base URL: {{.ServerURL}}
+          <br/>
+          <br/>
+          OpenAPI version: {{.ApiVersion}}
+          <br/>
+          OpenAPI document: 
+          <a href="{{.Prefix}}/static/api_spec.json">{{.Prefix}}/static/api_spec.json</a>
         </p>
-     </div>
-
-    </section>
-    <hr class="section-divider" />
+    
+      </section>
+    </div>
     <section>
-      <h1>Endpoints</h1>
+      <h2>Endpoints</h2>
       
       {{template "components/endpoint" .}}
     </main>

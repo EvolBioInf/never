@@ -4,7 +4,7 @@
   id='{{ toKebab "body" .Name .Op.Verb }}'
 >
   <div class="description">
-    <h3>Description</h3>
+    <h3 class="description-title">Description</h3>
     <p class="description-text">{{.Op.Description}}</p>
     <div class="path-params">
       <h3>Path Parameters</h3>
@@ -50,11 +50,12 @@
               '{{toKebab "run" "example" .Name .Op.Verb}}',
             );
             button.onclick = () => {
-              const input = document.getElementById(
-                '{{toKebab "input" "example" .Name .Op.Verb}}',
-              );
               const pre = document.getElementById(
                 '{{toKebab "response" .Name .Op.Verb}}',
+              );
+              pre.innerHTML = "Loading...";
+              const input = document.getElementById(
+                '{{toKebab "input" "example" .Name .Op.Verb}}',
               );
 
               fetch(input.value)
@@ -64,10 +65,10 @@
           }
         </script>
       </div>
-      <h3 class="schema-title">Schema</h3>
       {{template "components/code-block" (dict "Text" .Op.ExampleResponse "Id"
-      (toKebab "response" .Name .Op.Verb))}} {{template "components/code-block"
-      (dict "Text" .Op.Schema)}}
+      (toKebab "response" .Name .Op.Verb))}}
+      <h3 class="schema-title">Schema</h3>
+      {{template "components/code-block" (dict "Text" .Op.Schema)}}
     </div>
     <hr class="arg-divider" />
 
