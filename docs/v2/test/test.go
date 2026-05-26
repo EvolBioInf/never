@@ -47,6 +47,7 @@ type Parameter struct {
 	Name        string
 	Description string
 	Required    bool
+	Extra       string
 	Example     string
 	Schema      string
 }
@@ -228,6 +229,26 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 		json.Indent(&indented, []byte(parseType(rawSchema)), "", "  ")
 
 		param.Schema = indented.String()
+
+		s, err := parameter.Schema.BuildSchema()
+		if err != nil {
+			panic(fmt.Sprintf("cannot build parameter schema: %e", err))
+		}
+
+		var vals []string
+		if s.Minimum != nil {
+			vals = append(vals, fmt.Sprintf("Minimum: %f", *s.Minimum))
+		}
+
+		if s.Maximum != nil {
+			vals = append(vals, fmt.Sprintf("Maximum: %f", *s.Maximum))
+		}
+
+		if s.Default != nil {
+			vals = append(vals, fmt.Sprintf("Default: %s", s.Default.Value))
+		}
+
+		param.Extra = strings.Join(vals, ", ")
 
 		if parameter.Required != nil {
 			param.Required = *parameter.Required

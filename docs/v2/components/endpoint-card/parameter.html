@@ -8,7 +8,10 @@
   <p>{{.item.Schema}}</p>
   <p>Required</p>
   <p>{{.item.Required}}</p>
-  {{if .item.Example}}
+  {{if .item.Extra}}
+  <p>Extra</p>
+  <p>{{.item.Extra}}</p>
+  {{end}} {{if .item.Example}}
   <p>Example</p>
   <p>{{.item.Example}}</p>
   {{end}}
