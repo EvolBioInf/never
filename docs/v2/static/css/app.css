@@ -74,6 +74,12 @@ section {
   overflow-anchor: none;
 }
 
+@media (min-width: 1920px) {
+  section {
+    max-width: 70vw;
+  }
+}
+
 a:link,
 a:visited {
   color: var(--secondary-color);

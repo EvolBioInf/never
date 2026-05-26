@@ -137,7 +137,6 @@ func main() {
 				if err != nil {
 					panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
 				}
-
 				if !response.Content.IsZero() {
 					responseContent := response.Content.First()
 

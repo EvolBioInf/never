@@ -613,14 +613,25 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_src go <<Parse Responses, Pa. \ref{pa:docs}>>=
 	for strCode, response := range operation.Responses.Codes.FromOldest() {
-		var newResponse Response
+    //<<Get response info, Pa. \ref{pa:docs}>>
     if !response.Content.IsZero() {
-    // <<Read code and description, Pa. \ref{pa:docs}>>
+    // <<Read description, Pa. \ref{pa:docs}>>
 		// <<Act on response code, Pa. \ref{pa:docs}>>
+		}
 
   	newOperation.Responses = append(newOperation.Responses, newResponse)
-		}
   }
+#+end_src
+
+#+begin_export latex
+  TODO
+#+end_export
+
+#+begin_src go <<Get response info, Pa. \ref{pa:docs}>>=
+    code, err := strconv.Atoi(strCode)
+		if err != nil {
+			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
+		}
 #+end_src
 
 #+begin_export latex
@@ -633,7 +644,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   "strconv"
 #+end_src
 
-#+begin_src go <<Read code and description, Pa. \ref{pa:docs}>>=
+#+begin_src go <<Read description, Pa. \ref{pa:docs}>>=
     code, err := strconv.Atoi(strCode)
 		if err != nil {
 			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))

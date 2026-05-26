@@ -276,8 +276,9 @@ func retrieveData(filepath string, local bool, port int) Content {
 
 					}
 
-					newOperation.Responses = append(newOperation.Responses, newResponse)
 				}
+
+				newOperation.Responses = append(newOperation.Responses, newResponse)
 			}
 
 			newPath.Operations = append(newPath.Operations, newOperation)
