@@ -218,18 +218,19 @@ func retrieveData(filepath string, local bool, port int) Content {
 			newOperation.ExampleRequest = examplePath
 
 			for strCode, response := range operation.Responses.Codes.FromOldest() {
-				var newResponse Response
+				code, err := strconv.Atoi(strCode)
+				if err != nil {
+					panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
+				}
+
+				newResponse := Response{
+					Code:        code,
+					Description: response.Description,
+				}
+
 				if !response.Content.IsZero() {
-					code, err := strconv.Atoi(strCode)
-					if err != nil {
-						panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
-					}
-
 					responseContent := response.Content.First()
-					newResponse.Code = code
-					newResponse.Description = response.Description
 					newResponse.Mime = responseContent.Key()
-
 					contentValue := responseContent.Value()
 					if newResponse.Code == 200 && contentValue != nil {
 						if contentValue.Examples.Len() > 0 {

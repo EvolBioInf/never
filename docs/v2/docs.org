@@ -615,23 +615,11 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	for strCode, response := range operation.Responses.Codes.FromOldest() {
     //<<Get response info, Pa. \ref{pa:docs}>>
     if !response.Content.IsZero() {
-    // <<Read description, Pa. \ref{pa:docs}>>
 		// <<Act on response code, Pa. \ref{pa:docs}>>
 		}
 
   	newOperation.Responses = append(newOperation.Responses, newResponse)
   }
-#+end_src
-
-#+begin_export latex
-  TODO
-#+end_export
-
-#+begin_src go <<Get response info, Pa. \ref{pa:docs}>>=
-    code, err := strconv.Atoi(strCode)
-		if err != nil {
-			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
-		}
 #+end_src
 
 #+begin_export latex
@@ -644,16 +632,21 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   "strconv"
 #+end_src
 
-#+begin_src go <<Read description, Pa. \ref{pa:docs}>>=
-    code, err := strconv.Atoi(strCode)
-		if err != nil {
-			panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
-		}
+#+begin_export latex
+  Let's get the code and set the description.
+#+end_export
 
-		responseContent := response.Content.First()
-		newResponse.Code = code
-		newResponse.Description = response.Description
-		newResponse.Mime = responseContent.Key()
+#+begin_src go <<Get response info, Pa. \ref{pa:docs}>>=
+  code, err := strconv.Atoi(strCode)
+	if err != nil {
+		panic(fmt.Sprintf("cannot convert HTTP response code to int: %e", err))
+	}
+
+  newResponse := Response {
+    Code: code,
+    Description: response.Description,
+  }
+
 #+end_src
 
 #+begin_export latex
@@ -662,6 +655,8 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Act on response code, Pa. \ref{pa:docs}>>=
+	responseContent := response.Content.First()
+	newResponse.Mime = responseContent.Key()
 	contentValue := responseContent.Value()
 	if newResponse.Code == 200 && contentValue != nil {
       // <<Parse response example, Pa. \ref{pa:docs}>>
