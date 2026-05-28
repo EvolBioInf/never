@@ -1,7 +1,7 @@
 {{define "components/endpoint-card/header"}}
-<div
+<a
   class='{{ toKebab "endpoint" "card" "header" .Op.Verb }}'
-  id="header-{{.Name}}"
+  id='{{ toKebab "header" .Name .Op.Verb}}'
 >
   <div class="request-main-info">
     <p class='{{ toKebab "request" "type" "block" .Op.Verb }}'>{{.Op.Verb}}</p>
@@ -17,10 +17,13 @@
       stroke-linejoin="round"
     />
   </svg>
-</div>
+</a>
 
 <script>
-  document.getElementById("header-{{.Name}}").onclick = () => {
+  document.getElementById('{{ toKebab "header" .Name .Op.Verb}}').onclick = (
+    event,
+  ) => {
+    event.preventDefault();
     const id = "{{toKebab .Name .Op.Verb}}";
     if (window.location.hash === "#" + id) {
       location.href = "#";

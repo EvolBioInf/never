@@ -9,7 +9,7 @@
 }
 
 header {
-  background-color: color-mix(in srgb, var(--secondary-color), white 90%);
+  background-color: color-mix(in srgb, var(--secondary-color), white 95%);
   border-bottom: 1px solid var(--secondary-color);
 }
 

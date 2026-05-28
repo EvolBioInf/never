@@ -10,20 +10,34 @@
     const newHash =
       window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
 
-    const oldId = "body-" + oldHash;
-    const newId = "body-" + newHash;
+    const oldBodyId = "body-" + oldHash;
+    const newBodyId = "body-" + newHash;
 
-    const newEndpoint = document.getElementById(newId);
-    if (newEndpoint) {
-      newEndpoint.style.display = "flex";
-    }
-    const endpointCard = document.getElementById("card-" + newHash);
-    endpointCard?.scrollIntoView();
+    const oldHeaderId = "header-" + oldHash;
+    const newHeaderId = "header-" + newHash;
 
-    const oldEndpoint = document.getElementById(oldId);
+    const oldEndpoint = document.getElementById(oldBodyId);
     if (oldEndpoint) {
       oldEndpoint.style.display = "none";
     }
+
+    const oldHeader = document.getElementById(oldHeaderId);
+    if (oldHeader) {
+      oldHeader.classList.remove("selected-header");
+    }
+
+    const newEndpoint = document.getElementById(newBodyId);
+    if (newEndpoint) {
+      newEndpoint.style.display = "flex";
+    }
+
+    const newHeader = document.getElementById(newHeaderId);
+    if (newHeader) {
+      newHeader.classList.add("selected-header");
+    }
+
+    const endpointCard = document.getElementById("card-" + newHash);
+    endpointCard?.scrollIntoView();
   };
 
   window.addEventListener("hashchange", onHashUpdate);
