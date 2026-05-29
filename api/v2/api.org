@@ -7,7 +7,9 @@
 
       \subsection*{Implementation}
       The api backend provides the global RegisterRoutes function just
-      like every standalone package used within neverV2.
+      like every standalone package used within neverV2. It takes as arguments
+      a prefix for the routes, the filepath of the db file and a handler function
+      for rate limiting.
       \bpr{api}{pr:api}
 #+end_export
 
@@ -20,7 +22,7 @@
 
   //<<Types, Pa. \ref{pa:api}>>
 
-  func RegisterRoutes(prefix, dbPath string) {
+  func RegisterRoutes(prefix, dbPath string, handleLimit func(http.ResponseWriter) bool) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
 
@@ -98,8 +100,8 @@ type TaxonName struct {
   route registration, making things easier for us in the long run. Say we want to
   add a parameter or some specific handling to all our endpoints, we can just add
   it to the registration helper. We call this function \ty{makeRoute}. The function
-  needs to take a path, the one to register, then it needs a function \ty{fn} that is executed
-  when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
+  needs to take a path, the one to register, then the limit handler, as well as a function \ty{fn}
+  that is executed when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
   However it needs to accept at least the http writer and request. It may accept more
   arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
   to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
@@ -112,8 +114,12 @@ type TaxonName struct {
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
-      http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) { fn(w, r, args...) })
+  func makeRoute(path string, handleLimit func(http.ResponseWriter) bool, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
+	  http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	  	if handleLimit(w) {
+	  		fn(w, r, args...)
+	  	}
+	  })
   }
 #+end_src
 
@@ -157,22 +163,22 @@ type TaxonName struct {
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-  makeRoute(prefix + "/accessions", accessions, neidb) // formerly known as levels
-  makeRoute(prefix + "/assembly-levels", assemblyLevels, neidb) // new
-  makeRoute(prefix + "/taxa-accessions", taxaAccessions, neidb) // formerly known as accessions
-  makeRoute(prefix + "/ranks", ranks, neidb) // same as before
-  makeRoute(prefix + "/taxa", taxa, neidb) // formerly known as taxi
-  makeRoute(prefix + "/taxa-count", taxaCount, neidb) // new
-  makeRoute(prefix + "/taxa-info", taxaInfo, neidb) // same as before
-  makeRoute(prefix + "/taxa-names", taxaNames, neidb) // formerly known as names
-  makeRoute(prefix + "/taxa/{start_id}/path/{end_id}", taxaPath, neidb) // formerly just path
-  makeRoute(prefix + "/taxa/{taxon_id}/children", taxaChildren, neidb) // formerly just children
-  makeRoute(prefix + "/taxa/{taxon_id}/images", taxaImages, neidb) // new
-  makeRoute(prefix + "/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb) // formerly known as num_genomes
-  makeRoute(prefix + "/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
-  makeRoute(prefix + "/taxa/{taxon_id}/parent", taxaParent, neidb) // formerly known as parent
-  makeRoute(prefix + "/taxa/{taxon_id}/subtree", taxaSubtree, neidb) // formerly just subtree
-  makeRoute(prefix + "/taxa/{taxon_ids}/mrca", taxaMRCA, neidb) // formerly just mrca
+	makeRoute(prefix+"/accessions", handleLimit, accessions, neidb)                                     // formerly known as levels
+	makeRoute(prefix+"/assembly-levels", handleLimit, assemblyLevels, neidb)                            // new
+	makeRoute(prefix+"/taxa-accessions", handleLimit, taxaAccessions, neidb)                            // formerly known as accessions
+	makeRoute(prefix+"/ranks", handleLimit, ranks, neidb)                                               // same as before
+	makeRoute(prefix+"/taxa", handleLimit, taxa, neidb)                                                 // formerly known as taxi
+	makeRoute(prefix+"/taxa-count", handleLimit, taxaCount, neidb)                                      // new
+	makeRoute(prefix+"/taxa-info", handleLimit, taxaInfo, neidb)                                        // same as before
+	makeRoute(prefix+"/taxa-names", handleLimit, taxaNames, neidb)                                      // formerly known as names
+	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", handleLimit, taxaPath, neidb)                    // formerly just path
+	makeRoute(prefix+"/taxa/{taxon_id}/children", handleLimit, taxaChildren, neidb)                     // formerly just children
+	makeRoute(prefix+"/taxa/{taxon_id}/images", handleLimit, taxaImages, neidb)                         // new
+	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", handleLimit, taxaGenomeCount, neidb)              // formerly known as num_genomes
+	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", handleLimit, taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
+	makeRoute(prefix+"/taxa/{taxon_id}/parent", handleLimit, taxaParent, neidb)                         // formerly known as parent
+	makeRoute(prefix+"/taxa/{taxon_id}/subtree", handleLimit, taxaSubtree, neidb)                       // formerly just subtree
+	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", handleLimit, taxaMRCA, neidb)                            // formerly just mrca
 #+end_src
 
 

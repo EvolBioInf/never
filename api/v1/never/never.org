@@ -25,22 +25,24 @@ function.\bpr{never}{pa:nev}
   //<<Types, Pa. \ref{pa:nev}>>
   //<<Variables, Pa. \ref{pa:nev}>>
   //<<Functions, Pa. \ref{pa:nev}>>
-  func RegisterRoutes(pref, dbPath, dateFilePath string) {
+  func RegisterRoutes(apiPref, docsPref, dbPath, dateFilePath string) {
 	  //<<Register routes, Pa. \ref{pa:nev}>>
   }
 #+end_src
 #+begin_export latex
-\epr In the registerRoutes function set the global prefix before we handle routes later on.
+\epr In the registerRoutes function set the global docsPrefix before we handle routes later on.
 #+end_export
 #+begin_src go <<Register routes, Pa. \ref{pa:nev}>>=
-  prefix = pref
+  docsPrefix = docsPref
+  apiPrefix = apiPref
   //<<Construct server, Pa. \ref{pa:nev}>>
 #+end_src
 #+begin_export latex
-We need to declare the prefix globally, so that the handlers may use it.
+We need to declare the prefixes for the api and the docs globally, so that the handlers may use it.
 #+end_export
 #+begin_src go <<Variables, Pa. \ref{pa:nev}>>=
-var prefix string
+var apiPrefix string
+var docsPrefix string
 #+end_src
 #+begin_export latex
 We import \ty{util}.
@@ -148,7 +150,7 @@ available by registering a file server to that directory.
 #+end_export
 #+begin_src go <<Serve style files, Pa. \ref{pa:nev}>>=
   staticFiles := http.FileServer(http.Dir("api/v1/never/static"))
-  http.Handle(prefix+"/static/", http.StripPrefix(prefix+"/static/",
+  http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix+"/static/",
 	  staticFiles))
 #+end_src
 #+begin_export latex
@@ -171,7 +173,7 @@ make them available by registering a file server to that directory.
 #+end_export
 #+begin_src go <<Serve data files, Pa. \ref{pa:nev}>>=
   dataFiles := http.FileServer(http.Dir("api/v1/never/data"))
-  http.Handle(prefix+"/data/", http.StripPrefix(prefix+"/data/", dataFiles))
+  http.Handle(docsPrefix+"/data/", http.StripPrefix(docsPrefix+"/data/", dataFiles))
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
@@ -212,23 +214,25 @@ set the number of taxa and genomes, and when the database was last updated.
 #+begin_src go <<Set index page data, Pa. \ref{pa:nev}>>=
   p.Title = "Neighbors"
   p.Services = services
-  p.Prefix = prefix
+  p.ApiPrefix = apiPrefix
+  p.DocsPrefix = docsPrefix
   //<<Sort services, Pa. \ref{pa:nev}>>
   //<<Set number of taxa, Pa. \ref{pa:nev}>>
   //<<Set number of genomes, Pa. \ref{pa:nev}>>
   //<<Set database time stamp, Pa. \ref{pa:nev}>>
 #+end_src
 #+begin_export latex
-We set the declare the fields \ty{Prefix}, \ty{Services} and \ty{Title} in
+We set the declare the fields \ty{ApiPrefix}, \ty{DocsPrefix}, \ty{Services} and \ty{Title} in
 ``Neighbors''.
 #+end_export
 #+begin_src go <<\ty{PageData} fields, Pa. \ref{pa:nev}>>=
   Services []Service
   Title string
-  Prefix string
+  ApiPrefix string
+  DocsPrefix string
 #+end_src
 #+begin_export latex
-A service consists of a name and a query.
+A service consists of a a name and a query.
 #+end_export
 #+begin_src go <<Types, Pa. \ref{pa:nev}>>=
   type Service struct {
@@ -398,7 +402,7 @@ the location of the style file. Then we set the page title.
   <meta charset="UTF-8"/>
   <meta name="viewport"
 	content="width=device-width,initial-scale=1.0"/>
-  <link rel="stylesheet" href="{{.Prefix}}/static/w3.css"/>
+  <link rel="stylesheet" href="{{.DocsPrefix}}/static/w3.css"/>
   <title>{{.Title}}</title>
   {{end}}
 #+end_src
@@ -410,7 +414,7 @@ description and the list of services.
   {{define "indexBody"}}
   {{template "indexTitle"}}
   {{template "indexDescr" .}}
-  {{template "services" .Services}}
+  {{template "services" .}}
   {{end}}
 #+end_src
 #+begin_export latex
@@ -582,11 +586,12 @@ function \ty{inc}.
 #+end_export
 #+begin_src html <<templates.html>>=
   {{define "body"}}
-  {{range $i, $e := .}}
+  {{$Prefix := .ApiPrefix}}
+  {{range $i, $e := .Services}}
   <tr>
     <td>{{inc $i}}</td>
     <td>{{.Name}}</td>
-    <td><a href="/{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
+    <td><a href="{{$Prefix}}/{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
   </tr>
   {{end}}
   {{end}}
@@ -651,8 +656,8 @@ arguments.
 	  ,*PageData)) http.HandlerFunc {
 	  p := new(PageData)
 	  return func(w http.ResponseWriter, r *http.Request) {
-		  w.Header().Set("Access-Control-Allow-Origin",
-			  "*")
+		  // w.Header().Set("Access-Control-Allow-Origin",
+			  // "*")
 		  fn(w, r, p)
 	  }
   }
@@ -662,7 +667,7 @@ We register \ty{index} as the function that handles calls to the root
 of our web site.
 #+end_export
 #+begin_src go <<Construct index page, Pa. \ref{pa:nev}>>=
-  http.HandleFunc(prefix, makeHandler(index))
+  http.HandleFunc(docsPrefix, makeHandler(index))
 #+end_src
 #+begin_export latex
 \subsection{\ty{taxi}}
@@ -797,10 +802,29 @@ We import \ty{json}.
 #+end_src
 #+begin_export latex
 We can now emulate the \ty{taxi} program by registering the service
-\ty{taxi} to the URL \verb+/taxi/+.
+\ty{taxi} to the URL \verb+/taxi/+. With the update of this api the URLs require changing.
+In order to conform to the new layout while taking care of a smooth transition period we
+redirect the old links to the new URL layout. As this will be required for all api URls it's
+sensible to write a function that takes care of this. Let's call this function \ty{handleRedirect}
 #+end_export
 #+begin_src go <<Emulate Neighbors programs, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/taxi/", makeHandler(taxi))
+  handleRedirect("/taxi/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/taxi/", makeHandler(taxi))
+#+end_src
+#+begin_export latex
+The function \ty{handleRedirect} takes the old path and its new prefix as arguments.
+It creates a handler for this endpoint, that returns a redirect response with a link to the new endpoint.
+It also needs to set all the parameters included with the requtest and the correct status code. There are multiple
+3xx status codes which we could use, i.e. 301 (moved permantly), 302 (found), 303 (see other). We will chose 301
+to signal, that the endpoint was moved permantly. We may change this to a 410 (gone) later on, once we are certain
+to have handled a smooth transitioning phase.
+#+end_export
+#+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
+func handleRedirect(path, prefix string) {
+  	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	  	http.Redirect(w, r, prefix+r.URL.RequestURI(), http.StatusMovedPermanently)
+  })
+}
 #+end_src
 #+begin_export latex
 We also add the \ty{taxi} service to our list of services. Our example
@@ -956,7 +980,8 @@ We are done writing \ty{accessions}. So we convert it to a handler
 function and register it.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/accessions/", makeHandler(accessions))
+  handleRedirect("/accessions/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/accessions/", makeHandler(accessions))
 #+end_src
 #+begin_export latex
 We also add \ty{accessions} to our list of services. We use
@@ -1017,7 +1042,8 @@ We look up the taxon's name and store it.
 We convert \ty{names} to a handler function and register it.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/names/", makeHandler(names))
+  handleRedirect("/names/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/names/", makeHandler(names))
 #+end_src
 #+begin_export latex
 We also add \ty{names} to our list of services.
@@ -1063,7 +1089,8 @@ corresponding ranks, and print the output.
 We convert \ty{ranks} to a handler function and register it.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/ranks/", makeHandler(ranks))
+  handleRedirect("/ranks/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/ranks/", makeHandler(ranks))
 #+end_src
 #+begin_export latex
 We also add \ty{ranks} to our list of services.
@@ -1118,7 +1145,8 @@ taxid zero.
 We register \ty{parent}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/parent/", makeHandler(parent))
+  handleRedirect("/parent/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/parent/", makeHandler(parent))
 #+end_src
 #+begin_export latex
 We also add \ty{parent} to our list of services.
@@ -1176,7 +1204,8 @@ We construct the child from its taxon ID and its names.
 We register \ty{children}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/children/", makeHandler(children))
+  handleRedirect("/children/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/children/", makeHandler(children))
 #+end_src
 #+begin_export latex
 We also add \ty{children} to our list of services.
@@ -1270,7 +1299,8 @@ end of the loop if we encounter an error.
 We register \ty{subtree}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/subtree/", makeHandler(subtree))
+  handleRedirect("/subtree/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/subtree/", makeHandler(subtree))
 #+end_src
 #+begin_export latex
 We also add \ty{subtree} to our list of services.
@@ -1306,7 +1336,8 @@ taxon IDs before we print the output.
 We register \ty{taxids}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/taxids/", makeHandler(taxids))
+  handleRedirect("/taxids/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/taxids/", makeHandler(taxids))
 #+end_src
 #+begin_export latex
 We also add \ty{taxids} to the list of services.
@@ -1343,7 +1374,8 @@ recent common ancestor, we return taxid 0.
 We register \ty{mrca}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/mrca/", makeHandler(mrca))
+  handleRedirect("/mrca/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/mrca/", makeHandler(mrca))
 #+end_src
 #+begin_export latex
 We also add \ty{mrca} to our list of services.
@@ -1402,7 +1434,8 @@ We look up the level of each accession and store it.
 We register \ty{levels}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/levels/", makeHandler(levels))
+  handleRedirect("/levels/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/levels/", makeHandler(levels))
 #+end_src
 #+begin_export latex
 We also add \ty{levels} to our list of services.
@@ -1455,7 +1488,8 @@ We get the raw genome counts across all levels and store them.
 We register \ty{num\_genomes}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/num_genomes/",
+    handleRedirect("/num_genomes/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/num_genomes/",
 	  makeHandler(num_genomes))
 #+end_src
 #+begin_export latex
@@ -1501,7 +1535,8 @@ genome counts across the levels and store them.
 We register \ty{num\_genomes\_rec}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/num_genomes_rec/", makeHandler(num_genomes_rec))
+  handleRedirect("/num_genomes_rec/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/num_genomes_rec/", makeHandler(num_genomes_rec))
 #+end_src
 #+begin_export latex
 We also add \ty{num\_genomes\_rec} to our list of services and again
@@ -1658,7 +1693,8 @@ focal taxon.
 We register \ty{taxon\_info}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/taxa_info/", makeHandler(taxa_info))
+  handleRedirect("/taxa_info/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/taxa_info/", makeHandler(taxa_info))
 #+end_src
 #+begin_export latex
 We also add \ty{taxa\_info} to our list of services and use
@@ -1771,7 +1807,8 @@ We construct and store the new node on the path.
 We register the service \ty{path}.
 #+end_export
 #+begin_src go <<Access \ty{tdb} functions, Pa. \ref{pa:nev}>>=
-  http.HandleFunc("/path/", makeHandler(path))
+  handleRedirect("/path/", apiPrefix)
+  http.HandleFunc(apiPrefix+"/path/", makeHandler(path))
 #+end_src
 #+begin_export latex
 We also add \ty{path} to our list of services and use the path between

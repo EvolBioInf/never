@@ -26,6 +26,7 @@ import (
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   func main() {
     //<<Handle io, Pr. \ref{pr:main}>>
+    //<<Setup rate limit, Pr. \ref{pr:main}>>
     //<<Register packages, Pr. \ref{pr:main}>>
     //<<Define default route, Pr. \ref{pr:main}>>
     //<<Start server, Pr. \ref{pr:main}>>
@@ -40,7 +41,7 @@ import (
   think about what arguments may be parsed and needed within the main function. Most importantly we
   need be able to pass an address and a port for the server to run on. It would be nice if we could also
   define a path for the HTTP/TLS files i.e. the certificate and the private key. Providing extra options
-  for the database path and the date file results in a more flexible setup. 
+  for the database path and the date file results in a more flexible setup.
   This results in five strings and an integer as a return tuple.
 #+end_export
 
@@ -137,18 +138,68 @@ import (
 #+end_src
 
 #+begin_export latex
+  Rate limiting is a technique to restrict the amount of requests a server may handle for a given timeframe.
+  We are going to implement a multilevel rate limit, where the first level is a user based limit and the second
+  handles across user requests. The per user requests should stop single users from sending too many requests, while
+  still allowing other users to work with the api. While the second level hardens against
+  a bot attacks. We use go rate package from the time extension pack for this.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+	"golang.org/x/time/rate"
+#+end_src
+
+#+begin_export latex
+  We create a new general limiter which follows a token bucket approach. Each token represents a request. Requests are allowed
+  as long as there are tokens in the bucket, new tokens are added every second. This rate limit allows for burst.
+#+end_export
+
+#+begin_src go <<Setup rate limit, Pr. \ref{pr:main}>>=
+  // TODO MISSING LOWER LEVEL LIMIT
+	limiter := rate.NewLimiter(rate.Limit(1), 1)
+#+end_src
+
+#+begin_export latex
+  Now we need to add a function that checks against the limiter and takes care of a 429 code when the token bucket is empty.
+  This needs to get the limiter and a response write as parameters. It should also return whether the limit was exceeded.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+func handleLimit(limiter *rate.Limiter, w http.ResponseWriter) bool {
+  //<<Check limiter, Pr. \ref{pr:main}>>
+}
+#+end_src
+
+#+begin_export latex
+  To check the limiter call its \ty{Allow} function. If the request is not allowed we write the
+  429 code, a fitting response body and return the result.
+#+end_export
+
+#+begin_src go <<Check limiter, Pr. \ref{pr:main}>>=
+	allowed := limiter.Allow()
+	if !allowed {
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write([]byte("Exceeded rate limit"))
+	}
+
+	return allowed
+#+end_src
+
+
+#+begin_export latex
   The packages we want to register each provide their own register function called \ty{registerRoutes}.
   We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each others existances.
-  So this task falls to the managing part of the software, which is this server. 
-  Additionally to the prefix \ty{apiv2} needs to know where the database is located. The same goes for \ty{neverv1}, but this needs to
-  get an extra filepath for the \ty{dateFile}.
+  So this task falls to the managing part of the software, which is this server.
+  Additionally to the prefix \ty{apiv2} needs to know where the database is located. \ty{neverv1} receives these arguments as well, but it gets
+  two prefixes as the package is not divided into api and docs. It also needs to get an extra filepath for the \ty{dateFile}.
+  The Apis also need to get access to the limiter. We provide a function that wraps \ty{handleLimit}, so they can implement it wherever needed.
   The \ty{docsv2} wants to know whether it is being hosted locally and on what port, so we need to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
 	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
-	apiv2.RegisterRoutes("/api/v2", dbPath)
-	neverv1.RegisterRoutes("/docs/api/v1", dbPath, dateFilePath)
+	apiv2.RegisterRoutes("/api/v2", dbPath, func(w http.ResponseWriter) bool { return handleLimit(limiter, w) })
+	neverv1.RegisterRoutes("/api/v1", "/docs/api/v1", dbPath, dateFilePath)
 #+end_src
 
 #+begin_export latex

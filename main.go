@@ -8,6 +8,8 @@ import (
 	"flag"
 	"os"
 
+	"golang.org/x/time/rate"
+
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
@@ -21,9 +23,11 @@ import (
 func main() {
 	certificate, dbPath, dateFilePath, privateKey, host, port := ioHandling()
 
+	limiter := rate.NewLimiter(rate.Limit(1), 1)
+
 	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
-	apiv2.RegisterRoutes("/api/v2", dbPath)
-	neverv1.RegisterRoutes("/docs/api/v1", dbPath, dateFilePath)
+	apiv2.RegisterRoutes("/api/v2", dbPath, func(w http.ResponseWriter) bool { return handleLimit(limiter, w) })
+	neverv1.RegisterRoutes("/api/v1", "/docs/api/v1", dbPath, dateFilePath)
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
@@ -68,5 +72,16 @@ func ioHandling() (string, string, string, string, string, int) {
 	}
 
 	return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag
+
+}
+
+func handleLimit(limiter *rate.Limiter, w http.ResponseWriter) bool {
+	allowed := limiter.Allow()
+	if !allowed {
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write([]byte("Exceeded rate limit"))
+	}
+
+	return allowed
 
 }

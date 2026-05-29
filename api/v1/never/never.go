@@ -17,12 +17,13 @@ import (
 )
 
 type PageData struct {
-	Services []Service
-	Title    string
-	Prefix   string
-	Ntaxa    string
-	Ngenomes string
-	Date     string
+	Services   []Service
+	Title      string
+	ApiPrefix  string
+	DocsPrefix string
+	Ntaxa      string
+	Ngenomes   string
+	Date       string
 }
 type Service struct {
 	Name, Query string
@@ -89,7 +90,8 @@ type Image struct {
 	Attribution string `json:"attribution"`
 }
 
-var prefix string
+var apiPrefix string
+var docsPrefix string
 var neidb *tdb.TaxonomyDB
 var dateFile string
 var services []Service
@@ -100,7 +102,8 @@ func index(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
 	p.Title = "Neighbors"
 	p.Services = services
-	p.Prefix = prefix
+	p.ApiPrefix = apiPrefix
+	p.DocsPrefix = docsPrefix
 	slices.SortFunc(p.Services, func(a, b Service) int {
 		return strings.Compare(a.Name, b.Name)
 	})
@@ -201,8 +204,8 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	*PageData)) http.HandlerFunc {
 	p := new(PageData)
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin",
-			"*")
+		// w.Header().Set("Access-Control-Allow-Origin",
+		// "*")
 		fn(w, r, p)
 	}
 }
@@ -246,6 +249,11 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 	b, err := json.MarshalIndent(out, "", "    ")
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
+}
+func handleRedirect(path, prefix string) {
+	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, prefix+r.URL.RequestURI(), http.StatusMovedPermanently)
+	})
 }
 func accessions(w http.ResponseWriter, r *http.Request,
 	p *PageData) {
@@ -581,8 +589,9 @@ func path(w http.ResponseWriter, r *http.Request,
 	util.Check(err)
 	fmt.Fprintf(w, "%s\n", string(b))
 }
-func RegisterRoutes(pref, dbPath, dateFilePath string) {
-	prefix = pref
+func RegisterRoutes(apiPref, docsPref, dbPath, dateFilePath string) {
+	docsPrefix = docsPref
+	apiPrefix = apiPref
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("neverV1: db does not exist")
 	} else {
@@ -594,26 +603,40 @@ func RegisterRoutes(pref, dbPath, dateFilePath string) {
 		log.Fatal("neverV1: dateFile does not exist")
 	}
 	staticFiles := http.FileServer(http.Dir("api/v1/never/static"))
-	http.Handle(prefix+"/static/", http.StripPrefix(prefix+"/static/",
+	http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix+"/static/",
 		staticFiles))
 	vitaxFiles := http.FileServer(http.Dir("vitax"))
 	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 	dataFiles := http.FileServer(http.Dir("api/v1/never/data"))
-	http.Handle(prefix+"/data/", http.StripPrefix(prefix+"/data/", dataFiles))
-	http.HandleFunc(prefix, makeHandler(index))
-	http.HandleFunc("/taxi/", makeHandler(taxi))
-	http.HandleFunc("/accessions/", makeHandler(accessions))
-	http.HandleFunc("/names/", makeHandler(names))
-	http.HandleFunc("/ranks/", makeHandler(ranks))
-	http.HandleFunc("/parent/", makeHandler(parent))
-	http.HandleFunc("/children/", makeHandler(children))
-	http.HandleFunc("/subtree/", makeHandler(subtree))
-	http.HandleFunc("/taxids/", makeHandler(taxids))
-	http.HandleFunc("/mrca/", makeHandler(mrca))
-	http.HandleFunc("/levels/", makeHandler(levels))
-	http.HandleFunc("/num_genomes/",
+	http.Handle(docsPrefix+"/data/", http.StripPrefix(docsPrefix+"/data/", dataFiles))
+	http.HandleFunc(docsPrefix, makeHandler(index))
+	handleRedirect("/taxi/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/taxi/", makeHandler(taxi))
+	handleRedirect("/accessions/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/accessions/", makeHandler(accessions))
+	handleRedirect("/names/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/names/", makeHandler(names))
+	handleRedirect("/ranks/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/ranks/", makeHandler(ranks))
+	handleRedirect("/parent/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/parent/", makeHandler(parent))
+	handleRedirect("/children/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/children/", makeHandler(children))
+	handleRedirect("/subtree/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/subtree/", makeHandler(subtree))
+	handleRedirect("/taxids/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/taxids/", makeHandler(taxids))
+	handleRedirect("/mrca/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/mrca/", makeHandler(mrca))
+	handleRedirect("/levels/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/levels/", makeHandler(levels))
+	handleRedirect("/num_genomes/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/num_genomes/",
 		makeHandler(num_genomes))
-	http.HandleFunc("/num_genomes_rec/", makeHandler(num_genomes_rec))
-	http.HandleFunc("/taxa_info/", makeHandler(taxa_info))
-	http.HandleFunc("/path/", makeHandler(path))
+	handleRedirect("/num_genomes_rec/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/num_genomes_rec/", makeHandler(num_genomes_rec))
+	handleRedirect("/taxa_info/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/taxa_info/", makeHandler(taxa_info))
+	handleRedirect("/path/", apiPrefix)
+	http.HandleFunc(apiPrefix+"/path/", makeHandler(path))
 }

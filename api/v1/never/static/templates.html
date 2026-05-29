@@ -13,13 +13,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport"
         content="width=device-width,initial-scale=1.0"/>
-<link rel="stylesheet" href="{{.Prefix}}/static/w3.css"/>
+<link rel="stylesheet" href="{{.DocsPrefix}}/static/w3.css"/>
 <title>{{.Title}}</title>
 {{end}}
 {{define "indexBody"}}
 {{template "indexTitle"}}
 {{template "indexDescr" .}}
-{{template "services" .Services}}
+{{template "services" .}}
 {{end}}
 {{define "indexTitle"}}
 <div class="w3-container">
@@ -105,11 +105,12 @@
 </tr>
 {{end}}
 {{define "body"}}
-{{range $i, $e := .}}
+{{$Prefix := .ApiPrefix}}
+{{range $i, $e := .Services}}
 <tr>
   <td>{{inc $i}}</td>
   <td>{{.Name}}</td>
-  <td><a href="/{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
+  <td><a href="{{$Prefix}}/{{.Name}}{{.Query}}"><code>{{.Query}}</code></td>
 </tr>
 {{end}}
 {{end}}
