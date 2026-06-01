@@ -1,0 +1,194 @@
+#+begin_export latex
+  Log is a custom log providing deffered logging functionality. Data is written
+  to buffers and copied to files during off time. 
+#+end_export
+
+#+begin_src go <<log.go>>=
+  package util
+
+  import (
+	  //<<Imports, Pa. \ref{pa:uti}>>
+  )
+
+  //<<Variables, Pa. \ref{pa:uti}>>
+  //<<Functions, Pa. \ref{pa:uti}>>
+#+end_src
+
+#+begin_export latex
+  \section{\ty{SetupLog}}
+  \ty{SetupLog} sets up the logger for the cycle. This means it has to create files to write to and 
+  begin a cycle to periodically write to the files. We write down the global variables necessary for this
+  which are file paths for an info and a warning file, a timer which calls a logging function, which needs 
+  need to be implemented later on. Lastly we need to define the interval in which the logging function is called. 
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:uti}>>=
+  var timer *time.Timer
+  var interval time.Duration
+  var infoFile, warningFile string
+  var infoWriter, warningWriter bufio.Writer
+#+end_src
+
+#+begin_export latex
+  We import \ty{bufio}, \ty{fmt}, \ty{time} and \ty{os}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+	"bufio"
+	"fmt"
+	"time"
+  "os"
+#+end_src
+
+#+begin_export latex
+  We begin setting up the by setting the variables.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func SetupLog() {
+    dir := "logs/"
+  	infoFile = dir+"info.txt"
+  	warningFile = dir+"warning.txt"
+    interval = 10 * time.Second
+
+    //<<Check for files, Pa. \ref{pa:uti}>>
+    //<<Open files, Pa. \ref{pa:uti}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The logs should be saved in a different directory. We need to create both the directory and the files
+  in case they are missing.
+#+end_export
+
+#+begin_src go <<Check for files, Pa. \ref{pa:uti}>>=
+	err := os.MkdirAll(dir, os.ModePerm)
+  if err != nil {
+    panic(fmt.Sprintf("Could not create directory for logs: %s\n", err))
+  }
+
+	if _, err := os.Stat(infoFile); errors.Is(err, os.ErrNotExist) {
+		os.Create(infoFile)
+	} else if err != nil {
+    panic(fmt.Sprintf("Could not create info file for logs: %s\n", err))
+  }
+
+  if _, err := os.Stat(warningFile); errors.Is(err, os.ErrNotExist) {
+		os.Create(warningFile)
+	} else if err != nil {
+    panic(fmt.Sprintf("Could not create warning file for logs: %s\n", err))
+  } 
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{errors}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "errors"
+#+end_src
+
+#+begin_export latex
+  We open the files and set them as output for the writers.
+#+end_export
+
+#+begin_src go <<Open files, Pa. \ref{pa:uti}>>=
+	file, err := os.Open(infoFile)
+	if err != nil {
+    panic(fmt.Sprintf("Could not open info file for logs: %s\n", err))
+  }
+
+  infoWriter = *bufio.NewWriter(file)
+
+  file, err = os.Open(warningFile)
+	if err != nil {
+    panic(fmt.Sprintf("Could not open warning file for logs: %s\n", err))
+  }
+
+  warningWriter = *bufio.NewWriter(file)
+#+end_src
+
+#+begin_export latex
+  \section{\ty{startLogging}}
+  \ty{startLogging} begins the logging cycle. 
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func startLogging() {
+    if timer == nil {
+      timer = time.AfterFunc(interval, logBuffs)
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  \section{\ty{LogInfoDef}}
+  \ty{LogInfoDef} writes to the info buffer used by the periodically called \ty{logBuffs} function.
+  It also starts the logging cycle if it's not running. 
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+func LogInfoDef(str string) {
+	fmt.Println("log info def")
+  if timer == nil {
+    startLogging()
+  }
+
+	fmt.Fprintln(&infoWriter, str)
+}
+#+end_src
+
+#+begin_export latex
+  \section{\ty{LogWarningDef}}
+  \ty{LogWarningDef} writes to the warning buffer used by the periodically called \ty{logBuffs} function.
+  It also starts the logging cycle if it's not running. 
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+func LogWarningDef(str string) {
+	fmt.Println("log info def")
+    if timer == nil {
+    startLogging()
+  }
+
+	fmt.Fprintln(&warningWriter, str)
+}
+#+end_src
+
+#+begin_export latex
+  \section{\ty{logBuffs}}
+  \ty{logBuffs} flushes the buffers and restarts the logging cycle. It only flushes if the writers are non empty.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+func logBuffs() {
+	fmt.Println("log immediate")
+ 	if infoWriter.Buffered() > 0 {
+    infoWriter.Flush()
+  }
+
+ 	if warningWriter.Buffered() > 0 {
+    warningWriter.Flush()
+  }
+
+	if timer != nil {
+		timer.Reset(interval)
+	}
+}
+#+end_src
+
+#+begin_export latex
+  \section{\ty{StopLogging}}
+  \ty{StopLogging} shuts down the stopping cycle and writes the remaining buffers.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func StopLogging() {
+  	if timer != nil {
+  		timer.Stop()
+      timer = nil
+  	}
+
+    logBuffs()
+  }
+#+end_src

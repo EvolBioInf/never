@@ -1,21 +1,17 @@
 nw = $(shell which noweb)
+SRCS = $(wildcard *.org)
+GOFILES = $(patsubst %.org, %.go, $(SRCS))
 
-all : util
+all: $(GOFILES)
 
-util: util.go
-	go build util.go
-util.go: util.org
+%.go: %.org
 	if [ "$(nw)" != "" ]; then\
-		awk -f ../scripts/preTangle.awk util.org | bash ../scripts/org2nw | notangle -Rutil.go | gofmt > util.go;\
+		awk -f ../scripts/preTangle.awk $< | bash ../scripts/org2nw | notangle -R$@ | gofmt > $@;\
 	fi
-tangle: util.go util_test.go
+tangle: $(GOFILES)
 .PHONY: test
 test: util_test.go util.go
 	go test -v
-util_test.go: util.org
-	if [ "$(nw)" != "" ]; then\
-		awk -f ../scripts/preTangle.awk util.org | bash ../scripts/org2nw | notangle -Rutil_test.go | gofmt > util_test.go;\
-	fi
 
 clean:
 	rm -f *.go

@@ -61,7 +61,7 @@ func main() {
 					userLimiters.mu.Lock()
 					lim, ok := userLimiters.ma[ip]
 					if !ok {
-						lim = rate.NewLimiter(rate.Limit(1), 2)
+						lim = rate.NewLimiter(rate.Limit(10), 25)
 						userLimiters.ma[ip] = lim
 					}
 
@@ -81,17 +81,32 @@ func main() {
 		})
 	}
 
-	handlerChain := middlewareLimiter(http.DefaultServeMux)
-
-	if host == "" {
-		fmt.Printf("Starting server at http://localhost:%d ...\n", port)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain))
-	} else {
-		fmt.Printf("Starting server at %s:%d ...\n", host, port)
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain))
+	util.SetupLog()
+	middlewareLogger := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			util.LogInfoDef("Incoming request")
+			next.ServeHTTP(w, r)
+		})
 	}
 
-	fmt.Println("...Stopping server")
+	handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
+
+	var err error
+	if host == "" {
+		fmt.Printf("Starting server at http://localhost:%d ...\n", port)
+		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
+	} else {
+		fmt.Printf("Starting server at %s:%d ...\n", host, port)
+		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
+	}
+
+	if err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Stopping server ...")
+	util.StopLogging()
+	fmt.Println("Shutdown gracefully")
 }
 
 func ioHandling() (string, string, string, string, string, int) {

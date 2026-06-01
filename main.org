@@ -268,7 +268,7 @@ import (
 #+end_src
 
 #+begin_export latex
-  First we check whether the requested url is rate limited, i.e. apiv1 or apiv2. We immedietly 
+  First we check whether the requested url is rate limited, i.e. apiv1 or apiv2. We immediately 
   call the next handler, if the url is no rate limited. If it is we check the general and user
   limiters. We first check the general limiter, as checking the user limiters requires more
   processing power. If the general limiter allows processing we check the user limiter. If both
@@ -328,9 +328,24 @@ import (
 #+end_src
 
 #+begin_export latex
+  TODO
+#+end_export
+
+#+begin_src go <<Create logger middleware, Pr. \ref{pr:main}>>=
+  util.SetupLog()
+	middlewareLogger := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    util.LogInfoDef("Incoming request")
+				next.ServeHTTP(w, r)
+		})
+	}
+#+end_src
+
+#+begin_export latex
   Now we are ready to start the server. If no host was provided we serve everything locally using http.
   If a host was specified, we serve at that address using HTTPS/TLS. In either case we should report where we
-  are serving. Lastly it would be nice to print that we stopped serving, if for any reason we do so.
+  are serving. We read errros provided by the serve function. If the error is a server closed error, we may shutdown gracefully,
+  otherwise we log a fatal error.
   But we need to import \ty{fmt} and \ty{log} first.
 #+end_export
 
@@ -341,18 +356,26 @@ import (
 
 #+begin_export latex
   Now lets get into starting the server. Here we also need to define the middleware chain as a context.
+  We also stop the logging process when we stop the server.
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
-  handlerChain := middlewareLimiter(http.DefaultServeMux)
+  handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
 
-  if host == "" {
-    fmt.Printf("Starting server at http://localhost:%d ...\n", port)
-    log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain))
-  } else {
-    fmt.Printf("Starting server at %s:%d ...\n", host, port)
-    log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain))
-  }
+	var err error
+	if host == "" {
+		fmt.Printf("Starting server at http://localhost:%d ...\n", port)
+		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
+	} else {
+		fmt.Printf("Starting server at %s:%d ...\n", host, port)
+		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
+	}
 
-  fmt.Println("...Stopping server")
+	if err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Stopping server ...")
+  util.StopLogging()
+	fmt.Println("Shutdown gracefully")
 #+end_src
