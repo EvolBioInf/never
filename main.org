@@ -13,6 +13,8 @@ import (
  //<<Imports, Pr. \ref{pr:main}>>
 )
 
+//<<Types, Pr. \ref{pr:main}>>
+
 //<<Functions, Pr. \ref{pr:main}>>
 #+end_src
 
@@ -26,9 +28,9 @@ import (
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   func main() {
     //<<Handle io, Pr. \ref{pr:main}>>
-    //<<Setup rate limit, Pr. \ref{pr:main}>>
     //<<Register packages, Pr. \ref{pr:main}>>
     //<<Define default route, Pr. \ref{pr:main}>>
+    //<<Create middleware, Pr. \ref{pr:main}>>
     //<<Start server, Pr. \ref{pr:main}>>
   }
 #+end_src
@@ -63,7 +65,7 @@ import (
 #+end_src
 
 #+begin_export latex
-  Now we may prepare the log
+  Now we may prepare the log.
 #+end_export
 
 #+begin_src go <<Prepare log, Pr. \ref{pr:main}>>=
@@ -138,68 +140,22 @@ import (
 #+end_src
 
 #+begin_export latex
-  Rate limiting is a technique to restrict the amount of requests a server may handle for a given timeframe.
-  We are going to implement a multilevel rate limit, where the first level is a user based limit and the second
-  handles across user requests. The per user requests should stop single users from sending too many requests, while
-  still allowing other users to work with the api. While the second level hardens against
-  a bot attacks. We use go rate package from the time extension pack for this.
-#+end_export
-
-#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"golang.org/x/time/rate"
-#+end_src
-
-#+begin_export latex
-  We create a new general limiter which follows a token bucket approach. Each token represents a request. Requests are allowed
-  as long as there are tokens in the bucket, new tokens are added every second. This rate limit allows for burst.
-#+end_export
-
-#+begin_src go <<Setup rate limit, Pr. \ref{pr:main}>>=
-  // TODO MISSING LOWER LEVEL LIMIT
-	limiter := rate.NewLimiter(rate.Limit(1), 1)
-#+end_src
-
-#+begin_export latex
-  Now we need to add a function that checks against the limiter and takes care of a 429 code when the token bucket is empty.
-  This needs to get the limiter and a response write as parameters. It should also return whether the limit was exceeded.
-#+end_export
-
-#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-func handleLimit(limiter *rate.Limiter, w http.ResponseWriter) bool {
-  //<<Check limiter, Pr. \ref{pr:main}>>
-}
-#+end_src
-
-#+begin_export latex
-  To check the limiter call its \ty{Allow} function. If the request is not allowed we write the
-  429 code, a fitting response body and return the result.
-#+end_export
-
-#+begin_src go <<Check limiter, Pr. \ref{pr:main}>>=
-	allowed := limiter.Allow()
-	if !allowed {
-		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte("Exceeded rate limit"))
-	}
-
-	return allowed
-#+end_src
-
-
-#+begin_export latex
   The packages we want to register each provide their own register function called \ty{registerRoutes}.
-  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each others existances.
+  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each others existance.
   So this task falls to the managing part of the software, which is this server.
   Additionally to the prefix \ty{apiv2} needs to know where the database is located. \ty{neverv1} receives these arguments as well, but it gets
   two prefixes as the package is not divided into api and docs. It also needs to get an extra filepath for the \ty{dateFile}.
-  The Apis also need to get access to the limiter. We provide a function that wraps \ty{handleLimit}, so they can implement it wherever needed.
-  The \ty{docsv2} wants to know whether it is being hosted locally and on what port, so we need to provide data for that.
+  \ty{docsv2} needs to know whether it is being hosted locally and on what port, so we need to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
-	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
-	apiv2.RegisterRoutes("/api/v2", dbPath, func(w http.ResponseWriter) bool { return handleLimit(limiter, w) })
-	neverv1.RegisterRoutes("/api/v1", "/docs/api/v1", dbPath, dateFilePath)
+  docsPref := "/docs"
+	apiPref := "/api"
+  docsV2Pref := docsPref + apiPref + "/v2"
+
+	neverv1.RegisterRoutes(apiPref + "/v1", docsPref+apiPref + "/v1", dbPath, dateFilePath)
+	apiv2.RegisterRoutes(apiPref + "/v2", dbPath)
+	docsv2.RegisterRoutes(docsV2Pref, host == "", port)
 #+end_src
 
 #+begin_export latex
@@ -222,8 +178,153 @@ func handleLimit(limiter *rate.Limiter, w http.ResponseWriter) bool {
 
 #+begin_src go <<Define default route, Pr. \ref{pr:main}>>=
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
+		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})
+#+end_src
+
+#+begin_export latex
+  Creating the middleware is a step in which we define functions that are called for all requests handled 
+  by this server. Whether their logic is applied to a specific route is up to the layer of the middleware.
+  One layer of this middleware is made up of a function that takes and returns a \ty{http.Handler}.
+  Each layer adds some processing capabilities. The first layer for example is for rate limiting.
+  Another layer is for logging requests and responses. We define the functions in the scope of 
+  the main function in order to get access to local variables, like paths and limiters.
+#+end_export
+
+#+begin_src go <<Create middleware, Pr. \ref{pr:main}>>=
+  //<<Create limiter middleware, Pr. \ref{pr:main}>>
+  //<<Create logger middleware, Pr. \ref{pr:main}>>
+  //<<Create caching middleware, Pr. \ref{pr:main}>>
+#+end_src
+
+#+begin_export latex
+  Rate limiting is a technique to restrict the amount of requests a server may handle for a given timeframe.
+  We are going to implement a multilevel rate limit, where the first level is a user based limit and the second
+  handles across user requests. The per user requests should stop single users from sending too many requests, while
+  still allowing other users to work with the api. While the second level hardens against
+  a bot attacks. We use go rate package from the time extension pack for this.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+	"golang.org/x/time/rate"
+#+end_src
+
+#+begin_export latex
+  We create a new general limiter which follows a token bucket approach. Each token represents a request. Requests are allowed
+  as long as there are tokens in the bucket, new tokens are added every second. This rate limit allows for burst.
+  The middleware checks against the limiter and passes the request to the next layer if the limiter allows it.
+  If the limit is exceeded we write a 429 (too many requests) response stating it's reason.
+  We should exclude the docs from beign limited. 
+#+end_export
+
+#+begin_src go <<Create limiter middleware, Pr. \ref{pr:main}>>=
+	generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
+  //<<Declare per user limiter, Pr. \ref{pr:main}>>
+  //<<Write limiter middleware, Pr. \ref{pr:main}>>
+#+end_src
+
+#+begin_export latex
+  The per user limiter is actually a map of many limiters. The map has ip adresses as a key
+  for user identification and their respective limiter as a value. As the server runs concurrently,
+  a mutex is required. We wrap both of them in a struct for better handling.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type SyncMap struct {
+    ma map[string]*rate.Limiter
+    mu sync.Mutex
+  }
+#+end_src
+
+#+begin_export latex
+  The mutex also requires the sync package.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "sync"
+#+end_src
+
+#+begin_export latex
+  Declaring the per limiter is now just a matter of creating a variable.
+#+end_export
+
+#+begin_src go <<Declare per user limiter, Pr. \ref{pr:main}>>=
+  userLimiters := SyncMap{ma: make(map[string]*rate.Limiter)}
+#+end_src
+
+#+begin_export latex
+  As already stated the middleware is just a function that gets and 
+  returns an \ty{http.Handler}. Inside we check for a certain condition, which includes
+  the requested url and the current limiter state. We either forward the request or
+  return an 429 error code, depending on the result.
+#+end_export
+
+#+begin_src go <<Write limiter middleware, Pr. \ref{pr:main}>>=
+  middlewareLimiter := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+      //<<Check condition, Pr. \ref{pr:main}>>
+		})
+	}
+#+end_src
+
+#+begin_export latex
+  First we check whether the requested url is rate limited, i.e. apiv1 or apiv2. We immedietly 
+  call the next handler, if the url is no rate limited. If it is we check the general and user
+  limiters. We first check the general limiter, as checking the user limiters requires more
+  processing power. If the general limiter allows processing we check the user limiter. If both
+  limiters allow processing we call the next handler. We write an error response if either limiter
+  denies processing.
+#+end_export
+
+#+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
+			allowed := !strings.HasPrefix(r.URL.Path, apiPref)
+			if !allowed {
+				if generalLimiter.Allow() {
+          //<<Check user limiter, Pr. \ref{pr:main}>>
+				}
+			}
+
+			if !allowed {
+				w.WriteHeader(http.StatusTooManyRequests)
+				w.Write([]byte("Exceeded rate limit\n"))
+			} else {
+				next.ServeHTTP(w, r)
+			}
+#+end_src
+
+#+begin_export latex
+  We are working with a custom syncMap - the \ty{sync.Map} advises against it's usage unless encoutering
+  two specific scenarios - which requires locking the mutex when reading or writing. Locking for a 
+  write might suffice, but I believe the go spec does not specify whethere a read operation is thread-
+  safe. We'd need to lock the map for the next step anyways, as calling the \ty{Allow} function 
+  entails a state change within the limiter, which wouldn't be thread safe. So we lock the mutex
+  get the specific limiter, or add if this is the user's first request, and check it.
+#+end_export
+
+#+begin_src go <<Check user limiter, Pr. \ref{pr:main}>>=
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
+	}
+
+	userLimiters.mu.Lock()
+	lim, ok := userLimiters.ma[ip]
+	if !ok {
+		lim = rate.NewLimiter(rate.Limit(10), 25)
+		userLimiters.ma[ip] = lim
+	}
+
+	allowed = lim.Allow()
+	userLimiters.mu.Unlock()
+#+end_src
+
+#+begin_export latex
+  We need to add the strings and net packages, because of the url comparison.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+	"strings"
+	"net"
 #+end_src
 
 #+begin_export latex
@@ -239,16 +340,18 @@ func handleLimit(limiter *rate.Limiter, w http.ResponseWriter) bool {
 #+end_src
 
 #+begin_export latex
-  Now lets get into starting the server.
+  Now lets get into starting the server. Here we also need to define the middleware chain as a context.
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
+  handlerChain := middlewareLimiter(http.DefaultServeMux)
+
   if host == "" {
     fmt.Printf("Starting server at http://localhost:%d ...\n", port)
-    log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+    log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain))
   } else {
     fmt.Printf("Starting server at %s:%d ...\n", host, port)
-    log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, nil))
+    log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain))
   }
 
   fmt.Println("...Stopping server")

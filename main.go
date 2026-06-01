@@ -8,37 +8,87 @@ import (
 	"flag"
 	"os"
 
-	"golang.org/x/time/rate"
-
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
 
 	"net/http"
 
+	"golang.org/x/time/rate"
+
+	"sync"
+
+	"net"
+	"strings"
+
 	"fmt"
 	"log"
 )
 
+type SyncMap struct {
+	ma map[string]*rate.Limiter
+	mu sync.Mutex
+}
+
 func main() {
 	certificate, dbPath, dateFilePath, privateKey, host, port := ioHandling()
 
-	limiter := rate.NewLimiter(rate.Limit(1), 1)
+	docsPref := "/docs"
+	apiPref := "/api"
+	docsV2Pref := docsPref + apiPref + "/v2"
 
-	docsv2.RegisterRoutes("/docs/api/v2", host == "", port)
-	apiv2.RegisterRoutes("/api/v2", dbPath, func(w http.ResponseWriter) bool { return handleLimit(limiter, w) })
-	neverv1.RegisterRoutes("/api/v1", "/docs/api/v1", dbPath, dateFilePath)
+	neverv1.RegisterRoutes(apiPref+"/v1", docsPref+apiPref+"/v1", dbPath, dateFilePath)
+	apiv2.RegisterRoutes(apiPref+"/v2", dbPath)
+	docsv2.RegisterRoutes(docsV2Pref, host == "", port)
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/docs/api/v2", http.StatusSeeOther)
+		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})
+
+	generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
+	userLimiters := SyncMap{ma: make(map[string]*rate.Limiter)}
+
+	middlewareLimiter := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			allowed := !strings.HasPrefix(r.URL.Path, apiPref)
+			if !allowed {
+				if generalLimiter.Allow() {
+					ip, _, err := net.SplitHostPort(r.RemoteAddr)
+					if err != nil {
+						fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
+					}
+
+					userLimiters.mu.Lock()
+					lim, ok := userLimiters.ma[ip]
+					if !ok {
+						lim = rate.NewLimiter(rate.Limit(1), 2)
+						userLimiters.ma[ip] = lim
+					}
+
+					allowed = lim.Allow()
+					userLimiters.mu.Unlock()
+
+				}
+			}
+
+			if !allowed {
+				w.WriteHeader(http.StatusTooManyRequests)
+				w.Write([]byte("Exceeded rate limit\n"))
+			} else {
+				next.ServeHTTP(w, r)
+			}
+
+		})
+	}
+
+	handlerChain := middlewareLimiter(http.DefaultServeMux)
 
 	if host == "" {
 		fmt.Printf("Starting server at http://localhost:%d ...\n", port)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain))
 	} else {
 		fmt.Printf("Starting server at %s:%d ...\n", host, port)
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, nil))
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain))
 	}
 
 	fmt.Println("...Stopping server")
@@ -72,16 +122,5 @@ func ioHandling() (string, string, string, string, string, int) {
 	}
 
 	return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag
-
-}
-
-func handleLimit(limiter *rate.Limiter, w http.ResponseWriter) bool {
-	allowed := limiter.Allow()
-	if !allowed {
-		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte("Exceeded rate limit"))
-	}
-
-	return allowed
 
 }

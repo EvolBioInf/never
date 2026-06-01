@@ -73,7 +73,7 @@ type TaxonName struct {
 	CommonName string `json:"common_name"`
 }
 
-func RegisterRoutes(prefix, dbPath string, handleLimit func(http.ResponseWriter) bool) {
+func RegisterRoutes(prefix, dbPath string) {
 	var neidb *tdb.TaxonomyDB
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("apiV2: db does not exist")
@@ -81,30 +81,28 @@ func RegisterRoutes(prefix, dbPath string, handleLimit func(http.ResponseWriter)
 		neidb = tdb.OpenTaxonomyDB(dbPath)
 	}
 
-	makeRoute(prefix+"/accessions", handleLimit, accessions, neidb)                                     // formerly known as levels
-	makeRoute(prefix+"/assembly-levels", handleLimit, assemblyLevels, neidb)                            // new
-	makeRoute(prefix+"/taxa-accessions", handleLimit, taxaAccessions, neidb)                            // formerly known as accessions
-	makeRoute(prefix+"/ranks", handleLimit, ranks, neidb)                                               // same as before
-	makeRoute(prefix+"/taxa", handleLimit, taxa, neidb)                                                 // formerly known as taxi
-	makeRoute(prefix+"/taxa-count", handleLimit, taxaCount, neidb)                                      // new
-	makeRoute(prefix+"/taxa-info", handleLimit, taxaInfo, neidb)                                        // same as before
-	makeRoute(prefix+"/taxa-names", handleLimit, taxaNames, neidb)                                      // formerly known as names
-	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", handleLimit, taxaPath, neidb)                    // formerly just path
-	makeRoute(prefix+"/taxa/{taxon_id}/children", handleLimit, taxaChildren, neidb)                     // formerly just children
-	makeRoute(prefix+"/taxa/{taxon_id}/images", handleLimit, taxaImages, neidb)                         // new
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", handleLimit, taxaGenomeCount, neidb)              // formerly known as num_genomes
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", handleLimit, taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
-	makeRoute(prefix+"/taxa/{taxon_id}/parent", handleLimit, taxaParent, neidb)                         // formerly known as parent
-	makeRoute(prefix+"/taxa/{taxon_id}/subtree", handleLimit, taxaSubtree, neidb)                       // formerly just subtree
-	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", handleLimit, taxaMRCA, neidb)                            // formerly just mrca
+	makeRoute(prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
+	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)                            // new
+	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)                            // formerly known as accessions
+	makeRoute(prefix+"/ranks", ranks, neidb)                                               // same as before
+	makeRoute(prefix+"/taxa", taxa, neidb)                                                 // formerly known as taxi
+	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                                      // new
+	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                                        // same as before
+	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                                      // formerly known as names
+	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb)                    // formerly just path
+	makeRoute(prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)                     // formerly just children
+	makeRoute(prefix+"/taxa/{taxon_id}/images", taxaImages, neidb)                         // new
+	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
+	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
+	makeRoute(prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
+	makeRoute(prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
+	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", taxaMRCA, neidb)                            // formerly just mrca
 
 }
 
-func makeRoute(path string, handleLimit func(http.ResponseWriter) bool, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
+func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if handleLimit(w) {
-			fn(w, r, args...)
-		}
+		fn(w, r, args...)
 	})
 }
 
