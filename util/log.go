@@ -1,102 +1,137 @@
 package util
 
 import (
-	"bufio"
+	"encoding/csv"
 	"fmt"
 	"os"
 	"time"
-
-	"errors"
 )
 
+type Writable interface {
+	Keys() []string
+	Values() []string
+}
+
+type WarningEntry struct {
+	timestamp,
+	Warning string
+}
+
+type InfoEntry struct {
+	timestamp,
+	RequestIp,
+	RequestUrl,
+	RequestMethod,
+	ResponseCode,
+	ResponseSize,
+	ResponseTime,
+	Description string
+}
+
+var infoBuffer, warningBuffer *csv.Writer
+var infoFile, warningFile *os.File
 var timer *time.Timer
 var interval time.Duration
-var infoFile, warningFile string
-var infoWriter, warningWriter bufio.Writer
 
 func SetupLog() {
 	dir := "logs/"
-	infoFile = dir + "info.txt"
-	warningFile = dir + "warning.txt"
 	interval = 2 * time.Second
-
-	err := os.MkdirAll(dir, os.ModePerm)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		panic(fmt.Sprintf("Could not create directory for logs: %s\n", err))
 	}
 
-	if _, err := os.Stat(infoFile); errors.Is(err, os.ErrNotExist) {
-		os.Create(infoFile)
-	} else if err != nil {
-		panic(fmt.Sprintf("Could not create info file for logs: %s\n", err))
-	}
+	infoFile, infoBuffer = handleFileOpen(dir+"info.csv", InfoEntry{})
+	warningFile, warningBuffer = handleFileOpen(dir+"warning.csv", WarningEntry{})
 
-	if _, err := os.Stat(warningFile); errors.Is(err, os.ErrNotExist) {
-		os.Create(warningFile)
-	} else if err != nil {
-		panic(fmt.Sprintf("Could not create warning file for logs: %s\n", err))
-	}
-
-	file, err := os.Open(infoFile)
-	if err != nil {
-		panic(fmt.Sprintf("Could not open info file for logs: %s\n", err))
-	}
-
-	infoWriter = *bufio.NewWriter(file)
-
-	file, err = os.Open(warningFile)
-	if err != nil {
-		panic(fmt.Sprintf("Could not open warning file for logs: %s\n", err))
-	}
-
-	warningWriter = *bufio.NewWriter(file)
-
+	LogInfoDef(InfoEntry{Description: "Setup log"})
 }
 
-func startLogging() {
+func handleFileOpen(path string, entry Writable) (*os.File, *csv.Writer) {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("Could not open %s for logs: %s\n", path, err))
+	}
+
+	buffer := csv.NewWriter(f)
+	fi, err := os.Stat(path)
+	if err != nil {
+		panic(fmt.Sprintf("Could not read stats of %s: %s\n", path, err))
+	}
+
+	if fi.Size() == 0 {
+		buffer.Write(entry.Keys())
+	}
+
+	return f, buffer
+}
+
+func (e WarningEntry) Keys() []string {
+	return []string{"timestamp", "warning"}
+}
+
+func (e WarningEntry) Values() []string {
+	return []string{e.timestamp, e.Warning}
+}
+
+func (e InfoEntry) Keys() []string {
+	return []string{
+		"timestamp",
+		"request_ip",
+		"request_url",
+		"request_method",
+		"request_code",
+		"request_size",
+		"request_time",
+		"description",
+	}
+}
+
+func (e InfoEntry) Values() []string {
+	return []string{
+		e.timestamp,
+		e.RequestIp,
+		e.RequestUrl,
+		e.RequestMethod,
+		e.ResponseCode,
+		e.ResponseSize,
+		e.ResponseTime,
+		e.Description,
+	}
+}
+
+func setTimer() {
 	if timer == nil {
 		timer = time.AfterFunc(interval, logBuffs)
 	}
 }
 
-func LogInfoDef(str string) {
-	fmt.Println("log info def")
-	if timer == nil {
-		startLogging()
-	}
-
-	fmt.Fprintln(&infoWriter, str)
+func LogInfoDef(e InfoEntry) {
+	e.timestamp = time.Now().Format(time.DateTime)
+	infoBuffer.Write(e.Values())
+	setTimer()
 }
 
-func LogWarningDef(str string) {
-	fmt.Println("log info def")
-	if timer == nil {
-		startLogging()
-	}
-
-	fmt.Fprintln(&warningWriter, str)
+func LogWarningDef(e WarningEntry) {
+	e.timestamp = time.Now().Format(time.DateTime)
+	warningBuffer.Write(e.Values())
+	setTimer()
 }
 
 func logBuffs() {
-	fmt.Println("log immediate")
-	if infoWriter.Buffered() > 0 {
-		infoWriter.Flush()
-	}
-
-	if warningWriter.Buffered() > 0 {
-		warningWriter.Flush()
-	}
-
-	if timer != nil {
-		timer.Reset(interval)
-	}
+	infoBuffer.Flush()
+	warningBuffer.Flush()
+	timer = nil
 }
 
 func StopLogging() {
+	LogInfoDef(InfoEntry{Description: "Stopped logging"})
 	if timer != nil {
 		timer.Stop()
 		timer = nil
 	}
 
 	logBuffs()
+	infoFile.Close()
+	warningFile.Close()
 }

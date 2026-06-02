@@ -1,6 +1,7 @@
 #+begin_export latex
   Log is a custom log providing deffered logging functionality. Data is written
-  to buffers and copied to files during off time. 
+  to buffers and copied to files during off time. This log works in a debounce like fashion.
+  Data is written to it, stored in buffers and written to files some later time.
 #+end_export
 
 #+begin_src go <<log.go>>=
@@ -10,111 +11,210 @@
 	  //<<Imports, Pa. \ref{pa:uti}>>
   )
 
+  //<<Interfaces, Pa. \ref{pa:uti}>>
+  //<<Types, Pa. \ref{pa:uti}>>
   //<<Variables, Pa. \ref{pa:uti}>>
   //<<Functions, Pa. \ref{pa:uti}>>
 #+end_src
 
 #+begin_export latex
   \section{\ty{SetupLog}}
-  \ty{SetupLog} sets up the logger for the cycle. This means it has to create files to write to and 
-  begin a cycle to periodically write to the files. We write down the global variables necessary for this
-  which are file paths for an info and a warning file, a timer which calls a logging function, which needs 
-  need to be implemented later on. Lastly we need to define the interval in which the logging function is called. 
+  \ty{SetupLog} sets up the logger for deferred writing. This means it has to create files to write to and
+  set variables needed in the process. We write down the global variables necessary for this
+  which are the info and warning files, buffers to write to those files, we use the csv pacakge for this,
+  a timer which calls a logging function, which needs need to be implemented later on. Lastly we need
+  to define the interval in which the logging function is called.
 #+end_export
 
 #+begin_src go <<Variables, Pa. \ref{pa:uti}>>=
+  var infoBuffer, warningBuffer *csv.Writer
+  var infoFile, warningFile *os.File
   var timer *time.Timer
   var interval time.Duration
-  var infoFile, warningFile string
-  var infoWriter, warningWriter bufio.Writer
 #+end_src
 
 #+begin_export latex
-  We import \ty{bufio}, \ty{fmt}, \ty{time} and \ty{os}.
+  We import \ty{encoding/csv}, \ty{fmt}, \ty{time} and \ty{os}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
-	"bufio"
+	"encoding/csv"
 	"fmt"
 	"time"
   "os"
 #+end_src
 
 #+begin_export latex
-  We begin setting up the by setting the variables.
+  We begin setting up the by setting the directory and interval.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func SetupLog() {
     dir := "logs/"
-  	infoFile = dir+"info.txt"
-  	warningFile = dir+"warning.txt"
-    interval = 10 * time.Second
-
-    //<<Check for files, Pa. \ref{pa:uti}>>
-    //<<Open files, Pa. \ref{pa:uti}>>
+    interval = 2 * time.Second
+    //<<Handle files, Pa. \ref{pa:uti}>>
+  	LogInfoDef(InfoEntry{Description: "Setup log"})
   }
 #+end_src
 
 #+begin_export latex
-  The logs should be saved in a different directory. We need to create both the directory and the files
-  in case they are missing.
+  The logs are saved in a different directory. For this we need to create the directory, if it is missing.
+  It seems that setting the permissions is done by writing the unix octal explicitly. The directory needs to
+  be a directory, which is handled by \ty{mkDirAll}, and have rwx for the owner and rx for the group and everyone else.
+  This results in \ty{os.ModeDir | 0755} We also need to open the logging files or create and initialize them, if they
+  don't exist. This is a bit tedious and needs to be done for the warning and info file, so we create a function to do that.
 #+end_export
 
-#+begin_src go <<Check for files, Pa. \ref{pa:uti}>>=
-	err := os.MkdirAll(dir, os.ModePerm)
+#+begin_src go <<Handle files, Pa. \ref{pa:uti}>>=
+	err := os.MkdirAll(dir, 0755)
   if err != nil {
     panic(fmt.Sprintf("Could not create directory for logs: %s\n", err))
   }
 
-	if _, err := os.Stat(infoFile); errors.Is(err, os.ErrNotExist) {
-		os.Create(infoFile)
-	} else if err != nil {
-    panic(fmt.Sprintf("Could not create info file for logs: %s\n", err))
-  }
-
-  if _, err := os.Stat(warningFile); errors.Is(err, os.ErrNotExist) {
-		os.Create(warningFile)
-	} else if err != nil {
-    panic(fmt.Sprintf("Could not create warning file for logs: %s\n", err))
-  } 
+  //<<Call handle file open function, Pa. \ref{pa:uti}>>
 #+end_src
 
 #+begin_export latex
-  We need to import \ty{errors}
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
-  "errors"
-#+end_src
-
-#+begin_export latex
-  We open the files and set them as output for the writers.
-#+end_export
-
-#+begin_src go <<Open files, Pa. \ref{pa:uti}>>=
-	file, err := os.Open(infoFile)
-	if err != nil {
-    panic(fmt.Sprintf("Could not open info file for logs: %s\n", err))
-  }
-
-  infoWriter = *bufio.NewWriter(file)
-
-  file, err = os.Open(warningFile)
-	if err != nil {
-    panic(fmt.Sprintf("Could not open warning file for logs: %s\n", err))
-  }
-
-  warningWriter = *bufio.NewWriter(file)
-#+end_src
-
-#+begin_export latex
-  \section{\ty{startLogging}}
-  \ty{startLogging} begins the logging cycle. 
+  We need to open the file for appending and create it if it does not exist. We can use the
+  os flags for this. In order to check, whether we need to write a header, we need to read the file as well.
+  this leads to us using a union of these three flags: \ty{os.O_APPEND}, \ty{os.O_CREATE}, \ty{os.O_RDWR}.
+  The permissions are again specified using explicit unix permission bits. The log files should be read and written
+  to by their owner, read by the group and everyone else. The which represents this is \ty{0644}
+  The type of entry is going to be discussed shortly.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-  func startLogging() {
+  func handleFileOpen(path string, entry Writable) (*os.File, *csv.Writer) {
+    f, err := os.OpenFile(path, os.O_APPEND | os.O_CREATE | os.O_RDWR, 0644)
+	  if err != nil {
+		  panic(fmt.Sprintf("Could not open %s for logs: %s\n", path, err))
+	  }
+
+    buffer := csv.NewWriter(f)
+    //<<Write csv header, Pa. \ref{pa:uti}>>
+
+    return f, buffer
+  }
+#+end_src
+
+#+begin_export latex
+  Before writing a header, we need to think about what data to log. We write two types for this purpose.
+  \ty{InfoEntry} and \ty{WarningEntry}. A \ty{WarningEntry} should just state the warning and the time it occured.
+  The \ty{InfoEntry} needs to provide more information. It needs a timestamp, the requesting api, the requested url,
+  request method, response code, response size, response time and a description. Entries that are not request related may
+  just the description and leave the all other fields as blanks. The timestamp is lowercased in order to prevent
+  other packages from writing it. This should be handled by the log function.
+#+end_export
+
+#+begin_src go <<Types, Pa. \ref{pa:uti}>>=
+  type WarningEntry struct {
+    timestamp,
+    Warning string
+  }
+
+  type InfoEntry struct {
+    timestamp,
+    RequestIp,
+    RequestUrl,
+    RequestMethod,
+    ResponseCode,
+    ResponseSize,
+    ResponseTime,
+    Description string
+  }
+#+end_src
+
+#+begin_export latex
+  Go doesn't seem to provide access to keynames or tags unless using the \ty{reflect} package, which I'm trying
+  to avoid. We will write two functions per entry, which will simulate this for us. Sadly those need to be
+  kept in sync with the actual structs manually. These functions are called \ty{Keys} and \ty{Values}.
+  \ty{Keys} returns an array of string literals, which represent each key of the struct. \ty{Values}
+  returns an array of strings composed of each property's value. Again I don't like hardcoding this, but
+  I'm lacking a better way to do this without getting the keys via reflect and looping over them.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func (e WarningEntry) Keys() []string {
+    return []string{"timestamp", "warning"}
+  }
+
+  func (e WarningEntry) Values() []string {
+    return []string{e.timestamp, e.Warning}
+  }
+
+  func (e InfoEntry) Keys() []string {
+    return []string{
+      "timestamp",
+      "request_ip",
+      "request_url",
+      "request_method",
+      "request_code",
+      "request_size",
+      "request_time",
+      "description",
+    }
+  }
+
+  func (e InfoEntry) Values() []string {
+    return []string{
+      e.timestamp,
+      e.RequestIp,
+      e.RequestUrl,
+      e.RequestMethod,
+      e.ResponseCode,
+      e.ResponseSize,
+      e.ResponseTime,
+      e.Description,
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  Now we define an interface for those two types. We can use this for convenience when doing action that are
+  equivalent for both entry types.
+#+end_export
+
+#+begin_src go <<Interfaces, Pa. \ref{pa:uti}>>=
+  type Writable interface {
+    Keys() []string
+    Values() []string
+  }
+#+end_src
+
+#+begin_export latex
+  Having defined all types, functions and an interface to work with these entries, we may now call the
+  handle function. Closing the files and cleaning up this logger is going to be handled by a separate function
+  later on.
+#+end_export
+
+#+begin_src go <<Call handle file open function, Pa. \ref{pa:uti}>>=
+	infoFile, infoBuffer = handleFileOpen(dir+"info.csv", InfoEntry{})
+	warningFile, warningBuffer = handleFileOpen(dir+"warning.csv", WarningEntry{})
+#+end_src
+
+#+begin_export latex
+  In order to check whether we need to write the header we look at the file size. If the file is empty, it was just
+  created, so we write the header, otherwise we don't. We use os.Stat to check the file's size.
+#+end_export
+
+#+begin_src go <<Write csv header, Pa. \ref{pa:uti}>>=
+  fi, err := os.Stat(path)
+  if err != nil {
+		  panic(fmt.Sprintf("Could not read stats of %s: %s\n", path, err))
+  }
+
+  if fi.Size() == 0 {
+    buffer.Write(entry.Keys())
+  }
+#+end_src
+
+#+begin_export latex
+  \section{\ty{setTimer}}
+  \ty{setTimer} starts a timer, that triggers logging after timer is done.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func setTimer() {
     if timer == nil {
       timer = time.AfterFunc(interval, logBuffs)
     }
@@ -124,71 +224,59 @@
 #+begin_export latex
   \section{\ty{LogInfoDef}}
   \ty{LogInfoDef} writes to the info buffer used by the periodically called \ty{logBuffs} function.
-  It also starts the logging cycle if it's not running. 
+  It also starts the logging timer if it's not running.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-func LogInfoDef(str string) {
-	fmt.Println("log info def")
-  if timer == nil {
-    startLogging()
-  }
-
-	fmt.Fprintln(&infoWriter, str)
+func LogInfoDef(e InfoEntry) {
+	e.timestamp = time.Now().Format(time.DateTime)
+	infoBuffer.Write(e.Values())
+  setTimer()
 }
 #+end_src
 
 #+begin_export latex
   \section{\ty{LogWarningDef}}
   \ty{LogWarningDef} writes to the warning buffer used by the periodically called \ty{logBuffs} function.
-  It also starts the logging cycle if it's not running. 
+  It also starts the logging timer if it's not running.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-func LogWarningDef(str string) {
-	fmt.Println("log info def")
-    if timer == nil {
-    startLogging()
-  }
-
-	fmt.Fprintln(&warningWriter, str)
+func LogWarningDef(e WarningEntry) {
+	e.timestamp = time.Now().Format(time.DateTime)
+	warningBuffer.Write(e.Values())
+  setTimer()
 }
 #+end_src
 
 #+begin_export latex
   \section{\ty{logBuffs}}
-  \ty{logBuffs} flushes the buffers and restarts the logging cycle. It only flushes if the writers are non empty.
+  \ty{logBuffs} writes the buffers to the log files and removes the timer reference.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
 func logBuffs() {
-	fmt.Println("log immediate")
- 	if infoWriter.Buffered() > 0 {
-    infoWriter.Flush()
-  }
-
- 	if warningWriter.Buffered() > 0 {
-    warningWriter.Flush()
-  }
-
-	if timer != nil {
-		timer.Reset(interval)
-	}
+	infoBuffer.Flush()
+	warningBuffer.Flush()
+  timer = nil
 }
 #+end_src
 
 #+begin_export latex
   \section{\ty{StopLogging}}
-  \ty{StopLogging} shuts down the stopping cycle and writes the remaining buffers.
+  \ty{StopLogging} shuts down the logging timer, writes the remaining buffers and closes the files.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func StopLogging() {
+    LogInfoDef(InfoEntry{Description: "Stopped logging"})
   	if timer != nil {
   		timer.Stop()
       timer = nil
   	}
 
     logBuffs()
+    infoFile.Close()
+    warningFile.Close()
   }
 #+end_src

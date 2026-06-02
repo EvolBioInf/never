@@ -82,9 +82,10 @@ func main() {
 	}
 
 	util.SetupLog()
+	defer util.StopLogging()
 	middlewareLogger := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			util.LogInfoDef("Incoming request")
+			util.LogInfoDef(util.InfoEntry{Description: "Incoming request"})
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -116,7 +117,7 @@ func ioHandling() (string, string, string, string, string, int) {
 		"-o 10.254.1.21 -p 443",
 		"This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
 			"as well as their respective documentation. "+
-			"New packages may be added in a simmilar fashion as seen "+
+			"New packages may be added in a similar fashion as seen "+
 			"in the main function.",
 		"Starts the webserver at specified address with given port.")
 

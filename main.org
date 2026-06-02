@@ -48,7 +48,7 @@ import (
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-  func ioHandling() ( string,string, string, string, string, int) {
+  func ioHandling() (string, string, string, string, string, int) {
     //<<Prepare log, Pr. \ref{pr:main}>>
     //<<Set usage, Pr. \ref{pr:main}>>
     //<<Parse flags, Pr. \ref{pr:main}>>
@@ -90,7 +90,7 @@ import (
     "-o 10.254.1.21 -p 443",
     "This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
       "as well as their respective documentation. "+
-      "New packages may be added in a simmilar fashion as seen "+
+      "New packages may be added in a similar fashion as seen "+
       "in the main function.",
     "Starts the webserver at specified address with given port.")
 #+end_src
@@ -183,11 +183,11 @@ import (
 #+end_src
 
 #+begin_export latex
-  Creating the middleware is a step in which we define functions that are called for all requests handled 
+  Creating the middleware is a step in which we define functions that are called for all requests handled
   by this server. Whether their logic is applied to a specific route is up to the layer of the middleware.
   One layer of this middleware is made up of a function that takes and returns a \ty{http.Handler}.
   Each layer adds some processing capabilities. The first layer for example is for rate limiting.
-  Another layer is for logging requests and responses. We define the functions in the scope of 
+  Another layer is for logging requests and responses. We define the functions in the scope of
   the main function in order to get access to local variables, like paths and limiters.
 #+end_export
 
@@ -214,7 +214,7 @@ import (
   as long as there are tokens in the bucket, new tokens are added every second. This rate limit allows for burst.
   The middleware checks against the limiter and passes the request to the next layer if the limiter allows it.
   If the limit is exceeded we write a 429 (too many requests) response stating it's reason.
-  We should exclude the docs from beign limited. 
+  We should exclude the docs from beign limited.
 #+end_export
 
 #+begin_src go <<Create limiter middleware, Pr. \ref{pr:main}>>=
@@ -253,7 +253,7 @@ import (
 #+end_src
 
 #+begin_export latex
-  As already stated the middleware is just a function that gets and 
+  As already stated the middleware is just a function that gets and
   returns an \ty{http.Handler}. Inside we check for a certain condition, which includes
   the requested url and the current limiter state. We either forward the request or
   return an 429 error code, depending on the result.
@@ -268,7 +268,7 @@ import (
 #+end_src
 
 #+begin_export latex
-  First we check whether the requested url is rate limited, i.e. apiv1 or apiv2. We immediately 
+  First we check whether the requested url is rate limited, i.e. apiv1 or apiv2. We immediately
   call the next handler, if the url is no rate limited. If it is we check the general and user
   limiters. We first check the general limiter, as checking the user limiters requires more
   processing power. If the general limiter allows processing we check the user limiter. If both
@@ -294,9 +294,9 @@ import (
 
 #+begin_export latex
   We are working with a custom syncMap - the \ty{sync.Map} advises against it's usage unless encoutering
-  two specific scenarios - which requires locking the mutex when reading or writing. Locking for a 
+  two specific scenarios - which requires locking the mutex when reading or writing. Locking for a
   write might suffice, but I believe the go spec does not specify whethere a read operation is thread-
-  safe. We'd need to lock the map for the next step anyways, as calling the \ty{Allow} function 
+  safe. We'd need to lock the map for the next step anyways, as calling the \ty{Allow} function
   entails a state change within the limiter, which wouldn't be thread safe. So we lock the mutex
   get the specific limiter, or add if this is the user's first request, and check it.
 #+end_export
@@ -333,9 +333,10 @@ import (
 
 #+begin_src go <<Create logger middleware, Pr. \ref{pr:main}>>=
   util.SetupLog()
+  defer util.StopLogging();
 	middlewareLogger := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    util.LogInfoDef("Incoming request")
+		util.LogInfoDef(util.InfoEntry{Description: "Incoming request"})
 				next.ServeHTTP(w, r)
 		})
 	}
