@@ -105,9 +105,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Stopping server ...")
-	util.StopLogging()
-	fmt.Println("Shutdown gracefully")
+	fmt.Println("...Stopping server")
 }
 
 func ioHandling() (string, string, string, string, string, int) {

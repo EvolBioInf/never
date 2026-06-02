@@ -376,7 +376,5 @@ import (
 		log.Fatal(err)
 	}
 
-	fmt.Println("Stopping server ...")
-  util.StopLogging()
-	fmt.Println("Shutdown gracefully")
+	fmt.Println("...Stopping server")
 #+end_src
