@@ -63,11 +63,11 @@
     <table>
       <tr>
           <td>Number of taxa</td>
-          <td>2,730,517</td>
+          <td>2,738,000</td>
       </tr>
       <tr>
           <td>Number of genomes</td>
-          <td>3,371,798</td>
+          <td>3,459,534</td>
       </tr>
     </table>
   </p>

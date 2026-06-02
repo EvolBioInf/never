@@ -688,12 +688,17 @@ name, and its common name. To store these four items, we declare the
 #+begin_export latex
 We write \ty{taxi} on the same pattern as \ty{index}.  Inside
 \ty{taxi}, we extract the query from the HTTP request, query the
-database, and write the result to the HTTP writer.
+database unless we were given the name passed is an empty string, and
+write the result to the HTTP writer.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
   func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
+	  out := []Taxon{}
+	  name := ""
 	  //<<Extract taxi query, Pa. \ref{pa:nev}>>
-	  //<<Execute taxi query, Pa. \ref{pa:nev}>>
+	  if name != "" {
+		  //<<Execute taxi query, Pa. \ref{pa:nev}>>
+	  }
 	  //<<Print taxi result, Pa. \ref{pa:nev}>>
   }
 #+end_src
@@ -704,7 +709,7 @@ exact mode, we bracket the name and the blanks it contains by wild
 cards.
 #+end_export
 #+begin_src go <<Extract taxi query, Pa. \ref{pa:nev}>>=
-  name := r.URL.Query().Get("t")
+  name = r.URL.Query().Get("t")
   sstr := r.URL.Query().Get("e")
   page := r.URL.Query().Get("p")
   size := r.URL.Query().Get("n")
@@ -727,7 +732,6 @@ taxa.
   //<<Calculate offset, Pa. \ref{pa:nev}>>
   ids, err := neidb.CommonTaxids(name, limit, offset)
   util.Check(err)
-  out := []Taxon{}
   for _, id := range ids {
 	  //<<Construct taxon output, Pa. \ref{pa:nev}>>
 	  //<<Store taxon output, Pa. \ref{pa:nev}>>
@@ -1315,21 +1319,31 @@ We also add \ty{subtree} to our list of services.
 \subsection{\ty{Taxids}}
 The function \ty{Taxids} takes as argument a taxon name and returns
 the corresponding taxon IDs. We implement the query in the function
-\ty{taxids} where we get the taxon name and store the corresponding
-taxon IDs before we print the output.
+\ty{taxids} where we get the taxon name. If that is the empty string,
+it matches every name, which creates a large and meaningless result
+set. So we only store the taxon IDs if the name is not the empty
+string. Then we print the output.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
   func taxids(w http.ResponseWriter, r *http.Request,
 	  p *PageData) {
-	  name := r.URL.Query().Get("t")
 	  out := []Taxid{}
-	  taxids, err := neidb.CommonTaxids(name, -1, 0)
-	  util.Check(err)
-	  for _, taxid := range taxids {
-		  o := Taxid{taxid}
-		  out = append(out, o)
+	  name := r.URL.Query().Get("t")
+	  if name != "" {
+		  //<<Store taxids, Pa. \ref{pa:nev}>>
 	  }
 	  //<<Print output, Pa. \ref{pa:nev}>>
+  }
+#+end_src
+#+begin_export latex
+We get the taxon IDs from the database and store them.
+#+end_export
+#+begin_src go <<Store taxids, Pa. \ref{pa:nev}>>=
+  taxids, err := neidb.CommonTaxids(name, -1, 0)
+  util.Check(err)
+  for _, taxid := range taxids {
+	  o := Taxid{taxid}
+	  out = append(out, o)
   }
 #+end_src
 #+begin_export latex
