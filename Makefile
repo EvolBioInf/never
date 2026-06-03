@@ -16,5 +16,6 @@ doc:
 PHONY.: clean
 
 clean:
+	rm bin/never
 	make clean -C never
 	make clean -C doc
