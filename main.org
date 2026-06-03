@@ -151,9 +151,10 @@ import (
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
   docsPref := "/docs"
 	apiPref := "/api"
+  docsV1Pref := docsPref + apiPref + "/v1"
   docsV2Pref := docsPref + apiPref + "/v2"
 
-	neverv1.RegisterRoutes(apiPref + "/v1", docsPref+apiPref + "/v1", dbPath, dateFilePath)
+	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbPath, dateFilePath)
 	apiv2.RegisterRoutes(apiPref + "/v2", dbPath)
 	docsv2.RegisterRoutes(docsV2Pref, host == "", port)
 #+end_src
@@ -192,9 +193,140 @@ import (
 #+end_export
 
 #+begin_src go <<Create middleware, Pr. \ref{pr:main}>>=
-  //<<Create limiter middleware, Pr. \ref{pr:main}>>
   //<<Create logger middleware, Pr. \ref{pr:main}>>
+  //<<Create limiter middleware, Pr. \ref{pr:main}>>
   //<<Create caching middleware, Pr. \ref{pr:main}>>
+#+end_src
+
+#+begin_export latex
+  For creating the logging middleware we use our own logging package.
+  This allows us to persist information and warning log entries. For this
+  we first need to setup the log. Before exiting this process we
+  to stop the logging process.
+#+end_export
+
+#+begin_src go <<Create logger middleware, Pr. \ref{pr:main}>>=
+  util.SetupLog()
+  defer util.StopLogging();
+  //<<Write logger middleware, Pr. \ref{pr:main}>>
+#+end_src
+
+#+begin_export latex
+  We write an outline of the logger middleware and think about how and exactly what
+  to log in the next step. A log entry contains data about the response, specifically
+  it's size, status code and processing time. Measuring the processing time may be done 
+  by subtracting a timestamp before passing the request and after getting it's response.
+  Obtaining the the response code and size is a bit trickier, as the writer does not give
+  access to it's response - probably because it's not yet written... We are going to address
+  this in the next step.
+#+end_export
+
+#+begin_src go <<Write logger middleware, Pr. \ref{pr:main}>>=
+	middlewareLogger := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+      bef := time.Now().UnixMilli()
+      //<<Pass on request, Pr. \ref{pr:main}>>
+      af := time.Now().UnixMilli()
+      //<<Log request, Pr. \ref{pr:main}>>
+		})
+	}
+#+end_src
+
+#+begin_export latex
+  Measuring time requires importing the \ty{time} package.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "time"
+#+end_src
+
+#+begin_export latex
+  Back to getting the response data. To obtain this data anyways we wrap the writer, 
+  into a custom one. This wrapper just saves the status code and bytes it wrote.
+  We need to define a type for this and redefine the functions \ty{Write} and
+  \ty{WriteHeader}.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type CustomResponseWriter struct {
+    http.ResponseWriter
+    code,
+    size int
+  }
+
+  func (w *CustomResponseWriter) Write(b []byte) (int, error)  {
+    a, err := w.ResponseWriter.Write(b)
+    w.size += a
+    return a, err
+  }
+
+  func (w *CustomResponseWriter) WriteHeader(statusCode int) {
+    w.code = statusCode
+    w.ResponseWriter.WriteHeader(statusCode)
+  }
+#+end_src
+
+#+begin_export latex
+  The \ty{CustomResponseWriter} fulfills the \ty{http.ResponseWriter} interface requirements.
+  This means we can pass without changing anything in the lower levels of this server.
+#+end_export
+
+#+begin_src go <<Pass on request, Pr. \ref{pr:main}>>=
+  cw := &CustomResponseWriter{ResponseWriter: w, code: 200, size: 0}
+  next.ServeHTTP(cw, r)
+#+end_src
+
+#+begin_export latex
+  We don't want to log every single request. Parts of the the server, mostly the frontend, 
+  make a lot of consecutive requests, that aren't worth logging. It's interesting to get 
+  a log entry, when someone is requesting the docs, but we don't need to log the follow up 
+  requests for all the css files etc. This means we need to check the request url. 
+#+end_export
+
+#+begin_src go <<Log request, Pr. \ref{pr:main}>>=
+  if r.URL.Path == docsV2Pref || 
+    r.URL.Path == docsV1Pref || 
+    !strings.Contains(r.URL.Path, docsPref) {
+    //<<Write log entry, Pr. \ref{pr:main}>>
+  }
+#+end_src
+
+#+begin_export latex
+  Now we know when to write an entry, but not what to write to it. Looking at our log package
+  let's us gain insight on what to log. An \ty{util.InfoEntry} may contain seven properties.
+  They hold information on ip, url, method, code, size, processing time and description.
+  This is the data we need to provide for logging. Most of this may be retrieved from the
+  http.Writer and http.Request objects.
+#+end_export
+
+#+begin_src go <<Write log entry, Pr. \ref{pr:main}>>=
+  //<<Retrieve remote ip, Pr. \ref{pr:main}>>
+
+  util.LogInfoDef(util.InfoEntry{
+    RequestIp: ip,
+    RequestUrl: r.URL.String(),
+    RequestMethod: r.Method,
+    ResponseCode: cw.code,
+    ResponseSize: fmt.Sprintf("%db", cw.size),
+    ResponseTime: fmt.Sprintf("%dms", int(af - bef)),
+    Description: "middleware request log entry",
+  })
+#+end_src
+
+#+begin_export latex
+  The remote ip is stored within the request's \ty{RemoteAddr} field. It may be retrieved
+  using the \ty{SplitHostPort} method from the net \ty{package}. We log any errors
+  using \ty{util.log}'s \ty{LogWarningDef} method.
+#+end_export
+
+#+begin_src go <<Retrieve remote ip, Pr. \ref{pr:main}>>=
+  ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		util.LogWarningDef(
+      util.WarningEntry{
+        Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+    })
+	}
 #+end_src
 
 #+begin_export latex
@@ -325,21 +457,6 @@ import (
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
 	"strings"
 	"net"
-#+end_src
-
-#+begin_export latex
-  TODO
-#+end_export
-
-#+begin_src go <<Create logger middleware, Pr. \ref{pr:main}>>=
-  util.SetupLog()
-  defer util.StopLogging();
-	middlewareLogger := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		util.LogInfoDef(util.InfoEntry{Description: "Incoming request"})
-				next.ServeHTTP(w, r)
-		})
-	}
 #+end_src
 
 #+begin_export latex

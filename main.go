@@ -14,6 +14,8 @@ import (
 
 	"net/http"
 
+	"time"
+
 	"golang.org/x/time/rate"
 
 	"sync"
@@ -25,6 +27,23 @@ import (
 	"log"
 )
 
+type CustomResponseWriter struct {
+	http.ResponseWriter
+	code,
+	size int
+}
+
+func (w *CustomResponseWriter) Write(b []byte) (int, error) {
+	a, err := w.ResponseWriter.Write(b)
+	w.size += a
+	return a, err
+}
+
+func (w *CustomResponseWriter) WriteHeader(statusCode int) {
+	w.code = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
 type SyncMap struct {
 	ma map[string]*rate.Limiter
 	mu sync.Mutex
@@ -35,15 +54,51 @@ func main() {
 
 	docsPref := "/docs"
 	apiPref := "/api"
+	docsV1Pref := docsPref + apiPref + "/v1"
 	docsV2Pref := docsPref + apiPref + "/v2"
 
-	neverv1.RegisterRoutes(apiPref+"/v1", docsPref+apiPref+"/v1", dbPath, dateFilePath)
+	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbPath, dateFilePath)
 	apiv2.RegisterRoutes(apiPref+"/v2", dbPath)
 	docsv2.RegisterRoutes(docsV2Pref, host == "", port)
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})
+
+	util.SetupLog()
+	defer util.StopLogging()
+	middlewareLogger := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bef := time.Now().UnixMilli()
+			cw := &CustomResponseWriter{ResponseWriter: w, code: 200, size: 0}
+			next.ServeHTTP(cw, r)
+
+			af := time.Now().UnixMilli()
+			if r.URL.Path == docsV2Pref ||
+				r.URL.Path == docsV1Pref ||
+				!strings.Contains(r.URL.Path, docsPref) {
+				ip, _, err := net.SplitHostPort(r.RemoteAddr)
+				if err != nil {
+					util.LogWarningDef(
+						util.WarningEntry{
+							Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+						})
+				}
+
+				util.LogInfoDef(util.InfoEntry{
+					RequestIp:     ip,
+					RequestUrl:    r.URL.String(),
+					RequestMethod: r.Method,
+					ResponseCode:  cw.code,
+					ResponseSize:  fmt.Sprintf("%db", cw.size),
+					ResponseTime:  fmt.Sprintf("%dms", int(af-bef)),
+					Description:   "middleware request log entry",
+				})
+
+			}
+
+		})
+	}
 
 	generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
 	userLimiters := SyncMap{ma: make(map[string]*rate.Limiter)}
@@ -78,15 +133,6 @@ func main() {
 				next.ServeHTTP(w, r)
 			}
 
-		})
-	}
-
-	util.SetupLog()
-	defer util.StopLogging()
-	middlewareLogger := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			util.LogInfoDef(util.InfoEntry{Description: "Incoming request"})
-			next.ServeHTTP(w, r)
 		})
 	}
 

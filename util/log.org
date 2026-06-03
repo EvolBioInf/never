@@ -116,8 +116,8 @@
     timestamp,
     RequestIp,
     RequestUrl,
-    RequestMethod,
-    ResponseCode,
+    RequestMethod string
+    ResponseCode int
     ResponseSize,
     ResponseTime,
     Description string
@@ -156,17 +156,30 @@
   }
 
   func (e InfoEntry) Values() []string {
+    code := ""
+    if e.ResponseCode != 0 {
+      code = strconv.Itoa(e.ResponseCode)
+    }
+
     return []string{
       e.timestamp,
       e.RequestIp,
       e.RequestUrl,
       e.RequestMethod,
-      e.ResponseCode,
+      code,
       e.ResponseSize,
       e.ResponseTime,
       e.Description,
     }
   }
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{strconv} for the string conversion.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "strconv"
 #+end_src
 
 #+begin_export latex

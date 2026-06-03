@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"strconv"
 )
 
 type Writable interface {
@@ -21,8 +23,8 @@ type InfoEntry struct {
 	timestamp,
 	RequestIp,
 	RequestUrl,
-	RequestMethod,
-	ResponseCode,
+	RequestMethod string
+	ResponseCode int
 	ResponseSize,
 	ResponseTime,
 	Description string
@@ -88,12 +90,17 @@ func (e InfoEntry) Keys() []string {
 }
 
 func (e InfoEntry) Values() []string {
+	code := ""
+	if e.ResponseCode != 0 {
+		code = strconv.Itoa(e.ResponseCode)
+	}
+
 	return []string{
 		e.timestamp,
 		e.RequestIp,
 		e.RequestUrl,
 		e.RequestMethod,
-		e.ResponseCode,
+		code,
 		e.ResponseSize,
 		e.ResponseTime,
 		e.Description,
