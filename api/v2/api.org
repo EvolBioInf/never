@@ -1,30 +1,27 @@
 #+begin_export latex
-      \section{api}
-      \ty{api} is the backend application for neverV2.
-      It implements all the endpoints defined in the
-      openApi document. The underlying logic will closely
-      resemble neverv1, as the backends don't differ too much.
+  \section{api}
+  \ty{api} is the backend application for neverV2.
+  It implements all the endpoints defined in the
+  openApi document. The underlying logic will closely
+  resemble neverv1, as the backends don't differ too much.
 
-      \subsection*{Implementation}
-      The api backend provides the global RegisterRoutes function just
-      like every standalone package used within neverV2. It takes as arguments
-      a prefix for the routes and the filepath of the db file.
-      \bpr{api}{pr:api}
+  \subsection*{Implementation}
+  The api backend provides the global RegisterRoutes function just
+  like every standalone package used within neverV2. It takes as arguments
+  a prefix for the routes and the filepath of the db file.
+  \bpr{api}{pr:api}
 #+end_export
 
 #+begin_src go <<api.go>>=
   package apiv2
-
   import (
     //<<Imports, Pa. \ref{pa:api}>>
   )
-
   //<<Types, Pa. \ref{pa:api}>>
-
+  //<<Variables, Pa. \ref{pa:api}>>
   func RegisterRoutes(prefix, dbPath string) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
-
   //<<Functions, Pa. \ref{pa:api}>>
 #+end_src
 
@@ -37,33 +34,41 @@ defined within the openApi document.
 type Accession struct {
   Accession string `json:"accession"`
   Level     string `json:"level"`
+  Links     []Link `json:"links",omitempty`
 }
-
 type GenomeCount struct {
   Level string `json:"level"`
   Count int    `json:"count"`
+  Links []Link `json:"links,omitempty"`
 }
-
-type Image struct {
-  Id          int    `json:"id"`
-  Url         string `json:"url"`
-  Attribution string `json:"attribution"`
+type TaxId struct {
+  TaxId int    `json:"tax_id"`
+  Links []Link `json:"links,omitempty"`
 }
-
 type Rank struct {
   TaxId int    `json:"tax_id"`
   Rank  string `json:"rank"`
+  Links []Link `json:"links,omitempty"`
 }
-
 type TaxonAccessions struct {
   TaxId      int         `json:"tax_id"`
   Accessions []Accession `json:"accessions"`
+  Links      []Link      `json:"links,omitempty"`
 }
-
-type TaxId struct {
-  TaxId int `json:"tax_id"`
+type TaxonMid struct {
+  TaxId      int    `json:"tax_id"`
+  Name       string `json:"name"`
+  CommonName string `json:"common_name"`
+  Parent     int    `json:"parent"`
+  Links      []Link `json:"links,omitempty"`
 }
-
+type TaxonNT struct {
+  TaxId      int         `json:"tax_id"`
+  Type       string      `json:"type"`
+  Name       string      `json:"name"`
+  Accessions []Accession `json:"parent"`
+  Links      []Link      `json:"links,omitempty"`
+}
 type TaxonInfo struct {
   TaxId          int           `json:"tax_id"`
   Parent         int           `json:"parent"`
@@ -74,19 +79,17 @@ type TaxonInfo struct {
   RawGenomeCount []GenomeCount `json:"raw_genome_counts"`
   RecGenomeCount []GenomeCount `json:"rec_genome_counts"`
   Images         []Image       `json:"images"`
+  Links          []Link        `json:"links,omitempty"`
 }
-
-type Taxon struct {
-  TaxId      int    `json:"tax_id"`
-  Name       string `json:"name"`
-  CommonName string `json:"common_name"`
-  Parent     int    `json:"parent"`
+type Link struct {
+  Rel            string   `json:"rel"`
+  Href           string   `json:"href"`
+  Action         string   `json:"action"`
+  Types          []string `json:"types"`
 }
-
-type TaxonName struct {
-  TaxId      int    `json:"tax_id"`
-  Name       string `json:"name"`
-  CommonName string `json:"common_name"`
+type ResponseBody[T any] struct {
+  Data  []T    `json:"data,omitempty"`
+  Links []Link `json:"links,omitempty"`
 }
 #+end_src
 
@@ -101,48 +104,59 @@ type TaxonName struct {
   it to the registration helper. We call this function \ty{makeRoute}. The function
   needs to take a path, the one to register, as well as a function \ty{fn}
   that is executed when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
-  However it needs to accept at least the http writer and request. It may accept more
+  However it needs to accept at least the http writer and request. The function may accept more
   arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
   to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
-  In \ty{makeRoute}'s body we simply register the path and function at the global http
-  object for now.
+  In \ty{makeRoute}'s body we register the path and function at the global http
+  object. We also add a LinkObject to the LinkMap. Therefore we create the \ty{LinkMap} first.
 #+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "net/http"
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  var LinkMap map[string]Link
 #+end_src
 
+#+begin_export latex
+  Now we may finally write \ty{makeRoute}.
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
-	  http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+  func makeRoute(method, string, path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
+	  http.HandleFunc(method + " " + prefix + path, func(w http.ResponseWriter, r *http.Request) {
 	  		fn(w, r, args...)
 	  })
   }
 #+end_src
 
 #+begin_export latex
-  Pretty much all of the endpoints need access to the database, which is the whole
+  We import the \ty{net/http} package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "net/http"
+#+end_src
+
+#+begin_export latex
+  Pretty much all of the endpoints need to access the database, which is the whole
   point of this api. So before registering the endpoints we open a connection to
   the database using neighbors' tdb program. We will pass the connection to
   all functions that need it.
 #+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "github.com/evolbioinf/neighbors/tdb"
-#+end_src
-
-#+begin_export latex
-  Before opening the database we need to check whether it exists.
-  If not we print an Error and return instantly.
-#+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
   var neidb *tdb.TaxonomyDB
-  if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
-    log.Fatal("apiV2: db does not exist")
-  } else {
-    neidb = tdb.OpenTaxonomyDB(dbPath)
-  }
+    neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
+    if err != nil {
+      log.Fatal("apiV2: " + err.Error())
+    }
+#+end_src
+
+#+begin_export latex
+  We need to import the corresponding pacakge aswell.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "github.com/evolbioinf/neighbors/tdb"
 #+end_src
 
 #+begin_export latex
@@ -157,32 +171,96 @@ type TaxonName struct {
 
 #+begin_export latex
   Having a connection to the database we may now register all the endpoints.
+  We know these because of the openAPI specification.
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-	makeRoute(prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
-	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)                            // new
-	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)                            // formerly known as accessions
-	makeRoute(prefix+"/ranks", ranks, neidb)                                               // same as before
-	makeRoute(prefix+"/taxa", taxa, neidb)                                                 // formerly known as taxi
-	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                                      // new
-	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                                        // same as before
-	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                                      // formerly known as names
-	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb)                    // formerly just path
-	makeRoute(prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)                     // formerly just children
-	makeRoute(prefix+"/taxa/{taxon_id}/images", taxaImages, neidb)                         // new
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
-	makeRoute(prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
-	makeRoute(prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
-	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", taxaMRCA, neidb)                            // formerly just mrca
+	makeRoute(GET, "", rootDocument, neidb)                                             // new
+	makeRoute(GET, "/accessions", accessions, neidb)                                     // formerly known as levels
+	makeRoute(POST, "/fintac", X, neidb)                                                 // new - calls fintac program
+	makeRoute(GET, "/taxa", X, neidb)                                                    // formerly known as taxi
+	makeRoute(GET, "/taxa/{taxon-id}", X, neidb)                                         // new
+	makeRoute(GET, "/taxa/{taxon-id}/ancestors", X, neidb)                               // new - calls ants program
+	makeRoute(GET, "/taxa/{taxon-id}/children", taxaChildren, neidb)                     // formerly just children
+	makeRoute(GET, "/taxa/{taxon-id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
+	makeRoute(GET, "/taxa/{taxon-id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
+	makeRoute(GET, "/taxa/{taxon-id}/parent", taxaParent, neidb)                         // formerly known as parent
+	makeRoute(POST, "/taxa/{taxon-id}/ranks", X, neidb)                                  // new - calls ranks program
+	makeRoute(GET, "/taxa/{taxon-id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
+	makeRoute(GET, "/taxonomy", X, neidb)                                                // new
+	makeRoute(GET, "/taxonomy/path", taxaPath, neidb)                                    // formerly just path
+	makeRoute(GET, "/taxonomy/neighbors", X, neidb)                                      // new - calls neighbors program
+	makeRoute(GET, "/taxonomy/mrca", taxaMRCA, neidb)                                    // formerly just mrca
 #+end_src
 
+#+begin_export latex
+  We begin implementing the function for the first 
+  endpoint, which is the root document \ty{/}. It just provides links
+  to all the endpoints provided by this api.
+  This is \ty{/}'s io:
+  Params:
+    Query:
+  Writes:
+    ResponseBody[nil]
+#+end_export
 
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[object]
+    //<<Write rootDocuments links, Pa. \ref{pa:api}>>
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
 
 #+begin_export latex
-  We begin implementing the function for the first endpoint, which is \ty{accessions}.
-  This endpoint used to be called levels.
+  We write down each of the services like we did above.
+  As most of them are almost identical in terms of their HTTP 
+  method and Headers, we use a function to reduce code duplication.
+#+end_export
+
+#+begin_src go <<Write rootDocuments links, Pa. \ref{pa:api}>>=
+  out.links = []Link{
+    getLink("accessions", prefix+"/accessions")
+  }
+#+end_src
+
+#+begin_export latex
+  \ty{getLink} takes a relation and a reference to a GET
+  endpoint and creates a Link object.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func getLink(relation string, refernce string) Link {
+    return Link{
+      Rel: relation,
+      Href: reference,
+      Actions: "GET",
+      Types: []string{"application/json"},
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  This code block is going to be used for writing the output
+  of all of our services. Before printing the output we need
+  to prettify it, meaning convert it into pretty printed json.
+  This is pretty much just about setting the correct indentations.
+  Then before writing the response we should also specify
+  that we are writing in json format. We do this by setting
+  the \ty{Content-type} field of the response header. The 
+  \ty{net/http} package writes the \ty{Content-Length} field
+  on its own, so we don't need to do that.
+#+end_export
+
+#+begin_src go <<Write output, Pa. \ref{pa:api}>>=
+  b, err := json.MarshalIndent(out, "", "  ")
+  util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+  fmt.Fprintf(w, "%s\n", string(b))
+#+end_src
+
+#+begin_export latex
+  This endpoint \ty{accessions} used to be called levels.
   The following sections will closely resemble neverV1
   In our implementation of \ty{accessions} we extract the accessions, get
   their levels, and write the output.
@@ -349,25 +427,6 @@ type TaxonName struct {
   "fmt"
   "github.com/evolbioinf/never/util"
 #+end_src
-
-#+begin_export latex
-  This code block is going to be used for writing the output
-  of all of our services. Before printing the output we need
-  to prettify it, meaning convert it into pretty printed json.
-  This is pretty much just about setting the correct indentations.
-  Then before writing the response we should also specify
-  that we are writing in json format. We do this by setting
-  the \ty{Content-type} field of the response header.
-#+end_export
-
-#+begin_src go <<Write output, Pa. \ref{pa:api}>>=
-  b, err := json.MarshalIndent(out, "", "  ")
-  util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-  fmt.Fprintf(w, "%s\n", string(b))
-#+end_src
-
-
 
 #+begin_export latex
   \ty{assemblyLevels} gets every possible level from the db
@@ -851,8 +910,6 @@ adding their levels before storing them.
   out = append(out, o)
 #+end_src
 
-
-
 #+begin_export latex
   The service \ty{taxa-names} takes a as argument a list of taxon IDs and
   returns their scientific and common names. We store its output in the struct
@@ -878,7 +935,7 @@ adding their levels before storing them.
 
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Extract taxa, Pa. \ref{pa:api}>>
-
+    fmt.Println(str)
     if size == -1 {
       size = len(taxIds)
     }

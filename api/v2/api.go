@@ -15,6 +15,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/evolbioinf/never/util"
 )
 
@@ -73,30 +74,33 @@ type TaxonName struct {
 	CommonName string `json:"common_name"`
 }
 
+var LinkMap map[string]Link
+
 func RegisterRoutes(prefix, dbPath string) {
 	var neidb *tdb.TaxonomyDB
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("apiV2: db does not exist")
 	} else {
 		neidb = tdb.OpenTaxonomyDB(dbPath)
+		tdb.OpenTaxonomyDBcheck(dbPath)
 	}
-
-	makeRoute(prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
-	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)                            // new
-	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)                            // formerly known as accessions
-	makeRoute(prefix+"/ranks", ranks, neidb)                                               // same as before
-	makeRoute(prefix+"/taxa", taxa, neidb)                                                 // formerly known as taxi
-	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                                      // new
-	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                                        // same as before
-	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                                      // formerly known as names
-	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb)                    // formerly just path
-	makeRoute(prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)                     // formerly just children
-	makeRoute(prefix+"/taxa/{taxon_id}/images", taxaImages, neidb)                         // new
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
-	makeRoute(prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
-	makeRoute(prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
-	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", taxaMRCA, neidb)                            // formerly just mrca
+	makeRoute("GET "+prefix, accessions, neidb)                                                   // formerly known as levels
+	makeRoute("GET "+prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
+	makeRoute("GET "+prefix+"/assembly-levels", assemblyLevels, neidb)                            // new
+	makeRoute("GET "+prefix+"/taxa-accessions", taxaAccessions, neidb)                            // formerly known as accessions
+	makeRoute("GET "+prefix+"/ranks", ranks, neidb)                                               // same as before
+	makeRoute("GET "+prefix+"/taxa", taxa, neidb)                                                 // formerly known as taxi
+	makeRoute("GET "+prefix+"/taxa-count", taxaCount, neidb)                                      // new
+	makeRoute("GET "+prefix+"/taxa-info", taxaInfo, neidb)                                        // same as before
+	makeRoute("GET "+prefix+"/taxa-names", taxaNames, neidb)                                      // formerly known as names
+	makeRoute("GET "+prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb)                    // formerly just path
+	makeRoute("GET "+prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)                     // formerly just children
+	makeRoute("GET "+prefix+"/taxa/{taxon_id}/images", taxaImages, neidb)                         // new
+	makeRoute("GET "+prefix+"/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
+	makeRoute("GET "+prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
+	makeRoute("GET "+prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
+	makeRoute("GET "+prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
+	makeRoute("GET "+prefix+"/taxa/{taxon_ids}/mrca", taxaMRCA, neidb)                            // formerly just mrca
 
 }
 
@@ -484,6 +488,7 @@ func taxaNames(w http.ResponseWriter, r *http.Request, args ...any) {
 		}
 	}
 
+	fmt.Println(str)
 	if size == -1 {
 		size = len(taxIds)
 	}

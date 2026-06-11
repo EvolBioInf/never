@@ -69,6 +69,15 @@
           sequences with Neighbors and related software, please read
           our 
           <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+
+          On API versioning: 
+          Never follows a major/minor release schema. Major releases might change up anything of an endpoint, including 
+	  it's removal. All major releases stay online, with their assigned prefix, in order to stay compatible. 
+          This means you can reach all major api versions with this prefix: "/api/v[MAJOR_RELEASE]". Each API prefix 
+	  i.e.:"/api/v1", "/api/v2" provides access to the latest minor release within that major.
+          Minor releases follow an add only strategy, which means endpoints, schemas and parameters may be added,
+          but all previous URIs and schemas will be left unchanged. Although minor releases
+          might introduce greater changes if security demands it.
       </p>
     </section>
     <div class="sever-info">
