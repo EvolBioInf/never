@@ -3,8 +3,9 @@ package apiv2
 import (
 	"net/http"
 
-	"github.com/evolbioinf/neighbors/tdb"
 	"log"
+
+	"github.com/evolbioinf/neighbors/tdb"
 
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/evolbioinf/never/util"
 
 	"slices"

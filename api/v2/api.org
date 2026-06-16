@@ -4,7 +4,17 @@
   It implements all the endpoints defined in the
   openApi document. The underlying logic will closely
   resemble neverv1, as the backends don't differ too much.
+  \section{api}
+  \ty{api} is the backend application for neverV2.
+  It implements all the endpoints defined in the
+  openApi document. The underlying logic will closely
+  resemble neverv1, as the backends don't differ too much.
 
+  \subsection*{Implementation}
+  The api backend provides the global RegisterRoutes function just
+  like every standalone package used within neverV2. It takes as arguments
+  a prefix for the routes and the filepath of the db file.
+  \bpr{api}{pr:api}
   \subsection*{Implementation}
   The api backend provides the global RegisterRoutes function just
   like every standalone package used within neverV2. It takes as arguments
@@ -46,10 +56,16 @@ type GenomeCount struct {
 type TaxId struct {
   TaxId int    `json:"tax_id"`
   Links []Link `json:"links,omitempty"`
+  Links []Link `json:"links,omitempty"`
+}
+type TaxId struct {
+  TaxId int    `json:"tax_id"`
+  Links []Link `json:"links,omitempty"`
 }
 type Rank struct {
   TaxId int    `json:"tax_id"`
   Rank  string `json:"rank"`
+  Links []Link `json:"links,omitempty"`
   Links []Link `json:"links,omitempty"`
 }
 type TaxonAccessions struct {
@@ -168,6 +184,7 @@ type Node struct {
   needs to take a node, the one to register, as well as a function \ty{fn}
   that is executed when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
   However it needs to accept at least the http writer and request. The function may accept more
+  However it needs to accept at least the http writer and request. The function may accept more
   arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
   to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
 #+end_export
@@ -182,9 +199,11 @@ type Node struct {
 
 #+begin_export latex
   We import the \ty{net/http} package.
+  We import the \ty{net/http} package.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "net/http"
   "net/http"
 #+end_src
 
@@ -194,6 +213,7 @@ type Node struct {
   the database using neighbors' tdb program. We will pass the connection to
   all functions that need it.
 #+end_export
+
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
   var neidb *tdb.TaxonomyDB
@@ -696,8 +716,6 @@ type Node struct {
 	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
   root = rootDocL
 #+end_src
-
-
 
 #+begin_export latex
   Having delcared all the endpoints we need to begin implementing them.
