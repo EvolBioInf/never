@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b
-	github.com/evolbioinf/neighbors v0.0.0-20260508100631-677369428da4
+	github.com/evolbioinf/neighbors v0.0.0-20260610135727-7e4d3739858a
 	github.com/pb33f/libopenapi v0.36.3
 	golang.org/x/time v0.15.0
 )

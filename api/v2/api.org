@@ -1,69 +1,80 @@
 #+begin_export latex
-      \section{api}
-      \ty{api} is the backend application for neverV2.
-      It implements all the endpoints defined in the
-      openApi document. The underlying logic will closely
-      resemble neverv1, as the backends don't differ too much.
+  \section{api}
+  \ty{api} is the backend application for neverV2.
+  It implements all the endpoints defined in the
+  openApi document. The underlying logic will closely
+  resemble neverv1, as the backends don't differ too much.
 
-      \subsection*{Implementation}
-      The api backend provides the global RegisterRoutes function just
-      like every standalone package used within neverV2. It takes as arguments
-      a prefix for the routes and the filepath of the db file.
-      \bpr{api}{pr:api}
+  \subsection*{Implementation}
+  The api backend provides the global RegisterRoutes function just
+  like every standalone package used within neverV2. It takes as arguments
+  a prefix for the routes and the filepath of the db file.
+  \bpr{api}{pr:api}
 #+end_export
 
 #+begin_src go <<api.go>>=
   package apiv2
-
   import (
     //<<Imports, Pa. \ref{pa:api}>>
   )
-
   //<<Types, Pa. \ref{pa:api}>>
-
-  func RegisterRoutes(prefix, dbPath string) {
+  //<<Variables, Pa. \ref{pa:api}>>
+  func RegisterRoutes(pref, dbPath string) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
-
   //<<Functions, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
 First off we declare the types. This is an easy task as they are already
-defined within the openApi document.
+defined within the openApi document. Every type needs a \ty{Links} attribute
+which is going to be explained later on.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Accession struct {
   Accession string `json:"accession"`
   Level     string `json:"level"`
+  Links     []Link `json:"links,omitempty"`
 }
-
 type GenomeCount struct {
   Level string `json:"level"`
   Count int    `json:"count"`
+  Links []Link `json:"links,omitempty"`
 }
-
-type Image struct {
-  Id          int    `json:"id"`
-  Url         string `json:"url"`
-  Attribution string `json:"attribution"`
+type TaxId struct {
+  TaxId int    `json:"tax_id"`
+  Links []Link `json:"links,omitempty"`
 }
-
 type Rank struct {
   TaxId int    `json:"tax_id"`
   Rank  string `json:"rank"`
+  Links []Link `json:"links,omitempty"`
 }
-
 type TaxonAccessions struct {
   TaxId      int         `json:"tax_id"`
   Accessions []Accession `json:"accessions"`
+  Links      []Link      `json:"links,omitempty"`
 }
-
-type TaxId struct {
-  TaxId int `json:"tax_id"`
+type TaxonMid struct {
+  TaxId      int    `json:"tax_id"`
+  Name       string `json:"name"`
+  CommonName string `json:"common_name"`
+  Parent     int    `json:"parent"`
+  Links      []Link `json:"links,omitempty"`
 }
-
+type TaxonNT struct {
+  TaxId      int         `json:"tax_id"`
+  Type       string      `json:"type"`
+  Name       string      `json:"name"`
+  Accessions []Accession `json:"parent"`
+  Links      []Link      `json:"links,omitempty"`
+}
+type Image struct {
+	Id          int    `json:"id"`
+	Url         string `json:"url"`
+	Attribution string `json:"attribution"`
+}
 type TaxonInfo struct {
   TaxId          int           `json:"tax_id"`
   Parent         int           `json:"parent"`
@@ -74,115 +85,286 @@ type TaxonInfo struct {
   RawGenomeCount []GenomeCount `json:"raw_genome_counts"`
   RecGenomeCount []GenomeCount `json:"rec_genome_counts"`
   Images         []Image       `json:"images"`
-}
-
-type Taxon struct {
-  TaxId      int    `json:"tax_id"`
-  Name       string `json:"name"`
-  CommonName string `json:"common_name"`
-  Parent     int    `json:"parent"`
-}
-
-type TaxonName struct {
-  TaxId      int    `json:"tax_id"`
-  Name       string `json:"name"`
-  CommonName string `json:"common_name"`
+  Links          []Link        `json:"links,omitempty"`
 }
 #+end_src
 
 #+begin_export latex
-  With the types declared we may begin defining the route registration.
-  The first step and main task of the route registration function is to define
-  neverV2's endpoints. Luckily they are declared within the openApi document
-  as well. But before pasting them into the RegisterRoutes function we need to think
+  These are the types we could infer from the api specification. All of them have some semantical
+  meaning in regards of the resources we provide via the api. To really make this API a REST API it
+  needs to be hypermedia driven. Therefore each type representing a resource needs to get a \ty{Links}
+  attribute. This allows entities to offer further queries against themselves. The top level response
+  needs to offer links as well. For this reason we wrap the response into a type with a \ty{Data} field and
+  a \ty{Links} field. The \ty{Link} itself is made of four properties: a relation, a hyper reference, which
+  is essentially the actual link, an action, otherwise called http method and the content types provided
+  by the link. This schema for links is part of Microsofts REST API guidelines.
+#+end_export
+
+#+begin_src go <<Types, Pa. \ref{pa:api}>>=
+type ResponseBody[T any] struct {
+  Data  T    `json:"data,omitempty"`
+  Links []Link `json:"links,omitempty"`
+}
+type Link struct {
+  Rel            string   `json:"rel"`
+  Href           string   `json:"href"`
+  Action         string   `json:"action"`
+  Types          []string `json:"types"`
+}
+#+end_src
+
+#+begin_export latex
+  Handling all of these links is a tedious task. So creating a data structure for working
+  with them seems necessary. I thought of a link graph as a well suited structure.
+  This link graph is composed of nodes, like any other graph. Each node represents a
+  callable endpoint with a template URI. These nodes again contain information about
+  the http method and content types. The \ty{Links} attribute is what allows these
+  nodes to turn into a graph. This attribute is a map mapping strings to a list of nodes.
+  The string is used to model the relation for a set of nodes. We need a set or list of nodes
+  for each relation, as some might use the same name, think of the root document for instance.
+  Its whole purpose is to provide the links to all services. The relation to each of them is the
+  same: "service".
+#+end_export
+
+#+begin_src go <<Types, Pa. \ref{pa:api}>>=
+type Node struct {
+	Links    map[string][]Node
+	BasePath string
+	// PathParams  []string
+	// QueryParams []string
+	Action string
+	Types  []string
+}
+#+end_src
+
+#+begin_export latex
+  We also need some way of entering he graph. The root document is a perfect
+  fit for this.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  var root Node
+#+end_src
+
+#+begin_export latex
+  Let's also declare a global variable for the route prefix.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  var prefix string
+#+end_src
+
+#+begin_export latex
+  With the types declared we may begin implementing the \ty{RouteRegistration} function.
+  In this we define the Linkgraph and use it's nodes to register the endpoints.
+  Luckily the endpoints are already declared within the openApi document
+  But before pasting everything into \ty{RegisterRoutes}, we need to think
   about how registration should work. It is reasonable to create a function that handles
   route registration, making things easier for us in the long run. Say we want to
   add a parameter or some specific handling to all our endpoints, we can just add
   it to the registration helper. We call this function \ty{makeRoute}. The function
-  needs to take a path, the one to register, as well as a function \ty{fn}
+  needs to take a node, the one to register, as well as a function \ty{fn}
   that is executed when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
-  However it needs to accept at least the http writer and request. It may accept more
+  However it needs to accept at least the http writer and request. The function may accept more
   arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
   to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
-  In \ty{makeRoute}'s body we simply register the path and function at the global http
-  object for now.
 #+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "net/http"
-#+end_src
-
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func makeRoute(path string, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
-	  http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+  func makeRoute(node Node, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
+    http.HandleFunc(node.Action + " " + prefix + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
 	  		fn(w, r, args...)
 	  })
   }
 #+end_src
 
 #+begin_export latex
-  Pretty much all of the endpoints need access to the database, which is the whole
-  point of this api. So before registering the endpoints we open a connection to
+  We import the \ty{net/http} package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "net/http"
+#+end_src
+
+#+begin_export latex
+  All of the endpoints need to access the database.
+  So before registering the endpoints we open a connection to
   the database using neighbors' tdb program. We will pass the connection to
   all functions that need it.
 #+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "github.com/evolbioinf/neighbors/tdb"
-#+end_src
-
-#+begin_export latex
-  Before opening the database we need to check whether it exists.
-  If not we print an Error and return instantly.
-#+end_export
-
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
   var neidb *tdb.TaxonomyDB
-  if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
-    log.Fatal("apiV2: db does not exist")
-  } else {
-    neidb = tdb.OpenTaxonomyDB(dbPath)
+  neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
+  if err != nil {
+    log.Fatal("apiV2: " + err.Error())
   }
 #+end_src
 
 #+begin_export latex
-  We also need to import the \ty{errors}, \ty{log} and \ty{os} to do this check.
+  We need to import the \ty{tdb} and \ty{log} packages.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "errors"
+  "github.com/evolbioinf/neighbors/tdb"
   "log"
-  "os"
 #+end_src
 
 #+begin_export latex
-  Having a connection to the database we may now register all the endpoints.
+  This is a good time to write the prefix to our global function.
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-	makeRoute(prefix+"/accessions", accessions, neidb)                                     // formerly known as levels
-	makeRoute(prefix+"/assembly-levels", assemblyLevels, neidb)                            // new
-	makeRoute(prefix+"/taxa-accessions", taxaAccessions, neidb)                            // formerly known as accessions
-	makeRoute(prefix+"/ranks", ranks, neidb)                                               // same as before
-	makeRoute(prefix+"/taxa", taxa, neidb)                                                 // formerly known as taxi
-	makeRoute(prefix+"/taxa-count", taxaCount, neidb)                                      // new
-	makeRoute(prefix+"/taxa-info", taxaInfo, neidb)                                        // same as before
-	makeRoute(prefix+"/taxa-names", taxaNames, neidb)                                      // formerly known as names
-	makeRoute(prefix+"/taxa/{start_id}/path/{end_id}", taxaPath, neidb)                    // formerly just path
-	makeRoute(prefix+"/taxa/{taxon_id}/children", taxaChildren, neidb)                     // formerly just children
-	makeRoute(prefix+"/taxa/{taxon_id}/images", taxaImages, neidb)                         // new
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count", taxaGenomeCount, neidb)              // formerly known as num_genomes
-	makeRoute(prefix+"/taxa/{taxon_id}/genome-count-recursive", taxaGenomeCountRec, neidb) // formerly known as num_genomes_rec
-	makeRoute(prefix+"/taxa/{taxon_id}/parent", taxaParent, neidb)                         // formerly known as parent
-	makeRoute(prefix+"/taxa/{taxon_id}/subtree", taxaSubtree, neidb)                       // formerly just subtree
-	makeRoute(prefix+"/taxa/{taxon_ids}/mrca", taxaMRCA, neidb)                            // formerly just mrca
+  prefix = pref
+#+end_src
+
+#+begin_export latex
+  This leaves us with the writing the link graph and the actual registration of the
+  endpoints.
+#+end_export
+
+#+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
+  //<<Initialize nodes and make routes, Pa. \ref{pa:api}>>
+  //<<Link nodes, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  We know all the endpoints as they are defined in the openApi document.
+#+end_export
+
+#+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
+  //<<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{accessions}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{accession}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{fintac}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxa}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxon}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{ancestors}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{children}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{genomeCount}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{genomeCountRec}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{parent}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{ranks}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{path}, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  The initialization is going to follow a very similar scheme for each of the endpoints.
+  First we define its node with an empty map of links. We write down the endpoints path and
+  http attributes, then we call \ty{makeRoute} using the node we just wrote. \ty{makeRoute}
+  takes a function as a second argument, which handles the endpoint. These functions are yet
+  to be implemented. For now we just write down some well fitting names and implement them later.
+  There are a few common http attributes, that we are going to be using for a lot of the nodes.
+  We should write them into variables, which makes house keeping easier in the long run.
+#+end_export
+
+#+begin_src go <<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>=
+	jsonT := "application/json"
+	plainT := "plain/text"
+	get := "GET"
+	post := "POST"
+
+	rootDocL := Node{
+		Links:    make(map[string][]Node),
+		BasePath: prefix,
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(rootDocL, rootDocument, neidb) // new
+#+end_src
+
+#+begin_export latex
+  Let's register \ty{accessions}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>=
+	accessionsL := Node{
+		Links:    make(map[string][]Node),
+		BasePath: prefix + "/accessions",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(accessionsL, accessions, neidb) // previously known as levels
 #+end_src
 
 
 
 #+begin_export latex
-  We begin implementing the function for the first endpoint, which is \ty{accessions}.
-  This endpoint used to be called levels.
+  We begin implementing the function for the first
+  endpoint, which is the root document \ty{/}. It just provides links
+  to all the endpoints provided by this api.
+  This is \ty{/}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      none
+  Writes:
+    \ty{ResponseBody[nil]}
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[*any]{}
+    //<<Write rootDocument's links, Pa. \ref{pa:api}>>
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  This is a perfect application for the LinkMap we just created. We iterate over it and
+  write down the relation \ty{service} for all of them.
+#+end_export
+
+#+begin_src go <<Write rootDocument's links, Pa. \ref{pa:api}>>=
+  for k := range LinkMap {
+    curr := LinkMap[k]
+    curr.Rel = "service"
+		out.Links = append(out.Links, curr)
+  }
+
+  slices.SortFunc(out.Links, func(a, b Link) int {
+    return cmp.Compare(a.Href, b.Href)
+  })
+
+  out.Links[0].Rel = "self"
+#+end_src
+
+#+begin_export latex
+  We need to add the \ty{slices} and \ty{cmp} packages.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "slices"
+  "cmp"
+#+end_src
+
+#+begin_export latex
+  This code block is going to be used for writing the output
+  of all of our services. Before printing the output we need
+  to prettify it, meaning convert it into pretty printed json.
+  This is pretty much just about setting the correct indentations.
+  Then before writing the response we should also specify
+  that we are writing in json format. We do this by setting
+  the \ty{Content-type} field of the response header. The
+  \ty{net/http} package writes the \ty{Content-Length} field
+  on its own, so we don't need to do that.
+#+end_export
+
+#+begin_src go <<Write output, Pa. \ref{pa:api}>>=
+  b, err := json.MarshalIndent(out, "", "  ")
+  util.Check(err)
+	w.Header().Set("Content-Type", "application/json")
+  fmt.Fprintf(w, "%s\n", string(b))
+#+end_src
+
+
+
+#+begin_export latex
+  The endpoint \ty{accessions} used to be called levels.
   The following sections will closely resemble neverV1
   In our implementation of \ty{accessions} we extract the accessions, get
   their levels, and write the output.
@@ -192,17 +374,20 @@ type TaxonName struct {
       accession_ids []string
       page []int
       page_size []int
+      plain_data bool
   Writes:
-    []Accession
+    \ty{ResponseBody[ []Accession ]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Check Parameters, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Extract accessions, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Look up levels, Pa. \ref{pa:api}>>
+    //<<Add Links \ty{accessions}, Pa. \ref{pa:api}>>
     //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -224,6 +409,7 @@ type TaxonName struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
     for _, arg := range args {
+
     p := r.URL.Query().Get(arg)
       if p == "" {
         w.WriteHeader(http.StatusBadRequest)
@@ -241,14 +427,26 @@ type TaxonName struct {
   so in order to use the parameters passed to them in an orderly fashion
   we need to assign them and do a type assertion. In this block
   assign the db.
+#+end_export
 
 #+begin_src go <<Get db from args, Pa. \ref{pa:api}>>=
   neidb := args[0].(*tdb.TaxonomyDB)
 #+end_src
 
+#+begin_export latex
+  If the query parameter \ty{plain_data} is passed, we need to change the response structure.
+#+end_export
+
+#+begin_src go <<Get plain param, Pa. \ref{pa:api}>>=
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+#+end_src
 
 #+begin_export latex
-  Accessions are passed as a comma-delimited string keyed by \ty{a}.
+  Accessions are passed as a comma-delimited string.
 #+end_export
 
 #+begin_src go <<Extract accessions, Pa. \ref{pa:api}>>=
@@ -324,7 +522,7 @@ type TaxonName struct {
 #+end_export
 
 #+begin_src go <<Look up levels, Pa. \ref{pa:api}>>=
-  out := []Accession{}
+  var data = []Accession{}
 
   if size == -1 {
     size = len(accessions)
@@ -334,7 +532,12 @@ type TaxonName struct {
     accession := accessions[i]
     level, err := neidb.Level(accession)
     if err == nil {
-      out = append(out, Accession{Accession: accession, Level: level})
+      acc := Accession{Accession: accession, Level: level}
+      if !plain {
+        //<<Add link to accession object, Pa. \ref{pa:api}>>
+      }
+
+      data = append(data, )
     }
   }
 #+end_src
@@ -351,214 +554,99 @@ type TaxonName struct {
 #+end_src
 
 #+begin_export latex
-  This code block is going to be used for writing the output
-  of all of our services. Before printing the output we need
-  to prettify it, meaning convert it into pretty printed json.
-  This is pretty much just about setting the correct indentations.
-  Then before writing the response we should also specify
-  that we are writing in json format. We do this by setting
-  the \ty{Content-type} field of the response header.
+  Each entity of a collcetion should hold two links. The first link references itself.
+  This may be used for ruther queries against the resource.
+  The second link references the entity's collection.
 #+end_export
 
-#+begin_src go <<Write output, Pa. \ref{pa:api}>>=
-  b, err := json.MarshalIndent(out, "", "  ")
-  util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-  fmt.Fprintf(w, "%s\n", string(b))
+#+begin_src go <<Add link to accession object, Pa. \ref{pa:api}>>=
+  self := LinkMap["base-accession"]
+  self.Rel = "self"
+  self.Href = r.URL.String()
+
+  partOf := LinkMap["base-accessions"]
+  self.Rel = "partOf"
+
+  acc.Links = []Link{self, partOf}
 #+end_src
 
-
-
 #+begin_export latex
-  \ty{assemblyLevels} gets every possible level from the db
-  and writes it to the response.
-
-  This is \ty{assemblyLevels}' io:
-  Params:
-    None
-  Writes:
-    []string
+  A collection provides multiple links. It shows every of its registered endpoints, as well as
+  a prev and next relations, when using pagination. Lastly a self reference is also part of the
+  links.
 #+end_export
 
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func assemblyLevels(w http.ResponseWriter, r *http.Request, args ...any) {
-    out := tdb.AssemblyLevels()
-    //<<Write output, Pa. \ref{pa:api}>>
+#+begin_src go <<Add Links accessions, Pa. \ref{pa:api}>>=
+  var out any
+  if plain {
+    out = data
+  } else {
+    out = ResponseBody[[]Accession]{Data: data}
+    self := LinkMap["base-accession"]
+    self.Rel = "self"
+    self.Href = r.URL.String()
+
+    links := []Link{
+
+    }
   }
 #+end_src
 
 
 
 #+begin_export latex
-  The function \ty{ranks} takes as argument a list of taxon IDs and
-  returns their ranks. We get the taxa through a call to \ty{getTaxa}, which
-  we still need to implement. We store the output in a slice with elements of
-  type \ty{Rank}.
-
-  This is \ty{ranks}' io:
+  The endpoint \ty{accession} is used to retrieve single
+  resources of the accessions collection.
+  This is \ty{accession}' io:
   Params:
+    Path:
+      none
     Query:
-      taxon_ids []int
-      page []int
-      page_size []int
-  Writes:
-    []Rank
+      plain_data bool
+    Writes:
+     \ty{ResponseBody[Accession]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func ranks(w http.ResponseWriter, r *http.Request, args ...any) {
-    valid := checkParams(w, r, "taxon_ids")
-    if !valid {
-      return
-    }
+  func accession(w http.ResponseWriter, r *http.Request, args ...any) {
     //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Extract taxa, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Filter with getTaxa, Pa. \ref{pa:api}>>
-
-    out := []Rank{}
-    for i, taxon := range taxa {
-      rank, err := neidb.Rank(taxon)
-      util.Check(err)
-      o := Rank{TaxId: taxa[i], Rank: rank}
-
-      out = append(out, o)
-    }
-
+    //<<Look up level, Pa. \ref{pa:api}>>
     //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
 #+begin_export latex
-  The function \ty{getTaxa} takes as input a HTTP request, stores the
-  taxa passed, and returns them. The taxa arrive as the value of key \ty{t}.
+  Looking up the level is the same as for an array, so we already know how to
+  do that.
 #+end_export
 
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func getTaxa(taxonIds []int, neidb *tdb.TaxonomyDB) []int {
-    taxa := []int{}
-    //<<Store taxa, Pa. \ref{pa:api}>>
-    return taxa
+#+begin_src go <<Look up level, Pa. \ref{pa:api}>>=
+  out := ResponseBody[Accession]{}
+  accession := r.PathValue("accession_id")
+  level, err := neidb.Level(accession)
+  if err == nil {
+		out.Data = Accession{Accession: accession, Level: level}
   }
 #+end_src
 
 
 
 #+begin_export latex
-  Inside of \ty{taxaAccessions}, we get the taxa through a call to \ty{getTaxa}.
-  Then we get the corresponding accessions, before we write the output.
-  This endpoint used to be called accessions.
-
-  This is \ty{taxaAccessions}' io:
+  The endpoint \ty{fintac} TODO
+  This is \ty{accession}' io:
   Params:
+    Path:
+      none
     Query:
-      taxon_ids []int
-      page []int
-      page_size []int
-  Writes:
-    []TaxonAccessions
+      none
+    Writes:
+     \ty{ResponseBody[string]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaAccessions(w http.ResponseWriter, r *http.Request, args ...any) {
-    valid := checkParams(w, r, "taxon_ids")
-    if !valid {
-      return
-    }
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Extract taxa, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Filter with getTaxa, Pa. \ref{pa:api}>>
-    //<<Get accessions, Pa. \ref{pa:api}>>
+  func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
     //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  We call getTaxa with the limited and offset taxIds.
-#+end_export
-
-#+begin_src go <<Filter with getTaxa, Pa. \ref{pa:api}>>=
-  if size == -1 {
-    size = len(taxIds)
-  }
-
-  taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
-#+end_src
-
-#+begin_src go <<Extract taxa, Pa. \ref{pa:api}>>=
-  str := r.URL.Query().Get("taxon_ids")
-  strTaxa := strings.Split(str, ",")
-  var taxIds []int
-  for _, strT := range strTaxa {
-    t, err := strconv.Atoi(strT)
-    if err == nil {
-      taxIds = append(taxIds, t)
-    }
-  }
-#+end_src
-
-#+begin_export latex
-  If the taxon has no name, it doesn't exist and we also skip the rest
-  of the loop.
-#+end_export
-
-#+begin_src go <<Store taxa, Pa. \ref{pa:api}>>=
-  for _, taxon := range taxonIds {
-    _, err := neidb.Name(taxon)
-    if err == nil {
-      taxa = append(taxa, taxon)
-    }
-  }
-#+end_src
-
-#+begin_export latex
-  We declare a slice of accessions for storing them. Then we iterate for
-  as long as our slice of taxa isn't empty. Inside the loop we remove
-  the first taxon from the slice and look up its accessions. If we get
-  at least one, we store it. Then we get the taxon's children.
-#+end_export
-
-#+begin_src go <<Get accessions, Pa. \ref{pa:api}>>=
-  out := []TaxonAccessions{}
-  for len(taxa) > 0 {
-    taxId := taxa[0]
-    taxa = taxa[1:]
-    accs, err := neidb.Accessions(taxId)
-    util.Check(err)
-    if len(accs) > 0 {
-      //<<Store accessions, Pa. \ref{pa:api}>>
-    }
-    //<<Get children, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-We make a variable of type \ty{TaxonAccessions} based on the taxId and
-store it in our output slice. Then we complete the taxon's accessions by
-adding their levels before storing them.
-#+end_export
-#+begin_src go <<Store accessions, Pa. \ref{pa:api}>>=
-  o := TaxonAccessions{TaxId: taxId}
-  for _, acc := range accs {
-    level, err := neidb.Level(acc)
-    util.Check(err)
-    accession := Accession{Accession: acc, Level: level}
-    o.Accessions = append(o.Accessions, accession)
-  }
-
-  out = append(out, o)
-#+end_src
-
-#+begin_export latex
-  We retrieve the children of the current taxon and store them in our
-  slice of taxa, ready for the next iteration.
-#+end_export
-
-#+begin_src go <<Get children, Pa. \ref{pa:api}>>=
-  children, err := neidb.Children(taxId)
-  for _, child := range children {
-    taxa = append(taxa, child)
   }
 #+end_src
 
@@ -566,9 +654,10 @@ adding their levels before storing them.
 
 #+begin_export latex
   The enpoint \ty{taxa} takes as input the name of a taxon, whether to use
-  the scientific name only, a matching mode, a page number
-  and a page size. It writes as response for each matching taxon the taxon ID,
-  its parent's taxon ID, its scientific name and or its common name.
+  the scientific name only, a matching mode, a page number, a page size
+  and an identifier for the kind of fields that should be returned. It
+  writes as response for each matching taxon the taxon ID, its parent's
+  taxon ID, its scientific name and or its common name.
 
   This is \ty{taxa}'s io:
   Params:
@@ -578,6 +667,8 @@ adding their levels before storing them.
       exact bool
       page []int
       page_size []int
+      field_composites string
+      plain_data bool
   Writes:
     []TaxonAccessions
 #+end_export
@@ -637,7 +728,7 @@ adding their levels before storing them.
   }
 
   util.Check(err)
-  out := []Taxon{}
+  out := []TaxonMid{}
   for _, id := range ids {
     //<<Construct taxon output, Pa. \ref{pa:api}>>
     //<<Store taxon output, Pa. \ref{pa:api}>>
@@ -654,10 +745,10 @@ adding their levels before storing them.
   util.Check(err)
   comName, err := neidb.CommonName(id)
   util.Check(err)
-  tout := Taxon{}
+  tout := TaxonMid{}
   parent, err := neidb.Parent(id)
   if err == nil {
-    tout = Taxon{TaxId: id, Parent: parent,
+    tout = TaxonMid{TaxId: id, Parent: parent,
       Name: sciName, CommonName: comName}
   }
 #+end_src
@@ -672,805 +763,3 @@ adding their levels before storing them.
     out = append(out, tout)
   }
 #+end_src
-
-
-
-#+begin_export latex
-  The enpoint \ty{taxa-count} writes the the amount
-  of taxa in the database.
-
-  This is \ty{taxa}'s io:
-  Params:
-    Query:
-      None
-  Writes:
-    {num_taxa: int}
-#+end_exports
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaCount(w http.ResponseWriter, r *http.Request, args ...any) {
-   //<<Get db from args, Pa. \ref{pa:api}>>
-    res, err:= neidb.NumTaxa()
-    out := struct {
-      NumTaxa int `json:"num_taxa"`
-    }{NumTaxa: res}
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa-info} takes as argument a string of
-  comma-delimited taxon IDs and returns the information available for
-  them. We get the taxon IDs and iterate over them to obtain and store
-  the corresponding information for each one. After the iteration we
-  print the output, which is stored as a slice of type \ty{TaxonInfo}.
-
-  This is \ty{taxa-info}'s io:
-  Params:
-    Query:
-      taxon_ids []int
-      page []int
-      page_size []int
-  Writes:
-    []TaxonInfo
-#+end_exports
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaInfo(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    valid := checkParams(w, r, "taxon_ids")
-    if !valid {
-      return
-    }
-
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Extract taxa, Pa. \ref{pa:api}>>
-
-    if size == -1 {
-      size = len(taxIds)
-    }
-
-    taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
-
-    out := []TaxonInfo{}
-    for _, taxon := range taxa {
-      //<<Get information, Pa. \ref{pa:api}>>
-      //<<Store information, Pa. \ref{pa:api}>>
-    }
-
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  We get the parent, determine whether the taxon is a leaf, its names,
-  rank, genome counts, and images.
-#+end_export
-
-#+begin_src go <<Get information, Pa. \ref{pa:api}>>=
-  //<<Get parent, Pa. \ref{pa:api}>>
-  //<<Is the taxon a leaf? Pa. \ref{pa:api}>>
-  //<<Get names, Pa. \ref{pa:api}>>
-  //<<Get taxon rank, Pa. \ref{pa:api}>>
-  //<<Get genome counts, Pa. \ref{pa:api}>>
-  //<<Get images, Pa. \ref{pa:api}>>
-#+end_src
-
-#+begin_export latex
-  We look up the parent taxon and check the error.
-#+end_export
-
-#+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
-  parent, err := neidb.Parent(taxon)
-  util.Check(err)
-#+end_src
-
-#+begin_export latex
-  We determine whether the taxon is a leaf.
-#+end_export
-
-#+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
-  isLeaf, err := neidb.IsLeaf(taxon)
-  util.Check(err)
-#+end_src
-
-#+begin_export latex
-  We get the rank of the taxon.
-#+end_export
-
-#+begin_src go <<Get taxon rank, Pa. \ref{pa:api}>>=
-  rank, err := neidb.Rank(taxon)
-  util.Check(err)
-#+end_src
-
-#+begin_export latex
-  We look up the taxon's scientific and common names with error
-  checking.
-#+end_export
-#+begin_src go <<Get names, Pa. \ref{pa:api}>>=
-  name, err := neidb.Name(taxon)
-  util.Check(err)
-  cname, err := neidb.CommonName(taxon)
-  util.Check(err)
-#+end_src
-#+begin_export latex
-  We look up the raw and recursive genome counts across the assembly
-  levels.
-#+end_export
-
-#+begin_src go <<Get genome counts, Pa. \ref{pa:api}>>=
-  var raw, rec []GenomeCount
-  for _, level := range tdb.AssemblyLevels() {
-    count, err := neidb.NumGenomes(taxon, level)
-    util.Check(err)
-    gc := GenomeCount{Count: count, Level: level}
-    raw = append(raw, gc)
-    count, err = neidb.NumGenomesRec(taxon, level)
-    util.Check(err)
-    gc = GenomeCount{Count: count, Level: level}
-    rec = append(rec, gc)
-  }
-#+end_src
-
-#+begin_export latex
-  We look up the images associated with the taxon.
-#+end_export
-
-#+begin_src go <<Get images, Pa. \ref{pa:api}>>=
-  var neiImages []Image
-  images, err := neidb.Images(taxon)
-  util.Check(err)
-
-  for _, image := range images {
-    i := Image{Id: image.Id,
-      Url: image.Url,
-      Attribution: image.Attribution}
-    neiImages = append(neiImages, i)
-  }
-#+end_src
-
-#+begin_export latex
-  We store the taxon ID and the information we just looked up for our
-  focal taxon.
-#+end_export
-#+begin_src go <<Store information, Pa. \ref{pa:api}>>=
-  o := TaxonInfo{
-    TaxId:          taxon,
-    Parent:         parent,
-    IsLeaf:         isLeaf,
-    Name:           name,
-    CommonName:     cname,
-    Rank:           rank,
-    RawGenomeCount: raw,
-    RecGenomeCount: rec,
-    Images:         neiImages,
-  }
-
-  out = append(out, o)
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa-names} takes a as argument a list of taxon IDs and
-  returns their scientific and common names. We store its output in the struct
-  \ty{TaxonName}.
-
-  This is \ty{taxa-names}'s io:
-  Params:
-    Query:
-      taxon_ids []int
-      page []int
-      page_size []int
-  Writes:
-    []TaxonName
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaNames(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    valid := checkParams(w, r, "taxon_ids")
-    if !valid {
-      return
-    }
-
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Extract taxa, Pa. \ref{pa:api}>>
-
-    if size == -1 {
-      size = len(taxIds)
-    }
-
-    taxa := getTaxa(taxIds[offset:min(offset + size, len(taxIds))], neidb)
-
-    out := []TaxonName{}
-    for _, taxon := range taxa {
-      //<<Find name, Pa. \ref{pa:api}>>
-    }
-
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  We look up the taxon's name and store it.
-#+end_export
-
-#+begin_src go <<Find name, Pa. \ref{pa:api}>>=
-  name, err := neidb.Name(taxon)
-  util.Check(err)
-  cname, err := neidb.CommonName(taxon)
-  util.Check(err)
-  o := TaxonName{TaxId: taxon, Name: name, CommonName: cname}
-  out = append(out, o)
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa/path} takes as input the taxon IDs of a start and an
-  end node in the taxonomy, where the end is closer to the root than the
-  start. It returns the array of taxon IDs that form the path from the
-  start to the end. If no such path exists, an empty array is returned.
-
-  This is \ty{taxa/path}'s io:
-  Params:
-    Path:
-      start_id int
-      end_id int
-    Query:
-      page int
-      page_size int
-  Writes:
-    []Taxon
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaPath(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Extract start and end taxa, Pa. \ref{pa:api}>>
-  	//<<Add start node, Pa. \ref{pa:api}>>
-  	//<<Climb path, Pa. \ref{pa:api}>>
-    //<<Slice output to size/offset, Pa. \ref{pa:api}>>
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  The start and end parameter are passed as path parameters.
-  We extract them via the \ty{PathValue} function. We still need
-  to convert them to integers.
-#+end_export
-
-#+begin_src go <<Extract start and end taxa, Pa. \ref{pa:api}>>=
-  strStartTaxon := r.PathValue("start_id")
-  start, err := strconv.Atoi(strStartTaxon)
-  if err != nil {
-    	w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Can't find parameter's taxa."))
-    return
-  }
-
-  strEndTaxon := r.PathValue("end_id")
-  end, err := strconv.Atoi(strEndTaxon)
-  if err != nil {
-    	w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Can't find parameter's taxa."))
-    return
-  }
-#+end_src
-
-#+begin_export latex
-  We get the parent and check whether the start node is root. If not, we
-  add the taxon.
-#+end_export
-
-#+begin_src go <<Add start node, Pa. \ref{pa:api}>>=
-  parent, err := neidb.Parent(start)
-  util.Check(err)
-  out := []Taxon{}
-
-  //<<Is start node root?, Pa. \ref{pa:api}>>
-  name, err := neidb.Name(start)
-  util.Check(err)
-  cn, err := neidb.CommonName(start)
-  util.Check(err)
-  o := Taxon{
-    TaxId: start,
-    Parent: parent,
-    Name: name,
-    CommonName: cn,
-  }
-
-  out = append(out, o)
-#+end_src
-
-#+begin_export latex
-  If the start node \emph{is} root, we only add it if it is identical to
-  the end node. Otherwise, we again print the empty output and return.
-#+end_export
-
-#+begin_src go <<Is start node root?, Pa. \ref{pa:api}>>=
-  if parent == start && start != end {
-	  //<<Write output, Pa. \ref{pa:api}>>
-	  return
-  }
-#+end_src
-
-#+begin_export latex
-  We climb the path until we reach its end or the root, whichever comes
-  first. As we accomodate paging with this endpoint, we also stop if
-  go past the last entry of the current page. We need to begin at the start
-  node either way, because we cant't index the path by our offset .
-#+end_export
-
-#+begin_src go <<Climb path, Pa. \ref{pa:api}>>=
-  for i := 0; (i < offset + size || size == -1) && start != end; i++ {
-	  parent, err := neidb.Parent(start)
-	  util.Check(err)
-	  //<<Has the path reached the root?, Pa. \ref{pa:api}>>
-	  start = parent
-	  //<<Store new node on path, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  If the path has reached the root, we empty the output slice and break
-  from climbing the tree.
-#+end_export
-
-#+begin_src go <<Has the path reached the root?, Pa. \ref{pa:api}>>=
-  if start == parent {
-	  out = out[:0]
-	  break
-  }
-#+end_src
-
-#+begin_export latex
-  We construct and store the new node on the path.
-#+end_export
-
-#+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
-  name, err := neidb.Name(start)
-  util.Check(err)
-  cname, err := neidb.CommonName(start)
-  util.Check(err)
-  parent, err = neidb.Parent(start)
-  util.Check(err)
-  o := Taxon{
-    TaxId: start,
-    Parent: parent,
-    Name: name,
-	  CommonName: cname,
-  }
-
-  out = append(out, o)
-#+end_src
-
-#+begin_export latex
-  We've already covered the end so we only need to reslice front.
-#+end_export
-
-#+begin_src go <<Slice output to size/offset, Pa. \ref{pa:api}>>=
-  out = out[offset:]
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa/children} takes as argument a taxon ID and returns its
-  children as a slice of their taxon IDs.
-  We implement the service \ty{taxa/children} in the function \ty{taxaChildren},
-  where we get the taxon ID and the corresponding children. Then we
-  iterate over the children and construct the output object for each
-  one, before we write the output.
-
-  This is \ty{taxa/children}'s io:
-  Params:
-    Path:
-      taxon_id int
-    Query:
-      page int
-      page_size int
-  Writes:
-    []TaxonName
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaChildren(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-
-	  children, err := neidb.Children(taxId)
-	  util.Check(err)
-	  out := []TaxonName{}
-    if size == -1 {
-      size = len(children)
-    }
-
-	  for i := offset; i < min(offset + size, len(children)); i++ {
-      child := children[i]
-		  //<<Construct child, Pa. \ref{pa:api}>>
-	  }
-	  //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  As we did in \ty{taxa/path} we again access the path parameters via
-  the \ty{PathValue} function and convert it to an integer.
-#+end_export
-
-#+begin_src go <<Get taxId from path, Pa. \ref{pa:api}>>=
-  strTaxonId := r.PathValue("taxon_id")
-  taxId, _ := strconv.Atoi(strTaxonId)
-#+end_src
-
-#+begin_export latex
-  We construct the child from its taxon ID and its names.
-#+end_export
-
-#+begin_src go <<Construct child, Pa. \ref{pa:api}>>=
-  name, err := neidb.Name(child)
-  util.Check(err)
-  cname, err := neidb.CommonName(child)
-  util.Check(err)
-  o := TaxonName{child, name, cname}
-  out = append(out, o)
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa/images} takes as argument a taxon ID and returns
-  the images associated with this taxon.
-  We implement the service \ty{taxa/images} in the function \ty{taxaImages},
-  where we get the taxon ID and the corresponding images. Then we
-  iterate over the images and construct the output object for each
-  one, before we write the output.
-
-  This is \ty{taxa/images}'s io:
-  Params:
-    Path:
-      taxon_id int
-    Query:
-      page int
-      page_size int
-  Writes:
-    []Image
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaImages(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    images, err := neidb.Images(taxId)
-	  util.Check(err)
-
-    if size == -1 {
-      size = len(images)
-    }
-
-	  out := []Image{}
-	  for i := offset; i < min(offset + size, len(images)); i++ {
-      image := images[i]
-      //<<Construct image, Pa. \ref{pa:api}>>
-	  }
-	  //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  The Image types of the api and tdb differ slightly as the api
-  does not provide a list of taxIds with its images. In order
-  to conform to the api, we drop the taxIds before writing the output.
-#+end_export
-
-#+begin_src go <<Construct image, Pa. \ref{pa:api}>>=
-  o := Image{
-    Id: image.Id,
-    Url: image.Url,
-    Attribution: image.Attribution,
-  }
-  out = append(out, o)
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa/genomeCount} takes a taxon ID and returns the number
-  of genomes across all assembly levels. We store the genome counts in a
-  slice of type \ty{GenomeCount}, which holds the count for a given
-  level.
-
-  This is \ty{taxa/genomeCount}'s io:
-  Params:
-    Path:
-      taxon_id int
-    Query:
-      page int
-      page_size int
-  Writes:
-    []GenomeCount
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaGenomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-	  //<<Get raw genome counts, Pa. \ref{pa:api}>>
-    //<<Reslice to offset and limit, Pa. \ref{pa:api}>>
-	  //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  We get the raw genome counts across all levels and store them.
-#+end_export
-
-#+begin_src go <<Get raw genome counts, Pa. \ref{pa:api}>>=
-  out := []GenomeCount{}
-  for _, level := range tdb.AssemblyLevels() {
-	  n, err := neidb.NumGenomes(taxId, level)
-	  if err == nil {
-		  o := GenomeCount{Count: n, Level: level}
-		  out = append(out, o)
-	  }
-  }
-#+end_src
-
-#+begin_export latex
-  Sadly we don't know the amount of \ty{GenomeCount} entries per level
-  before requesting them, which in turn makes efficient pagination
-  difficult. It would be possible to stop requesting new counts once we
-  reach the size limit, but as we can't efficiently predict the starting point
-  using the offset anyways, I decided for a code friendly slicing post
-  data requests.
-#+end_export
-
-#+begin_src go <<Reslice to offset and limit, Pa. \ref{pa:api}>>=
-  if size == -1 {
-    size = len(out)
-  }
-
-  out = out[offset:min(offset + size, len(out))]
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa/genomeCountRec} takes a taxon ID as input and
-  returns the recursive number of genomes for all assembly levels. We
-  get the taxon ID, get the recursive genome counts for it, and print
-  the output.
-
-  This is \ty{taxa/genomeCount}'s io:
-  Params:
-    Path:
-      taxon_id int
-    Query:
-      page int
-      page_size int
-  Writes:
-    []GenomeCount
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaGenomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-	  //<<Get recursive genome counts, Pa. \ref{pa:api}>>
-    //<<Reslice to offset and limit, Pa. \ref{pa:api}>>
-	  //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  Inside the function \ty{taxaGenomeCountRec} we get the recursive
-  genome counts across the levels and store them.
-#+end_export
-
-#+begin_src go <<Get recursive genome counts, Pa. \ref{pa:api}>>=
-  out := []GenomeCount{}
-  for _, level := range tdb.AssemblyLevels() {
-	  n, err := neidb.NumGenomesRec(taxId, level)
-	  if err == nil {
-		  o := GenomeCount{Count: n, Level: level}
-		  out = append(out, o)
-	  }
-  }
-#+end_src
-
-
-
-#+begin_export latex
-The service \ty{taxa/parent} takes as argument a taxon ID and returns the
-parent's taxon ID.
-
-  This is \ty{taxa/parent}'s io:
-  Params:
-    Path:
-      taxon_id int
-  Writes:
-    TaxId
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaParent(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>
-	  parent, err := neidb.Parent(taxId)
-	  out := TaxId{0}
-	  if err == nil {
-		  out = TaxId{parent}
-	  }
-
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{taxa/subtree} returns all taxa in a subtree, including the
-  root. In the function \ty{taxaSubtree} we get the taxon ID, get and store
-  the corresponding subtree, and write the output. A subtree consists of
-  nodes, which are structs to hold a taxon ID, its name, its common
-  name, and the parent ID. We iterate over the taxa in the subtree
-  and look up the parent for each one, except for the root, \ty{taxId},
-  whose parent is itself. From the current taxon, its parent, and
-  its names we construct the new node, which we store in our output slice.
-
-  This is \ty{taxa/parent}'s io:
-  Params:
-    Path:
-      taxon_id int
-    Query:
-      page int
-      page_size int
-  Writes:
-    []Taxon
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaSubtree(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get taxId from path, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Get taxa in subtree, Pa. \ref{pa:api}>>
-	  //<<Construct nodes in subtree, Pa. \ref{pa:api}>>
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  We obtain the taxa in the subtree rooted on the taxon with \ty{taxId}.
-#+end_export
-
-#+begin_src go <<Get taxa in subtree, Pa. \ref{pa:api}>>=
-  taxa, err := neidb.Subtree(taxId)
-  util.Check(err)
-#+end_src
-
-#+begin_export latex
-  We iterate over the taxa in the subtree and look up the parent for
-  each one, except for the root, \ty{taxId}, whose parent is
-  itself. From the current taxon, its parent, and its names we construct
-  the new node, which we store in our output slice.
-#+end_export
-
-#+begin_src go <<Construct nodes in subtree, Pa. \ref{pa:api}>>=
-
-  if size == -1 {
-    size = len(taxa)
-  }
-
-  out := []Taxon{}
-  for i := offset; i < min(offset + size, len(taxa)); i++ {
-    taxon := taxa[i]
-	  parent := taxon
-	  //<<Get node parent, Pa. \ref{pa:api}>>
-	  name := ""
-	  cname := ""
-	  //<<Get node names, Pa. \ref{pa:api}>>
-	  o := Taxon{
-      TaxId: taxon,
-      Name: name,
-		  CommonName: cname,
-      Parent: parent,
-    }
-
-	  out = append(out, o)
-  }
-#+end_src
-
-#+begin_export latex
-  We get the node's parent and skip the rest of the loop if we encounter
-  an error.
-#+end_export
-
-#+begin_src go <<Get node parent, Pa. \ref{pa:api}>>=
-  parent, err := neidb.Parent(taxon)
-  util.Check(err)
-  if err != nil {
-	  continue
-  }
-#+end_src
-
-#+begin_export latex
-  We get the node's scientific and common names and again skip to the
-  end of the loop if we encounter an error.
-#+end_export
-
-#+begin_src go <<Get node names, Pa. \ref{pa:api}>>=
-  name, err = neidb.Name(taxon)
-  util.Check(err)
-  if err != nil {
-	  continue
-  }
-  cname, err = neidb.CommonName(taxon)
-  util.Check(err)
-  if err != nil {
-	  continue
-  }
-#+end_src
-
-
-
-#+begin_export latex
-  \subsection{\ty{mrca}}
-  The service \ty{taxa/mrca} taks as argument a slice of taxon IDs and
-  returns their most recent common ancestor. We implement the service in
-  the function \ty{taxaMRCA}, where we get the taxon IDs, calculate their
-  most recent common ancestor, and write the output. If there is no most
-  recent common ancestor, we return taxid 0.
-
-  This is \ty{taxa/mrca}'s io:
-  Params:
-    Path:
-      taxon_ids []int
-  Writes:
-    TaxId
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxaMRCA(w http.ResponseWriter, r *http.Request, args ...any) {
-    //<<Get db from args, Pa. \ref{pa:api}>>
- 	  out := TaxId{0}
-    //<<Exract taxonIds from path, Pa. \ref{pa:api}>>
-	  if len(taxa) > 0 {
-		  mrca, err := neidb.MRCA(taxa)
-		  if err == nil {
-			  out = TaxId{mrca}
-		  }
-	  }
-
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_src go <<Exract taxonIds from path, Pa. \ref{pa:api}>>=
-  strTaxonIds := r.PathValue("taxon_ids")
-  split := strings.Split(strTaxonIds, ",")
-  taxa := []int{}
-  for _, str := range split {
-    id, err := strconv.Atoi(str)
-    if err != nil {
-      return
-    }
-
-    taxa = append(taxa, id)
-  }
-#+end_src
-
-#+begin_export latex
-  With the last endpoint implemented, we are done programming the
-  second iteration of never's api. Though we still need to test it.
-#+end_export
