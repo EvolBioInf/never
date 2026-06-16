@@ -18,6 +18,7 @@
     //<<Imports, Pa. \ref{pa:api}>>
   )
   //<<Types, Pa. \ref{pa:api}>>
+  //<<Methods, Pa. \ref{pa:api}>>
   //<<Variables, Pa. \ref{pa:api}>>
   func RegisterRoutes(pref, dbPath string) {
     //<<Register routes, Pa. \ref{pa:api}>>
@@ -129,11 +130,12 @@ type Link struct {
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Node struct {
 	Links    map[string][]Node
+  Name     string
 	BasePath string
+	Action   string
+	Types    []string
 	// PathParams  []string
 	// QueryParams []string
-	Action string
-	Types  []string
 }
 #+end_src
 
@@ -172,7 +174,7 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func makeRoute(node Node, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
-    http.HandleFunc(node.Action + " " + prefix + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc(node.Action + " " + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
 	  		fn(w, r, args...)
 	  })
   }
@@ -232,7 +234,7 @@ type Node struct {
   We know all the endpoints as they are defined in the openApi document.
 #+end_export
 
-#+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
+#+begin_src go <<Initialize nodes and make routes, Pa. \ref{pa:api}>>=
   //<<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{accessions}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{accession}, Pa. \ref{pa:api}>>
@@ -244,9 +246,10 @@ type Node struct {
   //<<Initialize \ty{genomeCount}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{genomeCountRec}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{parent}, Pa. \ref{pa:api}>>
-  //<<Initialize \ty{ranks}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{rankDistribution}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{mrca}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{path}, Pa. \ref{pa:api}>>
 #+end_src
@@ -269,6 +272,7 @@ type Node struct {
 
 	rootDocL := Node{
 		Links:    make(map[string][]Node),
+    Name:     "rootDocument",
 		BasePath: prefix,
 		Action:   get,
 		Types:    []string{jsonT},
@@ -280,9 +284,10 @@ type Node struct {
   Let's register \ty{accessions}.
 #+end_export
 
-#+begin_src go <<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>=
+#+begin_src go <<Initialize \ty{accessions}, Pa. \ref{pa:api}>>=
 	accessionsL := Node{
 		Links:    make(map[string][]Node),
+    Name:     "accessions",
 		BasePath: prefix + "/accessions",
 		Action:   get,
 		Types:    []string{jsonT},
@@ -290,11 +295,413 @@ type Node struct {
 	makeRoute(accessionsL, accessions, neidb) // previously known as levels
 #+end_src
 
+#+begin_export latex
+  \ty{accession} is almost the same as before.
+#+end_export
+
+#+begin_src go <<Initialize \ty{accession}, Pa. \ref{pa:api}>>=
+	accessionL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "accession",
+		BasePath: prefix + "/accessions/{accession_id}",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(accessionL, accession, neidb) // new
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} just gets a different path.
+#+end_export
+
+#+begin_src go <<Initialize \ty{fintac}, Pa. \ref{pa:api}>>=
+	fintacL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "fintac",
+		BasePath: prefix + "/fintac",
+		Action:   post,
+		Types:    []string{jsonT},
+	}
+	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
+#+end_src
+
+#+begin_export latex
+  As does \ty{taxa}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{taxa}, Pa. \ref{pa:api}>>=
+	taxaL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "taxa",
+		BasePath: prefix + "/taxa",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(taxaL, taxa, neidb) // previously known as taxi
+#+end_src
+
+#+begin_export latex
+  \ty{taxon} is a subservice of \ty{taxa}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{taxon}, Pa. \ref{pa:api}>>=
+	taxonL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "taxon",
+		BasePath: prefix + "/taxa/{taxon_id}",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(taxonL, taxon, neidb) // new
+#+end_src
+
+#+begin_export latex
+  \ty{ancestorsL} is another subservice of \ty{taxa}, but it provides
+  two different content types.
+#+end_export
+
+#+begin_src go <<Initialize \ty{ancestors}, Pa. \ref{pa:api}>>=
+	ancestorsL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "ancestors",
+		BasePath: prefix + "/taxa/{taxon_id}/ancestors",
+		Action:   get,
+		Types:    []string{jsonT, plainT},
+	}
+	makeRoute(ancestorsL, ancestors, neidb) // new - calls ants program
+#+end_src
+
+#+begin_export latex
+  As is \ty{children}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{children}, Pa. \ref{pa:api}>>=
+	childrenL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "children",
+		BasePath: prefix + "/taxa/{taxon_id}/children",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(childrenL, children, neidb) // previously just children
+#+end_src
+
+#+begin_export latex
+  \ty{genomeCount} is yet another subservice of \ty{taxa}, but it does not respond with taxon
+  entities.
+#+end_export
+
+#+begin_src go <<Initialize \ty{genomeCount}, Pa. \ref{pa:api}>>=
+	genomeCountL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "genomeCount",
+		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(genomeCountL, genomeCount, neidb) // previously known as num_genomes
+#+end_src
+
+#+begin_export latex
+  \ty{genomeCountRec} registration works just like before.
+#+end_export
+
+#+begin_src go <<Initialize \ty{genomeCountRec}, Pa. \ref{pa:api}>>=
+	genomeCountRecL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "genomeCountRec",
+		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
+#+end_src
+
+#+begin_export latex
+  \ty{parent} is yet another subservice of \ty{taxa}. It again responds with taxon entities.
+#+end_export
+
+#+begin_src go <<Initialize \ty{parent}, Pa. \ref{pa:api}>>=
+	parentL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "parent",
+		BasePath: prefix + "/taxa/{taxon_id}/parent",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(parentL, parent, neidb) // previously known as parent
+#+end_src
+
+#+begin_export latex
+  \ty{rankDistribution} again provides multiple content types.
+#+end_export
+
+#+begin_src go <<Initialize \ty{rankDistribution}, Pa. \ref{pa:api}>>=
+	rankDistL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "rankDistribution",
+		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
+		Action:   post,
+		Types:    []string{jsonT, plainT},
+	}
+	makeRoute(rankDistL, rankDistribution, neidb) // new - calls ranks program
+#+end_src
+
+#+begin_export latex
+  \ty{subtree} provides multiple content types as well.
+#+end_export
+
+#+begin_src go <<Initialize \ty{subtree}, Pa. \ref{pa:api}>>=
+	subtreeL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "subtree",
+		BasePath: prefix + "/taxa/{taxon_id}/subtree",
+		Action:   get,
+		Types:    []string{jsonT, plainT},
+	}
+	makeRoute(subtreeL, subtree, neidb) // previously just subtree
+#+end_src
+
+#+begin_export latex
+  \ty{taxonomy} is a new service. With this we are finally done registering subservices of \ty{taxa}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>=
+	taxonomyL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "taxonomy",
+		BasePath: prefix + "/taxonomy",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(taxonomyL, taxonomy, neidb) // new
+#+end_src
+
+#+begin_export latex
+  \ty{mrca} is a subservice of \ty{taxonomy}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{mrca}, Pa. \ref{pa:api}>>=
+	mrcaL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "mrca",
+		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(mrcaL, mrca, neidb) // previously just mrca
+#+end_src
+
+#+begin_export latex
+  \ty{neighbors} is another subservice of \ty{taxonomy}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>=
+	neighborsL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "neighbors",
+		BasePath: prefix + "/taxonomy/neighbors",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(neighborsL, neighbors, neidb) // new - calls neighbors program
+#+end_src
+
+#+begin_export latex
+  \ty{path} is our last service.
+#+end_export
+
+#+begin_src go <<Initialize \ty{path}, Pa. \ref{pa:api}>>=
+	pathL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "path",
+		BasePath: prefix + "/taxonomy/path",
+		Action:   get,
+		Types:    []string{jsonT},
+	}
+	makeRoute(pathL, path, neidb) // previously just path
+#+end_src
+
+#+begin_export latex
+  Now that we are done creating nodes and registering function we may set the links that
+  turn the nodes into a graph. The following rules define which links should be part of this graph.
+  \begin{enumerate}
+    \item Every endpoint has a link to itself.
+    \item Every endpoint with services has links to its subservices.
+    \item An item of a collection has a reference to itself.
+    \item A collection has a link to the entities it is made out of.
+    \item An entity that is part of a collection has a link to this collection.
+    \item A paginated collection should reference it's next and previous page.
+    \item Endpoints that provide responses with different attributes should advertise them.
+  \end{enumerate}
+  We can also enhance this graph with a few interservice connections like these:
+    \begin{itemize}
+    \item mrca -> path (you may want to see the path to the mrca)
+    \item parent -> ancestor (view further than the direct parent)
+    \item children -> subtree (view further than the direct children)
+  \end{enumerate}
+
+  A lot of these links will need to be slightly modified, to match the current request/ responds. We may define
+  this basic graph now nevertheless.
+#+end_export
+
+#+begin_src go <<Link nodes, Pa. \ref{pa:api}>>=
+  //<<Link self, Pa. \ref{pa:api}>>
+  //<<Link subservices, Pa. \ref{pa:api}>>
+  //<<Link collection entities, Pa. \ref{pa:api}>>
+  //<<Link entity to collection, Pa. \ref{pa:api}>>
+  //<<Link pagination, Pa. \ref{pa:api}>>
+  //<<Link entity fields, Pa. \ref{pa:api}>>
+  //<<Interservice links, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  The self references are pretty straight forward. We just append a node to the list with the key \ty{self}.
+#+end_export
+
+#+begin_src go <<Link self, Pa. \ref{pa:api}>>=
+	rootDocL.Links["self"] = append(rootDocL.Links["self"], rootDocL)
+	accessionsL.Links["self"] = append(accessionsL.Links["self"], accessionsL)
+	accessionL.Links["self"] = append(accessionL.Links["self"], accessionL)
+	fintacL.Links["self"] = append(fintacL.Links["self"], fintacL)
+	taxaL.Links["self"] = append(taxaL.Links["self"], taxaL)
+	taxonL.Links["self"] = append(taxonL.Links["self"], taxonL)
+	ancestorsL.Links["self"] = append(ancestorsL.Links["self"], ancestorsL)
+	childrenL.Links["self"] = append(childrenL.Links["self"], childrenL)
+	genomeCountL.Links["self"] = append(genomeCountL.Links["self"], genomeCountL)
+	genomeCountRecL.Links["self"] = append(genomeCountRecL.Links["self"], genomeCountRecL)
+	parentL.Links["self"] = append(parentL.Links["self"], parentL)
+	rankDistL.Links["self"] = append(rankDistL.Links["self"], rankDistL)
+	subtreeL.Links["self"] = append(subtreeL.Links["self"], subtreeL)
+	taxonomyL.Links["self"] = append(taxonomyL.Links["self"], taxonomyL)
+	mrcaL.Links["self"] = append(mrcaL.Links["self"], mrcaL)
+	neighborsL.Links["self"] = append(neighborsL.Links["self"], neighborsL)
+	pathL.Links["self"] = append(pathL.Links["self"], pathL)
+#+end_src
+
+#+begin_export latex
+  With the subservices we know that, each endpoint should be contained in the links of the \ty{rootDocument}.
+  Then there \ty{accession} which is a subservice of \ty{accessions}; \ty{taxon}, \ty{ancestors}, \ty{children},
+  \ty{genomeCount}, \ty{genomeCountRec}, \ty{parent}, \ty{rankDistribution} and \ty{subtree} which are subservices
+  of \ty{taxa}. Lastly \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
+#+end_export
+
+#+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], fintacL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], ancestorsL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], genomeCountL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], genomeCountRecL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], rankDistL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], neighborsL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
+	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], ancestorsL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], genomeCountL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], genomeCountRecL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
+#+end_src
+
+#+begin_export latex
+  Now to write the entities of the collections. There are basically two entities, which
+  are the basis of almost all the collections. \ty{accession} is the base entity of \ty{accessions};
+  \ty{taxon} is the base entity of \ty{taxa}, \ty{ancestors}, \ty{children}, \ty{subtree}, \ty{neighbors}
+  and \ty{path}.
+#+end_export
+
+#+begin_src go <<Link collection entities, Pa. \ref{pa:api}>>=
+	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
+	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
+	ancestorsL.Links["entities"] = append(ancestorsL.Links["entities"], taxonL)
+	childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
+	subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
+	neighborsL.Links["entities"] = append(neighborsL.Links["entities"], taxonL)
+	pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
+#+end_src
+
+#+begin_export latex
+  We now link the entities to their collections. I believe we should link them to the basic
+  collection only, i.e. \ty{taxon} to \ty{taxa}, as \ty{ancestors} for example is basically a filtered
+  version of \ty{taxa}. I don't see a reason to link an entity to every specialized sub collection that
+  it is part of.
+#+end_export
+
+#+begin_src go <<Link entity to collection, Pa. \ref{pa:api}>>=
+	accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
+	taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
+#+end_src
+
+#+begin_export latex
+  Handling pagination is easy again, as we already found all the collections.
+#+end_export
+
+#+begin_src go <<Link pagination, Pa. \ref{pa:api}>>=
+	accessionsL.Links["previous"] = append(accessionsL.Links["previous"], accessionsL)
+	taxaL.Links["previous"] = append(taxaL.Links["previous"], taxaL)
+	ancestorsL.Links["previous"] = append(ancestorsL.Links["previous"], ancestorsL)
+	childrenL.Links["previous"] = append(childrenL.Links["previous"], childrenL)
+	subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
+	neighborsL.Links["previous"] = append(neighborsL.Links["previous"], neighborsL)
+	pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
+	accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
+	taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
+	ancestorsL.Links["next"] = append(ancestorsL.Links["next"], ancestorsL)
+	childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
+	subtreeL.Links["next"] = append(subtreeL.Links["next"], subtreeL)
+	neighborsL.Links["next"] = append(neighborsL.Links["next"], neighborsL)
+	pathL.Links["next"] = append(pathL.Links["next"], pathL)
+#+end_src
+
+#+begin_export latex
+  All endpoints that offer different fields with their responses, respond with a taxon entity.
+  So we just need to find all that do so and may add another link to themselves.
+  The services are \ty{taxa}, \ty{taxon}, \ty{ancestors}, \ty{children}, \ty{parent},
+  \ty{subtree}, \ty{mrca} and \ty{path}.
+#+end_export
+
+#+begin_src go <<Link entity fields, Pa. \ref{pa:api}>>=
+	taxaL.Links["more fields"] = append(taxaL.Links["more fields"], taxaL)
+	taxonL.Links["more fields"] = append(taxonL.Links["more fields"], taxonL)
+	ancestorsL.Links["more fields"] = append(ancestorsL.Links["more fields"], ancestorsL)
+	childrenL.Links["more fields"] = append(childrenL.Links["more fields"], childrenL)
+	parentL.Links["more fields"] = append(parentL.Links["more fields"], parentL)
+	subtreeL.Links["more fields"] = append(subtreeL.Links["more fields"], subtreeL)
+	mrcaL.Links["more fields"] = append(mrcaL.Links["more fields"], mrcaL)
+	pathL.Links["more fields"] = append(pathL.Links["more fields"], pathL)
+#+end_src
+
+#+begin_export latex
+  Lastly we implement the interservice links. These are straightfoward as we specified them above.
+  We should set the root variable as well, now that we are done with initializing the link graph.
+#+end_export
+
+#+begin_src go <<Interservice links, Pa. \ref{pa:api}>>=
+	mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
+	parentL.Links["all ancestors"] = append(parentL.Links["all ancestors"], ancestorsL)
+	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
+  root = rootDocL
+#+end_src
+
 
 
 #+begin_export latex
-  We begin implementing the function for the first
-  endpoint, which is the root document \ty{/}. It just provides links
+  Having delcared all the endpoints we need to begin implementing them.
+  We start with the root document \ty{/}. It just provides links
   to all the endpoints provided by this api.
   This is \ty{/}'s io:
   Params:
@@ -315,31 +722,36 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  This is a perfect application for the LinkMap we just created. We iterate over it and
-  write down the relation \ty{service} for all of them.
+  This is a perfect application for the link graph we just created. We just iterate over
+  \ty{service} links of root and parse them into the \ty{Link}, which provide json annotation.
+  Parsing \ty{Node}s to \ty{Link}s is going to be common issue, so we might as well write a
+  function for it. Let's call that function \ty{makeLink} for now and implement it later.
 #+end_export
 
 #+begin_src go <<Write rootDocument's links, Pa. \ref{pa:api}>>=
-  for k := range LinkMap {
-    curr := LinkMap[k]
-    curr.Rel = "service"
-		out.Links = append(out.Links, curr)
+  out.Links = append(out.Links, root.Links["self"][0].makeLink("self", ""))
+  for _, v := range root.Links["service"] {
+    out.Links = append(out.Links, v.makeLink("service", ""))
   }
-
-  slices.SortFunc(out.Links, func(a, b Link) int {
-    return cmp.Compare(a.Href, b.Href)
-  })
-
-  out.Links[0].Rel = "self"
 #+end_src
 
 #+begin_export latex
-  We need to add the \ty{slices} and \ty{cmp} packages.
+  The \ty{makeLink} function takes a \ty{node}, the relation's name and a \ty{href}. If the \ty{href} is empty it uses the \ty{node}'s
+  \ty{href} instead instead.
 #+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "slices"
-  "cmp"
+#+begin_src go <<Methods, Pa. \ref{pa:api}>>=
+  func (node *Node) makeLink(rel, href string) Link {
+    if href != "" {
+      node.BasePath = href
+    }
+    return Link{
+      Rel: rel,
+      Href: node.BasePath,
+      Action: node.Action,
+      Types: node.Types,
+    }
+  }
 #+end_src
 
 #+begin_export latex
@@ -360,8 +772,6 @@ type Node struct {
 	w.Header().Set("Content-Type", "application/json")
   fmt.Fprintf(w, "%s\n", string(b))
 #+end_src
-
-
 
 #+begin_export latex
   The endpoint \ty{accessions} used to be called levels.
@@ -409,15 +819,13 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
     for _, arg := range args {
-
-    p := r.URL.Query().Get(arg)
+      p := r.URL.Query().Get(arg)
       if p == "" {
         w.WriteHeader(http.StatusBadRequest)
         w.Write([]byte("Missing required parameter."))
         return false
       }
     }
-
     return true
   }
 #+end_src
@@ -435,6 +843,7 @@ type Node struct {
 
 #+begin_export latex
   If the query parameter \ty{plain_data} is passed, we need to change the response structure.
+  In order to do that we extract the parameter here and act on it later on.
 #+end_export
 
 #+begin_src go <<Get plain param, Pa. \ref{pa:api}>>=
@@ -497,7 +906,6 @@ type Node struct {
     } else {
         size = -1
     }
-
     if size != -1 && strPage != "" {
       page, err := strconv.Atoi(strPage)
       if err != nil {
@@ -508,7 +916,6 @@ type Node struct {
     } else {
       offset = 0
     }
-
   return
   }
 #+end_src
@@ -527,7 +934,6 @@ type Node struct {
   if size == -1 {
     size = len(accessions)
   }
-
   for i := offset; i < min(offset + size, len(accessions)); i++ {
     accession := accessions[i]
     level, err := neidb.Level(accession)
@@ -536,8 +942,7 @@ type Node struct {
       if !plain {
         //<<Add link to accession object, Pa. \ref{pa:api}>>
       }
-
-      data = append(data, )
+      data = append(data, acc)
     }
   }
 #+end_src
@@ -557,17 +962,52 @@ type Node struct {
   Each entity of a collcetion should hold two links. The first link references itself.
   This may be used for ruther queries against the resource.
   The second link references the entity's collection.
+  I feel like we could use a function here to work with the graph. A function that would make working with this graph
+  easier is \ty{getService}, which goes through all services and returns one with the correct name or nil.
+#+end_export
+
+#+begin_src go <<Methods, Pa. \ref{pa:api}>>=
+  func (node *Node) getService (name string) *Node {
+    services := node.Links["service"]
+    idx := slices.IndexFunc(services, func(a Node) bool { return a.Name == name})
+
+    if idx != -1 {
+      return &services[idx]
+    } else {
+      return nil
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  We also need to import \ty{slices}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "slices"
+#+end_src
+
+#+begin_export latex
+  We need further utility function for working with links. As paths saved in a node are URI templates
+  we need a function that exchanges a wildcard for an actual value.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func fillTemplate(node Node, vals map[string]string) string {
+    for k := range vals {
+      node.BasePath = strings.Replace(node.BasePath, "{"+k+"}", vals[k], 1)
+    }
+    return node.BasePath
+  }
+#+end_src
+
+#+begin_export latex
+  Now we can write the links of the accession entity entity.
 #+end_export
 
 #+begin_src go <<Add link to accession object, Pa. \ref{pa:api}>>=
-  self := LinkMap["base-accession"]
-  self.Rel = "self"
-  self.Href = r.URL.String()
-
-  partOf := LinkMap["base-accessions"]
-  self.Rel = "partOf"
-
-  acc.Links = []Link{self, partOf}
+  accNode := *root.getService("accession")
+  acc.Links = append(acc.Links, accNode.makeLink("self", fillTemplate(accNode, map[string]string{"accession_id": acc.Accession})))
 #+end_src
 
 #+begin_export latex
@@ -576,19 +1016,19 @@ type Node struct {
   links.
 #+end_export
 
-#+begin_src go <<Add Links accessions, Pa. \ref{pa:api}>>=
+#+begin_src go <<Add Links \ty{accessions}, Pa. \ref{pa:api}>>=
   var out any
   if plain {
     out = data
   } else {
-    out = ResponseBody[[]Accession]{Data: data}
-    self := LinkMap["base-accession"]
-    self.Rel = "self"
-    self.Href = r.URL.String()
-
-    links := []Link{
-
-    }
+		var links []Link
+		self := root.getService("accessions")
+		for link := range self.Links {
+			for _, node := range self.Links[link] {
+				links = append(links, node.makeLink(link, ""))
+			}
+		}
+		out = ResponseBody[[]Accession]{Data: data, Links: links}
   }
 #+end_src
 
@@ -761,5 +1201,57 @@ type Node struct {
 #+begin_src go <<Store taxon output, Pa. \ref{pa:api}>>=
   if err == nil {
     out = append(out, tout)
+  }
+#+end_src
+
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxon(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func ancestors(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func children(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func genomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func genomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func parent(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func rankDistribution(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func subtree(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func taxonomy(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func mrca(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func neighbors(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
+  }
+  func path(w http.ResponseWriter, r *http.Request, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    //<<Write output, Pa. \ref{pa:api}>>
   }
 #+end_src
