@@ -1,11 +1,14 @@
 package apiv2
 
 import (
+	"github.com/elnormous/contenttype"
+
 	"net/http"
 
+	"github.com/evolbioinf/neighbors/tdb"
 	"log"
 
-	"github.com/evolbioinf/neighbors/tdb"
+	"slices"
 
 	"strings"
 
@@ -13,10 +16,12 @@ import (
 
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 
-	"slices"
+	"bytes"
+	"os"
+	"os/exec"
+	"time"
 )
 
 type Accession struct {
@@ -91,20 +96,22 @@ type Node struct {
 	Name     string
 	BasePath string
 	Action   string
-	Types    []string
-	// PathParams  []string
-	// QueryParams []string
+	Types    []contenttype.MediaType
 }
 
 func (node *Node) makeLink(rel, href string) Link {
 	if href != "" {
 		node.BasePath = href
 	}
+	types := []string{}
+	for _, t := range node.Types {
+		types = append(types, t.String())
+	}
 	return Link{
 		Rel:    rel,
 		Href:   node.BasePath,
 		Action: node.Action,
-		Types:  node.Types,
+		Types:  types,
 	}
 }
 
@@ -119,6 +126,9 @@ func (node *Node) getService(name string) *Node {
 	}
 }
 
+var jsonct = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+var plainct = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+
 var root Node
 
 var prefix string
@@ -132,8 +142,6 @@ func RegisterRoutes(pref, dbPath string) {
 
 	prefix = pref
 
-	jsonT := "application/json"
-	plainT := "plain/text"
 	get := "GET"
 	post := "POST"
 
@@ -142,7 +150,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "rootDocument",
 		BasePath: prefix,
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(rootDocL, rootDocument, neidb) // new
 
@@ -151,7 +159,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "accessions",
 		BasePath: prefix + "/accessions",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(accessionsL, accessions, neidb) // previously known as levels
 
@@ -160,25 +168,16 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "accession",
 		BasePath: prefix + "/accessions/{accession_id}",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(accessionL, accession, neidb) // new
-
-	fintacL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "fintac",
-		BasePath: prefix + "/fintac",
-		Action:   post,
-		Types:    []string{jsonT},
-	}
-	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
 
 	taxaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(taxaL, taxa, neidb) // previously known as taxi
 
@@ -187,7 +186,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(taxonL, taxon, neidb) // new
 
@@ -196,7 +195,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "ancestors",
 		BasePath: prefix + "/taxa/{taxon_id}/ancestors",
 		Action:   get,
-		Types:    []string{jsonT, plainT},
+		Types:    []contenttype.MediaType{plainct},
 	}
 	makeRoute(ancestorsL, ancestors, neidb) // new - calls ants program
 
@@ -205,7 +204,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "children",
 		BasePath: prefix + "/taxa/{taxon_id}/children",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(childrenL, children, neidb) // previously just children
 
@@ -214,7 +213,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "genomeCount",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(genomeCountL, genomeCount, neidb) // previously known as num_genomes
 
@@ -223,7 +222,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "genomeCountRec",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
 
@@ -232,7 +231,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "parent",
 		BasePath: prefix + "/taxa/{taxon_id}/parent",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(parentL, parent, neidb) // previously known as parent
 
@@ -241,7 +240,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "rankDistribution",
 		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
 		Action:   post,
-		Types:    []string{jsonT, plainT},
+		Types:    []contenttype.MediaType{plainct},
 	}
 	makeRoute(rankDistL, rankDistribution, neidb) // new - calls ranks program
 
@@ -250,7 +249,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []string{jsonT, plainT},
+		Types:    []contenttype.MediaType{jsonct, plainct},
 	}
 	makeRoute(subtreeL, subtree, neidb) // previously just subtree
 
@@ -259,16 +258,25 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "taxonomy",
 		BasePath: prefix + "/taxonomy",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(taxonomyL, taxonomy, neidb) // new
+
+	fintacL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "fintac",
+		BasePath: prefix + "/taxonomy/fintac",
+		Action:   post,
+		Types:    []contenttype.MediaType{jsonct},
+	}
+	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
 
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "mrca",
 		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(mrcaL, mrca, neidb) // previously just mrca
 
@@ -277,7 +285,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "neighbors",
 		BasePath: prefix + "/taxonomy/neighbors",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{plainct},
 	}
 	makeRoute(neighborsL, neighbors, neidb) // new - calls neighbors program
 
@@ -286,27 +294,9 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "path",
 		BasePath: prefix + "/taxonomy/path",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(pathL, path, neidb) // previously just path
-
-	rootDocL.Links["self"] = append(rootDocL.Links["self"], rootDocL)
-	accessionsL.Links["self"] = append(accessionsL.Links["self"], accessionsL)
-	accessionL.Links["self"] = append(accessionL.Links["self"], accessionL)
-	fintacL.Links["self"] = append(fintacL.Links["self"], fintacL)
-	taxaL.Links["self"] = append(taxaL.Links["self"], taxaL)
-	taxonL.Links["self"] = append(taxonL.Links["self"], taxonL)
-	ancestorsL.Links["self"] = append(ancestorsL.Links["self"], ancestorsL)
-	childrenL.Links["self"] = append(childrenL.Links["self"], childrenL)
-	genomeCountL.Links["self"] = append(genomeCountL.Links["self"], genomeCountL)
-	genomeCountRecL.Links["self"] = append(genomeCountRecL.Links["self"], genomeCountRecL)
-	parentL.Links["self"] = append(parentL.Links["self"], parentL)
-	rankDistL.Links["self"] = append(rankDistL.Links["self"], rankDistL)
-	subtreeL.Links["self"] = append(subtreeL.Links["self"], subtreeL)
-	taxonomyL.Links["self"] = append(taxonomyL.Links["self"], taxonomyL)
-	mrcaL.Links["self"] = append(mrcaL.Links["self"], mrcaL)
-	neighborsL.Links["self"] = append(neighborsL.Links["self"], neighborsL)
-	pathL.Links["self"] = append(pathL.Links["self"], pathL)
 
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
@@ -333,6 +323,7 @@ func RegisterRoutes(pref, dbPath string) {
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], fintacL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
@@ -348,30 +339,6 @@ func RegisterRoutes(pref, dbPath string) {
 	accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
 	taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
 
-	accessionsL.Links["previous"] = append(accessionsL.Links["previous"], accessionsL)
-	taxaL.Links["previous"] = append(taxaL.Links["previous"], taxaL)
-	ancestorsL.Links["previous"] = append(ancestorsL.Links["previous"], ancestorsL)
-	childrenL.Links["previous"] = append(childrenL.Links["previous"], childrenL)
-	subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
-	neighborsL.Links["previous"] = append(neighborsL.Links["previous"], neighborsL)
-	pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
-	accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
-	taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
-	ancestorsL.Links["next"] = append(ancestorsL.Links["next"], ancestorsL)
-	childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
-	subtreeL.Links["next"] = append(subtreeL.Links["next"], subtreeL)
-	neighborsL.Links["next"] = append(neighborsL.Links["next"], neighborsL)
-	pathL.Links["next"] = append(pathL.Links["next"], pathL)
-
-	taxaL.Links["more fields"] = append(taxaL.Links["more fields"], taxaL)
-	taxonL.Links["more fields"] = append(taxonL.Links["more fields"], taxonL)
-	ancestorsL.Links["more fields"] = append(ancestorsL.Links["more fields"], ancestorsL)
-	childrenL.Links["more fields"] = append(childrenL.Links["more fields"], childrenL)
-	parentL.Links["more fields"] = append(parentL.Links["more fields"], parentL)
-	subtreeL.Links["more fields"] = append(subtreeL.Links["more fields"], subtreeL)
-	mrcaL.Links["more fields"] = append(mrcaL.Links["more fields"], mrcaL)
-	pathL.Links["more fields"] = append(pathL.Links["more fields"], pathL)
-
 	mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
 	parentL.Links["all ancestors"] = append(parentL.Links["all ancestors"], ancestorsL)
 	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
@@ -386,19 +353,39 @@ func makeRoute(node Node, fn func(http.ResponseWriter, *http.Request, ...any), a
 
 func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[*any]{}
-	out.Links = append(out.Links, root.Links["self"][0].makeLink("self", ""))
+	selfNode := root
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	out.Links = append(out.Links, root.makeLink("self", ""))
 	for _, v := range root.Links["service"] {
 		out.Links = append(out.Links, v.makeLink("service", ""))
 	}
 
+	writeJsonOutput(w, out)
+
+}
+
+func writeJsonOutput(w http.ResponseWriter, out any) {
 	b, err := json.MarshalIndent(out, "", "  ")
 	util.Check(err)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "%s\n", string(b))
-
 }
 
 func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
+	selfNode := root.getService("accessions")
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
 	valid := checkParams(w, r, "accession_ids")
 	if !valid {
 		return
@@ -436,24 +423,25 @@ func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
 		}
 	}
 
-	var out any
-	if plain {
-		out = data
-	} else {
+	out := ResponseBody[[]Accession]{Data: data}
+	if !plain {
 		var links []Link
-		self := root.getService("accessions")
-		for link := range self.Links {
-			for _, node := range self.Links[link] {
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
 				links = append(links, node.makeLink(link, ""))
 			}
 		}
-		out = ResponseBody[[]Accession]{Data: data, Links: links}
+
+		out.Links = links
 	}
 
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
 
 }
 
@@ -503,28 +491,58 @@ func fillTemplate(node Node, vals map[string]string) string {
 }
 
 func accession(w http.ResponseWriter, r *http.Request, args ...any) {
-	neidb := args[0].(*tdb.TaxonomyDB)
-
-	out := ResponseBody[Accession]{}
-	accession := r.PathValue("accession_id")
-	level, err := neidb.Level(accession)
-	if err == nil {
-		out.Data = Accession{Accession: accession, Level: level}
+	selfNode := root.getService("accession")
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
 	}
 
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
+	neidb := args[0].(*tdb.TaxonomyDB)
 
-}
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
 
-func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
+	accession := r.PathValue("accession_id")
+	level, err := neidb.Level(accession)
+	out := ResponseBody[Accession]{}
+	if err == nil {
+		out.Data = Accession{Accession: accession, Level: level}
+		if !plain {
+			var links []Link
+			links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+			for link := range selfNode.Links {
+				for _, node := range selfNode.Links[link] {
+					links = append(links, node.makeLink(link, ""))
+				}
+			}
+
+			out.Links = links
+
+		}
+	}
+
+	var links []Link
+	links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+	for link := range selfNode.Links {
+		for _, node := range selfNode.Links[link] {
+			links = append(links, node.makeLink(link, ""))
+		}
+	}
+
+	out.Links = links
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
 
 }
 
@@ -584,106 +602,107 @@ func taxa(w http.ResponseWriter, r *http.Request, args ...any) {
 
 	}
 
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 
 func taxon(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func ancestors(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func children(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func genomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func genomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func parent(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func rankDistribution(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func subtree(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func taxonomy(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
+
+func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
+	a := r.URL.Query().Get("a")
+	n := r.URL.Query().Get("n")
+	t := r.URL.Query().Get("t")
+	u := r.URL.Query().Get("u")
+
+	fintacArgs := []string{}
+
+	if a != "" {
+		fintacArgs = append(fintacArgs, "-a", a)
+	}
+	if n != "" {
+		fintacArgs = append(fintacArgs, "-n", n)
+	}
+	if t != "" {
+		fintacArgs = append(fintacArgs, "-t", t)
+	}
+	if u != "" {
+		fintacArgs = append(fintacArgs, "-u", u)
+	}
+
+	fintacArgs = append(fintacArgs, "-N", "neidb")
+
+	r.ParseMultipartForm(100_000_000)
+	trr := r.MultipartForm.File["file1"]
+	fmt.Println(trr)
+
+	body := make([]byte, r.ContentLength)
+	r.Body.Read(body)
+
+	path := "apiv2_temp_" + strconv.Itoa(time.Now().Nanosecond())
+	defer os.Remove(path)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+	}
+
+	buffer := bytes.NewBuffer(body)
+	buffer.WriteTo(f)
+	f.Close()
+
+	fintacArgs = append(fintacArgs, path)
+	fmt.Println("fintac", fintacArgs)
+	cmd := exec.Command("fintac", fintacArgs...)
+	outt, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(outt))
+}
+
 func mrca(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func neighbors(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }
 func path(w http.ResponseWriter, r *http.Request, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
-	b, err := json.MarshalIndent(out, "", "  ")
-	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%s\n", string(b))
-
+	writeJsonOutput(w, out)
 }

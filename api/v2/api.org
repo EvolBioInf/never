@@ -4,17 +4,7 @@
   It implements all the endpoints defined in the
   openApi document. The underlying logic will closely
   resemble neverv1, as the backends don't differ too much.
-  \section{api}
-  \ty{api} is the backend application for neverV2.
-  It implements all the endpoints defined in the
-  openApi document. The underlying logic will closely
-  resemble neverv1, as the backends don't differ too much.
 
-  \subsection*{Implementation}
-  The api backend provides the global RegisterRoutes function just
-  like every standalone package used within neverV2. It takes as arguments
-  a prefix for the routes and the filepath of the db file.
-  \bpr{api}{pr:api}
   \subsection*{Implementation}
   The api backend provides the global RegisterRoutes function just
   like every standalone package used within neverV2. It takes as arguments
@@ -56,16 +46,10 @@ type GenomeCount struct {
 type TaxId struct {
   TaxId int    `json:"tax_id"`
   Links []Link `json:"links,omitempty"`
-  Links []Link `json:"links,omitempty"`
-}
-type TaxId struct {
-  TaxId int    `json:"tax_id"`
-  Links []Link `json:"links,omitempty"`
 }
 type Rank struct {
   TaxId int    `json:"tax_id"`
   Rank  string `json:"rank"`
-  Links []Link `json:"links,omitempty"`
   Links []Link `json:"links,omitempty"`
 }
 type TaxonAccessions struct {
@@ -149,10 +133,29 @@ type Node struct {
   Name     string
 	BasePath string
 	Action   string
-	Types    []string
-	// PathParams  []string
-	// QueryParams []string
+	Types    []contenttype.MediaType
 }
+#+end_src
+
+#+begin_export latex
+  We are using the \ty{contenttype} package for the \ty{Types} here.
+  Which means we need to import it. This package is rfc7231 compliant
+  and is going to help us in terms of content negotiation.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"github.com/elnormous/contenttype"
+#+end_src
+
+#+begin_export latex
+  With this imported we might as well define the two content types we are going 
+  to use. As they will be used frequently and should not be redefined over 
+  the course of this document, we will save them as global variables.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+	var jsonct = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+	var plainct = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 #+end_src
 
 #+begin_export latex
@@ -184,7 +187,6 @@ type Node struct {
   needs to take a node, the one to register, as well as a function \ty{fn}
   that is executed when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
   However it needs to accept at least the http writer and request. The function may accept more
-  However it needs to accept at least the http writer and request. The function may accept more
   arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
   to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
 #+end_export
@@ -199,11 +201,9 @@ type Node struct {
 
 #+begin_export latex
   We import the \ty{net/http} package.
-  We import the \ty{net/http} package.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "net/http"
   "net/http"
 #+end_src
 
@@ -213,7 +213,6 @@ type Node struct {
   the database using neighbors' tdb program. We will pass the connection to
   all functions that need it.
 #+end_export
-
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
   var neidb *tdb.TaxonomyDB
@@ -258,7 +257,6 @@ type Node struct {
   //<<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{accessions}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{accession}, Pa. \ref{pa:api}>>
-  //<<Initialize \ty{fintac}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{taxa}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{taxon}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{ancestors}, Pa. \ref{pa:api}>>
@@ -269,6 +267,7 @@ type Node struct {
   //<<Initialize \ty{rankDistribution}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{fintac}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{mrca}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{path}, Pa. \ref{pa:api}>>
@@ -285,8 +284,6 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>=
-	jsonT := "application/json"
-	plainT := "plain/text"
 	get := "GET"
 	post := "POST"
 
@@ -295,7 +292,7 @@ type Node struct {
     Name:     "rootDocument",
 		BasePath: prefix,
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(rootDocL, rootDocument, neidb) // new
 #+end_src
@@ -310,7 +307,7 @@ type Node struct {
     Name:     "accessions",
 		BasePath: prefix + "/accessions",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(accessionsL, accessions, neidb) // previously known as levels
 #+end_src
@@ -325,24 +322,9 @@ type Node struct {
     Name:     "accession",
 		BasePath: prefix + "/accessions/{accession_id}",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(accessionL, accession, neidb) // new
-#+end_src
-
-#+begin_export latex
-  \ty{fintac} just gets a different path.
-#+end_export
-
-#+begin_src go <<Initialize \ty{fintac}, Pa. \ref{pa:api}>>=
-	fintacL := Node{
-		Links:    make(map[string][]Node),
-    Name:     "fintac",
-		BasePath: prefix + "/fintac",
-		Action:   post,
-		Types:    []string{jsonT},
-	}
-	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
 #+end_src
 
 #+begin_export latex
@@ -355,7 +337,7 @@ type Node struct {
     Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(taxaL, taxa, neidb) // previously known as taxi
 #+end_src
@@ -370,14 +352,14 @@ type Node struct {
     Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(taxonL, taxon, neidb) // new
 #+end_src
 
 #+begin_export latex
   \ty{ancestorsL} is another subservice of \ty{taxa}, but it provides
-  two different content types.
+  plain text instead of json.
 #+end_export
 
 #+begin_src go <<Initialize \ty{ancestors}, Pa. \ref{pa:api}>>=
@@ -386,7 +368,7 @@ type Node struct {
     Name:     "ancestors",
 		BasePath: prefix + "/taxa/{taxon_id}/ancestors",
 		Action:   get,
-		Types:    []string{jsonT, plainT},
+		Types:    []contenttype.MediaType{plainct},
 	}
 	makeRoute(ancestorsL, ancestors, neidb) // new - calls ants program
 #+end_src
@@ -401,7 +383,7 @@ type Node struct {
     Name:     "children",
 		BasePath: prefix + "/taxa/{taxon_id}/children",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(childrenL, children, neidb) // previously just children
 #+end_src
@@ -417,7 +399,7 @@ type Node struct {
     Name:     "genomeCount",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(genomeCountL, genomeCount, neidb) // previously known as num_genomes
 #+end_src
@@ -432,7 +414,7 @@ type Node struct {
     Name:     "genomeCountRec",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
 #+end_src
@@ -447,13 +429,13 @@ type Node struct {
     Name:     "parent",
 		BasePath: prefix + "/taxa/{taxon_id}/parent",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(parentL, parent, neidb) // previously known as parent
 #+end_src
 
 #+begin_export latex
-  \ty{rankDistribution} again provides multiple content types.
+  \ty{rankDistribution} again provides plain text.
 #+end_export
 
 #+begin_src go <<Initialize \ty{rankDistribution}, Pa. \ref{pa:api}>>=
@@ -462,13 +444,13 @@ type Node struct {
     Name:     "rankDistribution",
 		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
 		Action:   post,
-		Types:    []string{jsonT, plainT},
+		Types:    []contenttype.MediaType{plainct},
 	}
 	makeRoute(rankDistL, rankDistribution, neidb) // new - calls ranks program
 #+end_src
 
 #+begin_export latex
-  \ty{subtree} provides multiple content types as well.
+  \ty{subtree} provides json and plain text representations.
 #+end_export
 
 #+begin_src go <<Initialize \ty{subtree}, Pa. \ref{pa:api}>>=
@@ -477,7 +459,7 @@ type Node struct {
     Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []string{jsonT, plainT},
+		Types:    []contenttype.MediaType{jsonct, plainct},
 	}
 	makeRoute(subtreeL, subtree, neidb) // previously just subtree
 #+end_src
@@ -492,13 +474,28 @@ type Node struct {
     Name:     "taxonomy",
 		BasePath: prefix + "/taxonomy",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(taxonomyL, taxonomy, neidb) // new
 #+end_src
 
 #+begin_export latex
-  \ty{mrca} is a subservice of \ty{taxonomy}.
+  \ty{fintac} is a subservice of \ty{taxonomy} providing plain text.
+#+end_export
+
+#+begin_src go <<Initialize \ty{fintac}, Pa. \ref{pa:api}>>=
+	fintacL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "fintac",
+		BasePath: prefix + "/taxonomy/fintac",
+		Action:   post,
+		Types:    []contenttype.MediaType{jsonct},
+	}
+	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
+#+end_src
+
+#+begin_export latex
+  \ty{mrca} is a subservice of \ty{taxonomy} providing json.
 #+end_export
 
 #+begin_src go <<Initialize \ty{mrca}, Pa. \ref{pa:api}>>=
@@ -507,13 +504,13 @@ type Node struct {
     Name:     "mrca",
 		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(mrcaL, mrca, neidb) // previously just mrca
 #+end_src
 
 #+begin_export latex
-  \ty{neighbors} is another subservice of \ty{taxonomy}.
+  \ty{neighbors} is another subservice of \ty{taxonomy} providing plain text.
 #+end_export
 
 #+begin_src go <<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>=
@@ -522,7 +519,7 @@ type Node struct {
     Name:     "neighbors",
 		BasePath: prefix + "/taxonomy/neighbors",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{plainct},
 	}
 	makeRoute(neighborsL, neighbors, neidb) // new - calls neighbors program
 #+end_src
@@ -537,14 +534,14 @@ type Node struct {
     Name:     "path",
 		BasePath: prefix + "/taxonomy/path",
 		Action:   get,
-		Types:    []string{jsonT},
+		Types:    []contenttype.MediaType{jsonct},
 	}
 	makeRoute(pathL, path, neidb) // previously just path
 #+end_src
 
 #+begin_export latex
   Now that we are done creating nodes and registering function we may set the links that
-  turn the nodes into a graph. The following rules define which links should be part of this graph.
+  turn the nodes into a graph. The following rules define which links should be part of responses.
   \begin{enumerate}
     \item Every endpoint has a link to itself.
     \item Every endpoint with services has links to its subservices.
@@ -554,56 +551,32 @@ type Node struct {
     \item A paginated collection should reference it's next and previous page.
     \item Endpoints that provide responses with different attributes should advertise them.
   \end{enumerate}
-  We can also enhance this graph with a few interservice connections like these:
+  We can also enhance this graph with a few specific interservice connections like these:
     \begin{itemize}
     \item mrca -> path (you may want to see the path to the mrca)
     \item parent -> ancestor (view further than the direct parent)
     \item children -> subtree (view further than the direct children)
   \end{enumerate}
 
+  While references of an entity to itself, like the \ty{self} reference or pagination references, are essential 
+  for the responses, they enhance this graph by any meaningful way. So we might as well omit them here and add
+  them to the responses individually. 
   A lot of these links will need to be slightly modified, to match the current request/ responds. We may define
   this basic graph now nevertheless.
 #+end_export
 
 #+begin_src go <<Link nodes, Pa. \ref{pa:api}>>=
-  //<<Link self, Pa. \ref{pa:api}>>
   //<<Link subservices, Pa. \ref{pa:api}>>
   //<<Link collection entities, Pa. \ref{pa:api}>>
   //<<Link entity to collection, Pa. \ref{pa:api}>>
-  //<<Link pagination, Pa. \ref{pa:api}>>
-  //<<Link entity fields, Pa. \ref{pa:api}>>
   //<<Interservice links, Pa. \ref{pa:api}>>
-#+end_src
-
-#+begin_export latex
-  The self references are pretty straight forward. We just append a node to the list with the key \ty{self}.
-#+end_export
-
-#+begin_src go <<Link self, Pa. \ref{pa:api}>>=
-	rootDocL.Links["self"] = append(rootDocL.Links["self"], rootDocL)
-	accessionsL.Links["self"] = append(accessionsL.Links["self"], accessionsL)
-	accessionL.Links["self"] = append(accessionL.Links["self"], accessionL)
-	fintacL.Links["self"] = append(fintacL.Links["self"], fintacL)
-	taxaL.Links["self"] = append(taxaL.Links["self"], taxaL)
-	taxonL.Links["self"] = append(taxonL.Links["self"], taxonL)
-	ancestorsL.Links["self"] = append(ancestorsL.Links["self"], ancestorsL)
-	childrenL.Links["self"] = append(childrenL.Links["self"], childrenL)
-	genomeCountL.Links["self"] = append(genomeCountL.Links["self"], genomeCountL)
-	genomeCountRecL.Links["self"] = append(genomeCountRecL.Links["self"], genomeCountRecL)
-	parentL.Links["self"] = append(parentL.Links["self"], parentL)
-	rankDistL.Links["self"] = append(rankDistL.Links["self"], rankDistL)
-	subtreeL.Links["self"] = append(subtreeL.Links["self"], subtreeL)
-	taxonomyL.Links["self"] = append(taxonomyL.Links["self"], taxonomyL)
-	mrcaL.Links["self"] = append(mrcaL.Links["self"], mrcaL)
-	neighborsL.Links["self"] = append(neighborsL.Links["self"], neighborsL)
-	pathL.Links["self"] = append(pathL.Links["self"], pathL)
 #+end_src
 
 #+begin_export latex
   With the subservices we know that, each endpoint should be contained in the links of the \ty{rootDocument}.
   Then there \ty{accession} which is a subservice of \ty{accessions}; \ty{taxon}, \ty{ancestors}, \ty{children},
   \ty{genomeCount}, \ty{genomeCountRec}, \ty{parent}, \ty{rankDistribution} and \ty{subtree} which are subservices
-  of \ty{taxa}. Lastly \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
+  of \ty{taxa}. Lastly \ty{fintac}, \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
 #+end_export
 
 #+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
@@ -632,6 +605,7 @@ type Node struct {
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], fintacL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
@@ -678,7 +652,8 @@ type Node struct {
 	subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
 	neighborsL.Links["previous"] = append(neighborsL.Links["previous"], neighborsL)
 	pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
-	accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
+	
+  accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
 	taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
 	ancestorsL.Links["next"] = append(ancestorsL.Links["next"], ancestorsL)
 	childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
@@ -717,6 +692,8 @@ type Node struct {
   root = rootDocL
 #+end_src
 
+
+
 #+begin_export latex
   Having delcared all the endpoints we need to begin implementing them.
   We start with the root document \ty{/}. It just provides links
@@ -734,8 +711,34 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[*any]{}
-    //<<Write rootDocument's links, Pa. \ref{pa:api}>>
-    //<<Write output, Pa. \ref{pa:api}>>
+    selfNode := root
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Write \ty{rootDocument}'s links, Pa. \ref{pa:api}>>
+    //<<Write output \ty{rootDocument}, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We use the \ty{contenttype} to check whether the server is providing a content type
+  that would be accepted by the client. This is just a matter of
+  calling the accept method and supplying the types, which are defined within the
+  nodes.
+#+end_export
+
+#+begin_src go <<Check content types, Pa. \ref{pa:api}>>=
+  _, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+  //<<React no match, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  If no type matches the available content types we respond with a 406 (Not Acceptable).
+#+end_export
+
+#+begin_src go <<React no match, Pa. \ref{pa:api}>>=
+  if err != nil {
+    w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+    return
   }
 #+end_src
 
@@ -746,8 +749,8 @@ type Node struct {
   function for it. Let's call that function \ty{makeLink} for now and implement it later.
 #+end_export
 
-#+begin_src go <<Write rootDocument's links, Pa. \ref{pa:api}>>=
-  out.Links = append(out.Links, root.Links["self"][0].makeLink("self", ""))
+#+begin_src go <<Write \ty{rootDocument}'s links, Pa. \ref{pa:api}>>=
+  out.Links = append(out.Links, root.makeLink("self", ""))
   for _, v := range root.Links["service"] {
     out.Links = append(out.Links, v.makeLink("service", ""))
   }
@@ -763,19 +766,25 @@ type Node struct {
     if href != "" {
       node.BasePath = href
     }
+    types := []string{}
+    for _, t := range node.Types {
+      types = append(types, t.String())
+    }
     return Link{
       Rel: rel,
       Href: node.BasePath,
       Action: node.Action,
-      Types: node.Types,
+      Types: types,
     }
   }
 #+end_src
 
 #+begin_export latex
-  This code block is going to be used for writing the output
-  of all of our services. Before printing the output we need
-  to prettify it, meaning convert it into pretty printed json.
+  Writing the output is going to be a very common task. Every 
+  endpoint needs to do so. This function combines the steps
+  that turn whatever we want to output into a manageable json.
+  Before printing the output we need to prettify it, meaning 
+  convert it into pretty printed json.
   This is pretty much just about setting the correct indentations.
   Then before writing the response we should also specify
   that we are writing in json format. We do this by setting
@@ -784,12 +793,25 @@ type Node struct {
   on its own, so we don't need to do that.
 #+end_export
 
-#+begin_src go <<Write output, Pa. \ref{pa:api}>>=
-  b, err := json.MarshalIndent(out, "", "  ")
-  util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
-  fmt.Fprintf(w, "%s\n", string(b))
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writeJsonOutput(w http.ResponseWriter, out any) {
+    b, err := json.MarshalIndent(out, "", "  ")
+    util.Check(err)
+	  w.Header().Set("Content-Type", "application/json")
+    fmt.Fprintf(w, "%s\n", string(b))
+  }
 #+end_src
+
+#+begin_export latex
+  Having implemented \ty{writeJsonOutput} we may use it to 
+  write the links of \tty{rootDocument}.
+#+end_export
+
+#+begin_src go <<Write output \ty{rootDocument}, Pa. \ref{pa:api}>>=
+  writeJsonOutput(w, out)
+#+end_src
+
+
 
 #+begin_export latex
   The endpoint \ty{accessions} used to be called levels.
@@ -809,15 +831,44 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
+    selfNode := root.getService("accessions")
+    //<<Check content types, Pa. \ref{pa:api}>>
     //<<Check Parameters, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Extract accessions, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Look up levels, Pa. \ref{pa:api}>>
-    //<<Add Links \ty{accessions}, Pa. \ref{pa:api}>>
-    //<<Write output, Pa. \ref{pa:api}>>
+    //<<Add links \ty{accessions}, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  We need a function that makes getting nodes from the link graph easier.
+  This function is \ty{getService}, which goes through all services and returns 
+  a pointer to a node with the correct name or nil.
+#+end_export
+
+#+begin_src go <<Methods, Pa. \ref{pa:api}>>=
+  func (node *Node) getService (name string) *Node {
+    services := node.Links["service"]
+    idx := slices.IndexFunc(services, func(a Node) bool { return a.Name == name})
+
+    if idx != -1 {
+      return &services[idx]
+    } else {
+      return nil
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  We also need to import \ty{slices}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "slices"
 #+end_src
 
 #+begin_export latex
@@ -977,35 +1028,6 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Each entity of a collcetion should hold two links. The first link references itself.
-  This may be used for ruther queries against the resource.
-  The second link references the entity's collection.
-  I feel like we could use a function here to work with the graph. A function that would make working with this graph
-  easier is \ty{getService}, which goes through all services and returns one with the correct name or nil.
-#+end_export
-
-#+begin_src go <<Methods, Pa. \ref{pa:api}>>=
-  func (node *Node) getService (name string) *Node {
-    services := node.Links["service"]
-    idx := slices.IndexFunc(services, func(a Node) bool { return a.Name == name})
-
-    if idx != -1 {
-      return &services[idx]
-    } else {
-      return nil
-    }
-  }
-#+end_src
-
-#+begin_export latex
-  We also need to import \ty{slices}.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "slices"
-#+end_src
-
-#+begin_export latex
   We need further utility function for working with links. As paths saved in a node are URI templates
   we need a function that exchanges a wildcard for an actual value.
 #+end_export
@@ -1034,19 +1056,52 @@ type Node struct {
   links.
 #+end_export
 
-#+begin_src go <<Add Links \ty{accessions}, Pa. \ref{pa:api}>>=
-  var out any
-  if plain {
-    out = data
-  } else {
+#+begin_src go <<Add links \ty{accessions}, Pa. \ref{pa:api}>>=
+  out := ResponseBody[[]Accession]{Data: data}
+  if !plain {
 		var links []Link
-		self := root.getService("accessions")
-		for link := range self.Links {
-			for _, node := range self.Links[link] {
+    //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+    //<<Add pagination links, Pa. \ref{pa:api}>>
+    //<<Add graph links, Pa. \ref{pa:api}>>
+		out.Links = links
+  }
+#+end_src
+
+#+begin_export latex
+  For adding the self link we just take the \ty{self} node
+  to make a \ty{Link} with the requested url and append it to the
+  links.
+#+end_export
+
+#+begin_src go <<Add endpoint's self link, Pa. \ref{pa:api}>>=
+    links = append(links, selfNode.makeLink("self", r.URL.String()))
+#+end_src
+
+#+begin_export latex
+  Appending the graph links is a matter of iterating over the 
+  \ty{self} nodes and turning them into links using the correct
+  relation in the process.
+#+end_export
+
+#+begin_src go <<Add graph links, Pa. \ref{pa:api}>>=
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
 				links = append(links, node.makeLink(link, ""))
 			}
 		}
-		out = ResponseBody[[]Accession]{Data: data, Links: links}
+#+end_src
+
+#+begin_export latex
+  Lastly we write the output using the \ty{writeJsonOutput} function.
+  Using the plain parameter we decide whether to output the plain data
+  or the out struct including all the links.
+#+end_export
+
+#+begin_src go <<Write json output, Pa. \ref{pa:api}>>=
+  if plain {
+    writeJsonOutput(w, out.Data)
+  } else {
+    writeJsonOutput(w, out)
   }
 #+end_src
 
@@ -1067,9 +1122,13 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func accession(w http.ResponseWriter, r *http.Request, args ...any) {
+    selfNode := root.getService("accession")
+    //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Look up level, Pa. \ref{pa:api}>>
-    //<<Write output, Pa. \ref{pa:api}>>
+    //<<Add links \ty{accession}, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -1079,33 +1138,22 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Look up level, Pa. \ref{pa:api}>>=
-  out := ResponseBody[Accession]{}
   accession := r.PathValue("accession_id")
   level, err := neidb.Level(accession)
+  out := ResponseBody[Accession]{}
   if err == nil {
-		out.Data = Accession{Accession: accession, Level: level}
+    out.Data = Accession{Accession: accession, Level: level}
+		if !plain {
+      //<<Add links \ty{accession}, Pa. \ref{pa:api}>>
+    }
   }
 #+end_src
 
-
-
-#+begin_export latex
-  The endpoint \ty{fintac} TODO
-  This is \ty{accession}' io:
-  Params:
-    Path:
-      none
-    Query:
-      none
-    Writes:
-     \ty{ResponseBody[string]}
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
-  }
+#+begin_src go <<Add links \ty{accession}, Pa. \ref{pa:api}>>=
+  var links []Link
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
+  out.Links = links
 #+end_src
 
 
@@ -1142,7 +1190,7 @@ type Node struct {
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Extract taxi query, Pa. \ref{pa:api}>>
     //<<Execute taxi query, Pa. \ref{pa:api}>>
-     //<<Write output, Pa. \ref{pa:api}>>
+     writeJsonOutput(w, out)
   }
 #+end_src
 
@@ -1226,50 +1274,133 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxon(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func ancestors(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func children(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func genomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func genomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func parent(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func rankDistribution(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func subtree(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func taxonomy(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
+  } 
+#+end_src
+
+
+
+#+begin_export latex
+  The endpoint \ty{fintac} TODO
+  This is \ty{accession}' io:
+  Params:
+    Path:
+      none
+    Query:
+      a string
+      n string
+      t string
+      u string
+    Writes:
+      string
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "os/exec"
+  "os"
+  "bytes"
+  "time"
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
+	  a := r.URL.Query().Get("a")
+	  n := r.URL.Query().Get("n")
+	  t := r.URL.Query().Get("t")
+	  u := r.URL.Query().Get("u")
+
+	  fintacArgs := []string{}
+
+	  if a != "" {
+	  	fintacArgs = append(fintacArgs, "-a", a)
+	  }
+	  if n != "" {
+	  	fintacArgs = append(fintacArgs, "-n", n)
+	  }
+	  if t != "" {
+	  	fintacArgs = append(fintacArgs, "-t", t)
+	  }
+	  if u != "" {
+	  	fintacArgs = append(fintacArgs, "-u", u)
+	  }
+
+	  fintacArgs = append(fintacArgs, "-N", "neidb")
+
+	  r.ParseMultipartForm(100_000_000)
+	  trr := r.MultipartForm.File["file1"]
+	  fmt.Println(trr)
+
+	  body := make([]byte, r.ContentLength)
+	  r.Body.Read(body)
+
+	  path := "apiv2_temp_" + strconv.Itoa(time.Now().Nanosecond())
+	  defer os.Remove(path)
+	  f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	  if err != nil {
+	  	panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+	  }
+
+	  buffer := bytes.NewBuffer(body)
+	  buffer.WriteTo(f)
+	  f.Close()
+
+	  fintacArgs = append(fintacArgs, path)
+    fmt.Println("fintac", fintacArgs)
+	  cmd := exec.Command("fintac", fintacArgs...)
+	  outt, err := cmd.CombinedOutput()
+	  if err != nil {
+	  	log.Fatal(err)
+	  }
+	  w.WriteHeader(http.StatusOK)
+	  w.Write([]byte(outt))
   }
+#+end_src
+
+
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func mrca(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func neighbors(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
   func path(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
-    //<<Write output, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
   }
 #+end_src
