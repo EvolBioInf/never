@@ -1336,55 +1336,69 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
-	  a := r.URL.Query().Get("a")
-	  n := r.URL.Query().Get("n")
-	  t := r.URL.Query().Get("t")
-	  u := r.URL.Query().Get("u")
+	a := r.URL.Query().Get("a")
+	n := r.URL.Query().Get("n")
+	t := r.URL.Query().Get("t")
+	u := r.URL.Query().Get("u")
 
-	  fintacArgs := []string{}
+	fintacArgs := []string{}
 
-	  if a != "" {
-	  	fintacArgs = append(fintacArgs, "-a", a)
-	  }
-	  if n != "" {
-	  	fintacArgs = append(fintacArgs, "-n", n)
-	  }
-	  if t != "" {
-	  	fintacArgs = append(fintacArgs, "-t", t)
-	  }
-	  if u != "" {
-	  	fintacArgs = append(fintacArgs, "-u", u)
-	  }
+	if a != "" {
+		fintacArgs = append(fintacArgs, "-a", a)
+	}
+	if n != "" {
+		fintacArgs = append(fintacArgs, "-n", n)
+	}
+	if t != "" {
+		fintacArgs = append(fintacArgs, "-t", t)
+	}
+	if u != "" {
+		fintacArgs = append(fintacArgs, "-u", u)
+	}
 
-	  fintacArgs = append(fintacArgs, "-N", "neidb")
+	fintacArgs = append(fintacArgs, "-N", "neidb")
 
-	  r.ParseMultipartForm(100_000_000)
-	  trr := r.MultipartForm.File["file1"]
-	  fmt.Println(trr)
+	r.ParseMultipartForm(100_000_000)
 
-	  body := make([]byte, r.ContentLength)
-	  r.Body.Read(body)
+	paths := []string{}
+	i := 0
+	for key := range r.MultipartForm.File {
+		files := r.MultipartForm.File[key]
+		if len(files) > 0 {
+			h := *files[0]
+			rf, err := h.Open()
+			if err != nil {
+				log.Fatal("Err while reading file from fintac request: ", err)
+			}
+			b := make([]byte, h.Size)
+			rf.Read(b)
+			rf.Close()
 
-	  path := "apiv2_temp_" + strconv.Itoa(time.Now().Nanosecond())
-	  defer os.Remove(path)
-	  f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-	  if err != nil {
-	  	panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
-	  }
+			buffer := bytes.NewBuffer(b)
+			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
+			defer os.Remove(path)
+			paths = append(paths, path)
+			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+			}
+			buffer.WriteTo(tf)
+			tf.Close()
+			i++
+		}
+	}
 
-	  buffer := bytes.NewBuffer(body)
-	  buffer.WriteTo(f)
-	  f.Close()
-
-	  fintacArgs = append(fintacArgs, path)
-    fmt.Println("fintac", fintacArgs)
-	  cmd := exec.Command("fintac", fintacArgs...)
-	  outt, err := cmd.CombinedOutput()
-	  if err != nil {
-	  	log.Fatal(err)
-	  }
-	  w.WriteHeader(http.StatusOK)
-	  w.Write([]byte(outt))
+	fintacArgs = append(fintacArgs, paths...)
+	fmt.Println("fintac", fintacArgs)
+	w.WriteHeader(http.StatusOK)
+	for _, path := range paths {
+		cmd := exec.Command("cat", path)
+		outt, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		w.Write([]byte(outt))
+	}
   }
 #+end_src
 

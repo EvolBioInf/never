@@ -666,32 +666,46 @@ func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
 	fintacArgs = append(fintacArgs, "-N", "neidb")
 
 	r.ParseMultipartForm(100_000_000)
-	trr := r.MultipartForm.File["file1"]
-	fmt.Println(trr)
 
-	body := make([]byte, r.ContentLength)
-	r.Body.Read(body)
+	paths := []string{}
+	i := 0
+	for key := range r.MultipartForm.File {
+		files := r.MultipartForm.File[key]
+		if len(files) > 0 {
+			h := *files[0]
+			rf, err := h.Open()
+			if err != nil {
+				log.Fatal("Err while reading file from fintac request: ", err)
+			}
+			b := make([]byte, h.Size)
+			rf.Read(b)
+			rf.Close()
 
-	path := "apiv2_temp_" + strconv.Itoa(time.Now().Nanosecond())
-	defer os.Remove(path)
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+			buffer := bytes.NewBuffer(b)
+			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
+			defer os.Remove(path)
+			paths = append(paths, path)
+			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+			}
+			buffer.WriteTo(tf)
+			tf.Close()
+			i++
+		}
 	}
 
-	buffer := bytes.NewBuffer(body)
-	buffer.WriteTo(f)
-	f.Close()
-
-	fintacArgs = append(fintacArgs, path)
+	fintacArgs = append(fintacArgs, paths...)
 	fmt.Println("fintac", fintacArgs)
-	cmd := exec.Command("fintac", fintacArgs...)
-	outt, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Fatal(err)
-	}
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(outt))
+	for _, path := range paths {
+		cmd := exec.Command("cat", path)
+		outt, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		w.Write([]byte(outt))
+	}
 }
 
 func mrca(w http.ResponseWriter, r *http.Request, args ...any) {
