@@ -1155,7 +1155,7 @@ type Node struct {
       exact bool
       page []int
       page_size []int
-      field_composites string
+      field_composite string
       plain_data bool
   Writes:
     ResponseBody[ []Partial<Taxon> ]
@@ -1174,9 +1174,8 @@ type Node struct {
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Extract taxi query, Pa. \ref{pa:api}>>
     //<<Execute taxi query, Pa. \ref{pa:api}>>
-    //<<Execute taxi query, Pa. \ref{pa:api}>>
-    //<<Add links \ty{accessions}, Pa. \ref{pa:api}>>
-     writeJsonOutput(w, out)
+    //<<Add links \ty{taxa}, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -1190,7 +1189,7 @@ type Node struct {
   name := r.URL.Query().Get("name")
   strExact := r.URL.Query().Get("exact")
   strScientific := r.URL.Query().Get("scientific")
-  fieldComposites := r.URL.Query().Get("field_composites")
+  fieldComposite := r.URL.Query().Get("field_composite")
 
   exact, err := strconv.ParseBool(strExact)
   if err != nil {
@@ -1235,21 +1234,62 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func getTaxonData(id int, plain bool, fieldComposites string) (tax Taxon, err error) {
+  func getTaxonData(id int, plain bool, fieldComposite string) (tax Taxon, err error) {
     tax.id = id
-    
-    sciName, err := neidb.Name(id)
-    util.Check(err)
-    
-    comName, err := neidb.CommonName(id)
-    util.Check(err)
-
-    parent, err := neidb.Parent(id)
-    util.Check(err)
+    if fieldComposite == "accessions" {
+      //<<Retrieve accessions, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "rank" || fieldComposite == "wide" {
+      //<<Retrieve rank fields, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "mid" || fieldComposite == "wide" {
+      //<<Retrieve mid fields, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "wide" {
+      //<<Retrieve wide fields, Pa. \ref{pa:api}>>
+    }
     
     return
   }
 #+end_src
+
+#+begin_export latex
+  We get the accessions specific data.
+#+end_export
+
+#+begin_src go <<Retrieve accessions, Pa. \ref{pa:api}>>=
+#+end_src
+
+#+begin_export latex
+  We get the rank specific data.
+#+end_export
+
+#+begin_src go <<Retrieve rank fields, Pa. \ref{pa:api}>>=
+#+end_src
+
+#+begin_export latex
+  We get the mid specific data.
+#+end_export
+
+#+begin_src go <<Retrieve mid fields, Pa. \ref{pa:api}>>=
+  sciName, err := neidb.Name(id)
+  util.Check(err)
+  tax.Name = sciName
+  comName, err := neidb.CommonName(id)
+  util.Check(err)
+  tax.CommonName = comName
+  parent, err := neidb.Parent(id)
+  util.Check(err)
+  tax.Parent = parent
+#+end_src
+
+#+begin_export latex
+  We get the wide specific data.
+#+end_export
+
+#+begin_src go <<Retrieve wide fields, Pa. \ref{pa:api}>>=
+#+end_src
+
 
 #+begin_export latex
   We get the taxon's scientific and common names and parent. Then we
@@ -1257,20 +1297,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
-  tax, err := getTaxonData(id, plain, )
-  data = append(data, )
-#+end_src
-
-#+begin_export latex
-  If we just constructed an output item, we store it in the
-  corresponding slice.
-#+end_export
-
-#+begin_src go <<Store taxon output, Pa. \ref{pa:api}>>=
-  if err == nil {
-    out = append(out, tout)
+  tax, err := getTaxonData(id, plain, fieldComposite)
+  if err != nil {
+    data = append(data, taxa)
   }
 #+end_src
+
 
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
