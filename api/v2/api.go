@@ -18,10 +18,16 @@ import (
 	"fmt"
 	"github.com/evolbioinf/never/util"
 
-	"bytes"
+	"errors"
+
+	"sort"
+
 	"os"
-	"os/exec"
 	"time"
+
+	"bytes"
+
+	"os/exec"
 )
 
 type Accession struct {
@@ -126,18 +132,20 @@ func (node *Node) getService(name string) *Node {
 	}
 }
 
-var jsonct = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-var plainct = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-
 var root Node
 
 var prefix string
+
+var jsonct = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+var plainct = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+
+var multipartct = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 
 func RegisterRoutes(pref, dbPath string) {
 	var neidb *tdb.TaxonomyDB
 	neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
 	if err != nil {
-		log.Fatal("apiV2: " + err.Error())
+		log.Fatal("apiV2: error while opening the database: ", err.Error())
 	}
 
 	prefix = pref
@@ -269,7 +277,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Action:   post,
 		Types:    []contenttype.MediaType{jsonct},
 	}
-	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
+	makeRoute(fintacL, fintac, dbPath) // new - calls fintac program
 
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
@@ -373,7 +381,7 @@ func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
 func writeJsonOutput(w http.ResponseWriter, out any) {
 	b, err := json.MarshalIndent(out, "", "  ")
 	util.Check(err)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", jsonct.String())
 	fmt.Fprintf(w, "%s\n", string(b))
 }
 
@@ -643,15 +651,29 @@ func taxonomy(w http.ResponseWriter, r *http.Request, args ...any) {
 }
 
 func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
-	a := r.URL.Query().Get("a")
-	n := r.URL.Query().Get("n")
-	t := r.URL.Query().Get("t")
-	u := r.URL.Query().Get("u")
+	selfNode := root.getService("accession")
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	ct, err := contenttype.GetMediaType(r)
+	if !ct.EqualsMIME(multipartct) {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		w.Write([]byte("Use multipart/form-data"))
+		return
+	}
 
 	fintacArgs := []string{}
-
-	if a != "" {
-		fintacArgs = append(fintacArgs, "-a", a)
+	aStr := r.URL.Query().Get("all_splits")
+	a, _ := strconv.ParseBool(aStr)
+	n := r.URL.Query().Get("neighbor")
+	t := r.URL.Query().Get("target")
+	u := r.URL.Query().Get("unknown")
+	if a {
+		fintacArgs = append(fintacArgs, "-a")
 	}
 	if n != "" {
 		fintacArgs = append(fintacArgs, "-n", n)
@@ -663,49 +685,88 @@ func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
 		fintacArgs = append(fintacArgs, "-u", u)
 	}
 
-	fintacArgs = append(fintacArgs, "-N", "neidb")
+	dbPath := args[0].(string)
+	fintacArgs = append(fintacArgs, "-N", dbPath)
 
-	r.ParseMultipartForm(100_000_000)
+	paths, err := filesFromFormData(w, r)
+	if err != nil {
+		return
+	}
+	for _, p := range paths {
+		defer os.Remove(p)
+		fintacArgs = append(fintacArgs, p)
+	}
 
-	paths := []string{}
-	i := 0
+	out, err := exec.Command("./fintac", fintacArgs...).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing fintac: ", err)
+	}
+
+	writePlainOutput(w, out)
+
+}
+
+func filesFromFormData(w http.ResponseWriter, r *http.Request) (paths []string, err error) {
+	err = validateMultipartForm(w, r)
+	if err != nil {
+		return
+	}
+
+	keys := []string{}
 	for key := range r.MultipartForm.File {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for i, key := range keys {
 		files := r.MultipartForm.File[key]
 		if len(files) > 0 {
 			h := *files[0]
 			rf, err := h.Open()
 			if err != nil {
-				log.Fatal("Err while reading file from fintac request: ", err)
+				log.Fatal("apiv2: Error while reading file from fintac request: ", err)
 			}
 			b := make([]byte, h.Size)
 			rf.Read(b)
 			rf.Close()
 
-			buffer := bytes.NewBuffer(b)
 			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
-			defer os.Remove(path)
 			paths = append(paths, path)
 			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
 			}
+
+			buffer := bytes.NewBuffer(b)
 			buffer.WriteTo(tf)
 			tf.Close()
-			i++
+
 		}
 	}
 
-	fintacArgs = append(fintacArgs, paths...)
-	fmt.Println("fintac", fintacArgs)
-	w.WriteHeader(http.StatusOK)
-	for _, path := range paths {
-		cmd := exec.Command("cat", path)
-		outt, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		w.Write([]byte(outt))
+	return
+}
+
+func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
+	err = r.ParseMultipartForm(3_000_000)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Malformed multipart form request"))
+		return err
 	}
+
+	if len(r.MultipartForm.File) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Provide at least one file"))
+		return errors.New("no files in body")
+	}
+
+	return nil
+}
+
+func writePlainOutput(w http.ResponseWriter, out []byte) {
+	w.Header().Set("Content-Type", plainct.String())
+	fmt.Fprintf(w, "%s", out)
 }
 
 func mrca(w http.ResponseWriter, r *http.Request, args ...any) {

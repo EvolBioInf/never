@@ -20,6 +20,7 @@
   //<<Types, Pa. \ref{pa:api}>>
   //<<Methods, Pa. \ref{pa:api}>>
   //<<Variables, Pa. \ref{pa:api}>>
+  //<<Content types, Pa. \ref{pa:api}>>
   func RegisterRoutes(pref, dbPath string) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
@@ -28,7 +29,9 @@
 
 #+begin_export latex
 First off we declare the types. This is an easy task as they are already
-defined within the openApi document. Every type needs a \ty{Links} attribute
+defined within the openApi document. We can leave out a few \ty{Taxon} types
+here by just using the widest \ty{Taxon} type and adding \ty{omitempty} tags
+for most properties. Every type also needs a \ty{Links} attribute
 which is going to be explained later on.
 #+end_export
 
@@ -43,49 +46,27 @@ type GenomeCount struct {
   Count int    `json:"count"`
   Links []Link `json:"links,omitempty"`
 }
-type TaxId struct {
-  TaxId int    `json:"tax_id"`
-  Links []Link `json:"links,omitempty"`
-}
 type Rank struct {
   TaxId int    `json:"tax_id"`
   Rank  string `json:"rank"`
   Links []Link `json:"links,omitempty"`
-}
-type TaxonAccessions struct {
-  TaxId      int         `json:"tax_id"`
-  Accessions []Accession `json:"accessions"`
-  Links      []Link      `json:"links,omitempty"`
-}
-type TaxonMid struct {
-  TaxId      int    `json:"tax_id"`
-  Name       string `json:"name"`
-  CommonName string `json:"common_name"`
-  Parent     int    `json:"parent"`
-  Links      []Link `json:"links,omitempty"`
-}
-type TaxonNT struct {
-  TaxId      int         `json:"tax_id"`
-  Type       string      `json:"type"`
-  Name       string      `json:"name"`
-  Accessions []Accession `json:"parent"`
-  Links      []Link      `json:"links,omitempty"`
 }
 type Image struct {
 	Id          int    `json:"id"`
 	Url         string `json:"url"`
 	Attribution string `json:"attribution"`
 }
-type TaxonInfo struct {
+type Taxon struct {
   TaxId          int           `json:"tax_id"`
-  Parent         int           `json:"parent"`
-  IsLeaf         bool          `json:"is_leaf"`
-  Name           string        `json:"name"`
-  CommonName     string        `json:"common_name"`
-  Rank           string        `json:"rank"`
-  RawGenomeCount []GenomeCount `json:"raw_genome_counts"`
-  RecGenomeCount []GenomeCount `json:"rec_genome_counts"`
-  Images         []Image       `json:"images"`
+  Parent         int           `json:"parent,omitempty"`
+  IsLeaf         bool          `json:"is_leaf,omitempty"`
+  Name           string        `json:"name,omitempty"`
+  CommonName     string        `json:"common_name,omitempty"`
+  Rank           string        `json:"rank,omitempty"`
+  Accessions     []Accession   `json:"accessions,omitempty"`
+  RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
+  RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
+  Images         []Image       `json:"images,omitempty"`
   Links          []Link        `json:"links,omitempty"`
 }
 #+end_src
@@ -148,14 +129,14 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  With this imported we might as well define the two content types we are going 
-  to use. As they will be used frequently and should not be redefined over 
+  With this imported we might as well define the two content types we are going
+  to use. As they will be used frequently and should not be redefined over
   the course of this document, we will save them as global variables.
 #+end_export
 
-#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
-	var jsonct = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-	var plainct = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+#+begin_src go <<Content types, Pa. \ref{pa:api}>>=
+	var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+	var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 #+end_src
 
 #+begin_export latex
@@ -218,7 +199,7 @@ type Node struct {
   var neidb *tdb.TaxonomyDB
   neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
   if err != nil {
-    log.Fatal("apiV2: " + err.Error())
+    log.Fatal("apiV2: error while opening the database: ",  err.Error())
   }
 #+end_src
 
@@ -292,7 +273,7 @@ type Node struct {
     Name:     "rootDocument",
 		BasePath: prefix,
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(rootDocL, rootDocument, neidb) // new
 #+end_src
@@ -307,7 +288,7 @@ type Node struct {
     Name:     "accessions",
 		BasePath: prefix + "/accessions",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(accessionsL, accessions, neidb) // previously known as levels
 #+end_src
@@ -322,7 +303,7 @@ type Node struct {
     Name:     "accession",
 		BasePath: prefix + "/accessions/{accession_id}",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(accessionL, accession, neidb) // new
 #+end_src
@@ -337,7 +318,7 @@ type Node struct {
     Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(taxaL, taxa, neidb) // previously known as taxi
 #+end_src
@@ -352,7 +333,7 @@ type Node struct {
     Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(taxonL, taxon, neidb) // new
 #+end_src
@@ -368,7 +349,7 @@ type Node struct {
     Name:     "ancestors",
 		BasePath: prefix + "/taxa/{taxon_id}/ancestors",
 		Action:   get,
-		Types:    []contenttype.MediaType{plainct},
+		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(ancestorsL, ancestors, neidb) // new - calls ants program
 #+end_src
@@ -383,7 +364,7 @@ type Node struct {
     Name:     "children",
 		BasePath: prefix + "/taxa/{taxon_id}/children",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(childrenL, children, neidb) // previously just children
 #+end_src
@@ -399,7 +380,7 @@ type Node struct {
     Name:     "genomeCount",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(genomeCountL, genomeCount, neidb) // previously known as num_genomes
 #+end_src
@@ -414,7 +395,7 @@ type Node struct {
     Name:     "genomeCountRec",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
 #+end_src
@@ -429,7 +410,7 @@ type Node struct {
     Name:     "parent",
 		BasePath: prefix + "/taxa/{taxon_id}/parent",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(parentL, parent, neidb) // previously known as parent
 #+end_src
@@ -444,7 +425,7 @@ type Node struct {
     Name:     "rankDistribution",
 		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
 		Action:   post,
-		Types:    []contenttype.MediaType{plainct},
+		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(rankDistL, rankDistribution, neidb) // new - calls ranks program
 #+end_src
@@ -459,7 +440,7 @@ type Node struct {
     Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct, plainct},
+		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
 	makeRoute(subtreeL, subtree, neidb) // previously just subtree
 #+end_src
@@ -474,13 +455,14 @@ type Node struct {
     Name:     "taxonomy",
 		BasePath: prefix + "/taxonomy",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(taxonomyL, taxonomy, neidb) // new
 #+end_src
 
 #+begin_export latex
   \ty{fintac} is a subservice of \ty{taxonomy} providing plain text.
+  Takes a path to the database, as an argument, instead of the database itself.
 #+end_export
 
 #+begin_src go <<Initialize \ty{fintac}, Pa. \ref{pa:api}>>=
@@ -489,9 +471,9 @@ type Node struct {
     Name:     "fintac",
 		BasePath: prefix + "/taxonomy/fintac",
 		Action:   post,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(fintacL, fintac, neidb) // new - calls fintac program
+	makeRoute(fintacL, fintac, dbPath) // new - calls fintac program
 #+end_src
 
 #+begin_export latex
@@ -504,7 +486,7 @@ type Node struct {
     Name:     "mrca",
 		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(mrcaL, mrca, neidb) // previously just mrca
 #+end_src
@@ -519,7 +501,7 @@ type Node struct {
     Name:     "neighbors",
 		BasePath: prefix + "/taxonomy/neighbors",
 		Action:   get,
-		Types:    []contenttype.MediaType{plainct},
+		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(neighborsL, neighbors, neidb) // new - calls neighbors program
 #+end_src
@@ -534,7 +516,7 @@ type Node struct {
     Name:     "path",
 		BasePath: prefix + "/taxonomy/path",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(pathL, path, neidb) // previously just path
 #+end_src
@@ -558,9 +540,9 @@ type Node struct {
     \item children -> subtree (view further than the direct children)
   \end{enumerate}
 
-  While references of an entity to itself, like the \ty{self} reference or pagination references, are essential 
+  While references of an entity to itself, like the \ty{self} reference or pagination references, are essential
   for the responses, they enhance this graph by any meaningful way. So we might as well omit them here and add
-  them to the responses individually. 
+  them to the responses individually.
   A lot of these links will need to be slightly modified, to match the current request/ responds. We may define
   this basic graph now nevertheless.
 #+end_export
@@ -652,7 +634,7 @@ type Node struct {
 	subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
 	neighborsL.Links["previous"] = append(neighborsL.Links["previous"], neighborsL)
 	pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
-	
+
   accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
 	taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
 	ancestorsL.Links["next"] = append(ancestorsL.Links["next"], ancestorsL)
@@ -780,10 +762,10 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Writing the output is going to be a very common task. Every 
+  Writing the output is going to be a very common task. Every
   endpoint needs to do so. This function combines the steps
   that turn whatever we want to output into a manageable json.
-  Before printing the output we need to prettify it, meaning 
+  Before printing the output we need to prettify it, meaning
   convert it into pretty printed json.
   This is pretty much just about setting the correct indentations.
   Then before writing the response we should also specify
@@ -797,13 +779,13 @@ type Node struct {
   func writeJsonOutput(w http.ResponseWriter, out any) {
     b, err := json.MarshalIndent(out, "", "  ")
     util.Check(err)
-	  w.Header().Set("Content-Type", "application/json")
+	  w.Header().Set("Content-Type", jsonCt.String())
     fmt.Fprintf(w, "%s\n", string(b))
   }
 #+end_src
 
 #+begin_export latex
-  Having implemented \ty{writeJsonOutput} we may use it to 
+  Having implemented \ty{writeJsonOutput} we may use it to
   write the links of \tty{rootDocument}.
 #+end_export
 
@@ -846,7 +828,7 @@ type Node struct {
 
 #+begin_export latex
   We need a function that makes getting nodes from the link graph easier.
-  This function is \ty{getService}, which goes through all services and returns 
+  This function is \ty{getService}, which goes through all services and returns
   a pointer to a node with the correct name or nil.
 #+end_export
 
@@ -1078,7 +1060,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Appending the graph links is a matter of iterating over the 
+  Appending the graph links is a matter of iterating over the
   \ty{self} nodes and turning them into links using the correct
   relation in the process.
 #+end_export
@@ -1176,11 +1158,13 @@ type Node struct {
       field_composites string
       plain_data bool
   Writes:
-    []TaxonAccessions
+    ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxa(w http.ResponseWriter, r *http.Request, args ...any) {
+    selfNode := root.getService("accession")
+    //<<Check content types, Pa. \ref{pa:api}>>
     valid := checkParams(w, r, "name")
     if !valid {
       return
@@ -1190,6 +1174,8 @@ type Node struct {
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Extract taxi query, Pa. \ref{pa:api}>>
     //<<Execute taxi query, Pa. \ref{pa:api}>>
+    //<<Execute taxi query, Pa. \ref{pa:api}>>
+    //<<Add links \ty{accessions}, Pa. \ref{pa:api}>>
      writeJsonOutput(w, out)
   }
 #+end_src
@@ -1204,6 +1190,7 @@ type Node struct {
   name := r.URL.Query().Get("name")
   strExact := r.URL.Query().Get("exact")
   strScientific := r.URL.Query().Get("scientific")
+  fieldComposites := r.URL.Query().Get("field_composites")
 
   exact, err := strconv.ParseBool(strExact)
   if err != nil {
@@ -1232,12 +1219,35 @@ type Node struct {
   } else {
     ids, err = neidb.CommonTaxids(name, size, offset)
   }
-
   util.Check(err)
-  out := []TaxonMid{}
+  data := []Taxon{}
   for _, id := range ids {
     //<<Construct taxon output, Pa. \ref{pa:api}>>
     //<<Store taxon output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  Getting the data of a taxon is something we are doing frequently.
+  This means we write a function for this behaviour. \ty{getTaxonData}
+  takes an id, whether the data should be plain, i.e. without links
+  and the composite to create.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func getTaxonData(id int, plain bool, fieldComposites string) (tax Taxon, err error) {
+    tax.id = id
+    
+    sciName, err := neidb.Name(id)
+    util.Check(err)
+    
+    comName, err := neidb.CommonName(id)
+    util.Check(err)
+
+    parent, err := neidb.Parent(id)
+    util.Check(err)
+    
+    return
   }
 #+end_src
 
@@ -1247,16 +1257,8 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
-  sciName, err := neidb.Name(id)
-  util.Check(err)
-  comName, err := neidb.CommonName(id)
-  util.Check(err)
-  tout := TaxonMid{}
-  parent, err := neidb.Parent(id)
-  if err == nil {
-    tout = TaxonMid{TaxId: id, Parent: parent,
-      Name: sciName, CommonName: comName}
-  }
+  tax, err := getTaxonData(id, plain, )
+  data = append(data, )
 #+end_src
 
 #+begin_export latex
@@ -1307,44 +1309,95 @@ type Node struct {
   func taxonomy(w http.ResponseWriter, r *http.Request, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
     writeJsonOutput(w, out)
-  } 
+  }
 #+end_src
 
 
 
 #+begin_export latex
-  The endpoint \ty{fintac} TODO
+  The endpoint \ty{fintac} executes a system call. We use this endpoint
+  to call the \ty{fintac} program via this api. In order to do so we
+  need to recreate the io of the program excluding the obvious \ty{-h},
+  \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
+  allows to pass files as arguments, this creates the need for some new handling.
   This is \ty{accession}' io:
   Params:
     Path:
       none
     Query:
-      a string
-      n string
-      t string
-      u string
+      all_splits bool
+      neighbor string
+      target string
+      unknown string
     Writes:
       string
 #+end_export
 
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "os/exec"
-  "os"
-  "bytes"
-  "time"
-#+end_src
-
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
-	a := r.URL.Query().Get("a")
-	n := r.URL.Query().Get("n")
-	t := r.URL.Query().Get("t")
-	u := r.URL.Query().Get("u")
+    selfNode := root.getService("accession")
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Check request content types, Pa. \ref{pa:api}>>
+    //<<Handle arguments, Pa. \ref{pa:api}>>
+    //<<Call program, Pa. \ref{pa:api}>>
+    //<<Write plain output, Pa. \ref{pa:api}>>
+  }
+#+end_src
 
+#+begin_export latex
+  After checking whether the client is going to accept our response format,
+  we need to check, whether the request is using the correct media type. For
+  this we use the \ty{conttentype} package. The expected media type is
+  \ty{multipart/form-data}. We are going to use this more than once, so
+  we add it to the globally defined content types
+#+end_export
+
+#+begin_src go <<Content types, Pa. \ref{pa:api}>>=
+  var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
+#+end_src
+
+#+begin_export latex
+  For checking the request type, we extract the request's media
+  type, run \ty{EqualsMIME} and return a 415 (Unsupported Media Type)
+  if it does not match \ty{multipart/form-data}.
+#+end_export
+
+#+begin_src go <<Check request content types, Pa. \ref{pa:api}>>=
+	ct, err := contenttype.GetMediaType(r)
+	if !ct.EqualsMIME(multipartCt) {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		w.Write([]byte("Use multipart/form-data"))
+		return
+	}
+#+end_src
+
+#+begin_export latex
+  Handling the arguments is about checking the data submitted via the form
+  and via the query parameters. We need to get all this data, combine and
+  prepare it, so we can use it, as if all it were local.
+#+end_export
+
+#+begin_src go <<Handle arguments, Pa. \ref{pa:api}>>=
+  //<<Retrieve query parameters, Pa. \ref{pa:api}>>
+  //<<Add db parameter, Pa. \ref{pa:api}>>
+  //<<Handle files, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} takes the parameters \ty{a}, \ty{n}, \ty{t} and \ty{u}.
+  We retrieve them from the query of the url and add them to the
+  call arguments, if they exist.
+#+end_export
+
+#+begin_src go <<Retrieve query parameters, Pa. \ref{pa:api}>>=
 	fintacArgs := []string{}
-
-	if a != "" {
-		fintacArgs = append(fintacArgs, "-a", a)
+	aStr := r.URL.Query().Get("all_splits")
+	a, _ := strconv.ParseBool(aStr)
+	n := r.URL.Query().Get("neighbor")
+	t := r.URL.Query().Get("target")
+	u := r.URL.Query().Get("unknown")
+	if a {
+		fintacArgs = append(fintacArgs, "-a")
 	}
 	if n != "" {
 		fintacArgs = append(fintacArgs, "-n", n)
@@ -1355,54 +1408,269 @@ type Node struct {
 	if u != "" {
 		fintacArgs = append(fintacArgs, "-u", u)
 	}
+#+end_src
 
-	fintacArgs = append(fintacArgs, "-N", "neidb")
+#+begin_export latex
+  When calling fintac remotely we want to use the database.
+  In order to do so we need to specify it via a call argument.
+  The path of the database is specified as the first parameter
+  passed to this function.
+#+end_export
 
-	r.ParseMultipartForm(100_000_000)
+#+begin_src go <<Add db parameter, Pa. \ref{pa:api}>>=
+  dbPath := args[0].(string)
+	fintacArgs = append(fintacArgs, "-N", dbPath)
+#+end_src
 
-	paths := []string{}
-	i := 0
-	for key := range r.MultipartForm.File {
-		files := r.MultipartForm.File[key]
-		if len(files) > 0 {
-			h := *files[0]
-			rf, err := h.Open()
-			if err != nil {
-				log.Fatal("Err while reading file from fintac request: ", err)
-			}
-			b := make([]byte, h.Size)
-			rf.Read(b)
-			rf.Close()
+#+begin_export latex
+  Handling the files is a quite tedious process, which need to do
+  for at least one more service. This means we should write a function 
+  for this behaviour. 
+#+end_export
 
-			buffer := bytes.NewBuffer(b)
-			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
-			defer os.Remove(path)
-			paths = append(paths, path)
-			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
-			}
-			buffer.WriteTo(tf)
-			tf.Close()
-			i++
-		}
-	}
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func filesFromFormData(w http.ResponseWriter, r *http.Request) (paths []string, err error) {
+      //<<Validate form, Pa. \ref{pa:api}>>
+      //<<Sort files, Pa. \ref{pa:api}>>
+      //<<Create temporary files, Pa. \ref{pa:api}>>
+      return
+  } 
+#+end_src
 
-	fintacArgs = append(fintacArgs, paths...)
-	fmt.Println("fintac", fintacArgs)
-	w.WriteHeader(http.StatusOK)
-	for _, path := range paths {
-		cmd := exec.Command("cat", path)
-		outt, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		w.Write([]byte(outt))
-	}
+#+begin_export latex
+  There are two steps in validating the content of a multipart form.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
+      //<<Parse form data, Pa. \ref{pa:api}>>
+      //<<Check for files, Pa. \ref{pa:api}>>
+      return nil
   }
 #+end_src
 
+#+begin_export latex
+  Accessing the data of a multipart form request, requires
+  a parsing step. In this the format of provided is checked
+  and loaded into memory. We may define the amount space
+  we are willing to allocate for this data, I've decided
+  on 3MB, the remaining data will be stored on the hard
+  drive. We return a 400 (Bad Request) if the data is
+  malformed.
+#+end_export
 
+#+begin_src go <<Parse form data, Pa. \ref{pa:api}>>=
+	err = r.ParseMultipartForm(3_000_000)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Malformed multipart form request"))
+		return err
+	}
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} requires at least one file, so we should check whether
+  one was provided. We return a 400 (Bad Request) if there is no
+  file.
+#+end_export
+
+#+begin_src go <<Check for files, Pa. \ref{pa:api}>>=
+	if len(r.MultipartForm.File) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Provide at least one file"))
+		return errors.New("no files in body")
+	}
+#+end_src
+
+#+begin_export latex
+  We need to import the \ty{errors} package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"errors"
+#+end_src
+
+#+begin_export latex
+  Now we may just call the validation function to check 
+  the incoming form.
+#+end_export
+
+#+begin_src go <<Validate form, Pa. \ref{pa:api}>>=
+  err = validateMultipartForm(w, r)
+  if err != nil {
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  We need to pass the provided files in some defined
+  order. We use the keys that indicate the files to
+  do so.
+#+end_export
+
+#+begin_src go <<Sort files, Pa. \ref{pa:api}>>=
+	keys := []string{}
+	for key := range r.MultipartForm.File {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+#+end_src
+
+#+begin_export latex
+  We need to import the \ty{sort} package for this.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "sort"
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} works with specified file names. This means 
+  we have to have files to make the program call. For this I
+  thought of the following: We extract the file data from 
+  the request, create a temporary file and save it's path,
+  write the data to this temporary file, use the paths for 
+  the \ty{fintac} call and remove the temporary files afterwards.
+  So these are the steps we are going to follow.
+#+end_export
+
+#+begin_src go <<Create temporary files, Pa. \ref{pa:api}>>=
+  for i, key := range keys {
+		files := r.MultipartForm.File[key]
+		if len(files) > 0 {
+	  //<<Extract request's file data, Pa. \ref{pa:api}>>
+	  //<<Open temporary file, Pa. \ref{pa:api}>>
+	  //<<Write to temporary file, Pa. \ref{pa:api}>>
+		}
+	}
+#+end_src
+
+#+begin_export latex
+  We expect that each key contains exactly one file. When 
+  accesing the \ty{files} variable, we get pointers to the 
+  header of a file. Now working with this is rather similar
+  to working with any other file. We may open the file via 
+  the header, read it's data to a byte slice and close it again.
+#+end_export
+
+#+begin_src go <<Extract request's file data, Pa. \ref{pa:api}>>=
+	h := *files[0]
+	rf, err := h.Open()
+	if err != nil {
+		log.Fatal("apiv2: Error while reading file from fintac request: ", err)
+	}
+	b := make([]byte, h.Size)
+	rf.Read(b)
+	rf.Close()
+#+end_src
+
+#+begin_export latex
+  In order to open a file we need to define where this file
+  should be stored. This name should include the name of the 
+  package, a \ty{temp} marker and postpend something making
+  the filename unique. We are going to postpend a timestamp. 
+  Making this file temporary is necessary
+  to avoid flooding the hard drive. Sadly we can't make a 
+  deferred remove call right now, as we are in a subfunction.
+  This means the calling function needs to take care of the
+  file removal. 
+  To open/create the file we call \ty{os.Open} adding 
+  the create and write only flags. The \ty{0644} defines unix
+  permissions for a file. \ty{0644} means the owner may execute
+  read and write operation, while everyone else has read only rights.
+#+end_export
+
+#+begin_src go <<Open temporary file, Pa. \ref{pa:api}>>=
+	path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
+  paths = append(paths, path)
+	tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+  if err != nil {
+		panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+	}
+#+end_src
+
+#+begin_export latex
+  We need to import the \ty{os} and \ty{time} packages.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "os"
+  "time"
+#+end_src
+
+#+begin_export latex
+  We create a new buffer storing the bytes we just read,
+  write them to our temporary file and close the file afterwards.
+  It's necessary to close the file right now, instead of deferring it,
+  so that other processes may read it.
+#+end_export
+
+#+begin_src go <<Write to temporary file, Pa. \ref{pa:api}>>=
+	buffer := bytes.NewBuffer(b)
+	buffer.WriteTo(tf)
+	tf.Close()
+#+end_src
+
+#+begin_export latex
+  The buffers require importing the \ty{bytes} package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "bytes"
+#+end_src
+
+#+begin_export latex
+  Now we can call \ty{filesFromFormData}. We also need to make a deferred call
+  to \ty{os.Remove} to make the files temporary.
+#+end_export
+
+#+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
+  paths, err := filesFromFormData(w, r)
+  if err != nil {
+    return
+  }
+  for _, p := range paths {
+    defer os.Remove(p)
+    fintacArgs = append(fintacArgs, p)
+  }
+#+end_src
+
+#+begin_export latex
+  We make a sysCall to execute \ty{fintac}. \ty{Output}
+  is a blocking command, that returns whatever was written
+  to \ty{stdout} and \ty{stderr}.
+#+end_export
+
+#+begin_src go <<Call program, Pa. \ref{pa:api}>>=
+	out, err := exec.Command("./fintac", fintacArgs...).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing fintac: ", err)
+	}
+#+end_src
+
+#+begin_export latex
+  \ty{exec} is part of the \ty{os/exec} package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "os/exec"
+#+end_src
+
+#+begin_export latex
+  We need to implement a new function for writing plain data.
+  Let's call it \ty{writePlainOutput}
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writePlainOutput(w http.ResponseWriter, out []byte) {
+    w.Header().Set("Content-Type", plainCt.String())
+    fmt.Fprintf(w, "%s", out)
+  }
+#+end_src
+
+#+begin_src go <<Write plain output, Pa. \ref{pa:api}>>=
+  writePlainOutput(w, out)
+#+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func mrca(w http.ResponseWriter, r *http.Request, args ...any) {
