@@ -18,6 +18,8 @@ import (
 
 	"slices"
 
+	"os/exec"
+
 	"errors"
 
 	"sort"
@@ -26,8 +28,6 @@ import (
 	"time"
 
 	"bytes"
-
-	"os/exec"
 )
 
 type Accession struct {
@@ -183,7 +183,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Action:   get,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&ancestorsL, ancestors, neidb) // new - calls ants program
+	makeRoute(&ancestorsL, ancestors, dbPath) // new - calls ants program
 
 	childrenL := Node{
 		Links:    make(map[string][]Node),
@@ -727,6 +727,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	if err != nil {
 		writeBadRequestResp(w, "Taxon id is not an integer.")
 	}
+
 	tax, err := getTaxonData(id, true, fieldComposite, neidb)
 	var out ResponseBody[Taxon]
 	if err == nil {
@@ -754,9 +755,31 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 }
 
 func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	id := r.PathValue("taxon_id")
+
+	dbPath := args[0].(string)
+
+	out, err := exec.Command("./ants", id, dbPath).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing fintac: ", err)
+	}
+
+	writePlainOutput(w, out)
+
 }
+
+func writePlainOutput(w http.ResponseWriter, out []byte) {
+	w.Header().Set("Content-Type", plainCt.String())
+	fmt.Fprintf(w, "%s", out)
+}
+
 func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
@@ -895,11 +918,6 @@ func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
 	}
 
 	return nil
-}
-
-func writePlainOutput(w http.ResponseWriter, out []byte) {
-	w.Header().Set("Content-Type", plainCt.String())
-	fmt.Fprintf(w, "%s", out)
 }
 
 func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {

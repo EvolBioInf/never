@@ -340,7 +340,8 @@ type Node struct {
 
 #+begin_export latex
   \ty{ancestorsL} is another subservice of \ty{taxa}, but it provides
-  plain text instead of json.
+  plain text instead of json. It does not need a connection to the
+  database, but the actual file path instead.
 #+end_export
 
 #+begin_src go <<Initialize \ty{ancestors}, Pa. \ref{pa:api}>>=
@@ -351,7 +352,7 @@ type Node struct {
 		Action:   get,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&ancestorsL, ancestors, neidb) // new - calls ants program
+	makeRoute(&ancestorsL, ancestors, dbPath) // new - calls ants program
 #+end_src
 
 #+begin_export latex
@@ -677,6 +678,7 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{root document}
   Having delcared all the endpoints we need to begin implementing them.
   We start with the root document \ty{/}. It just provides links
   to all the endpoints provided by this api.
@@ -801,6 +803,7 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{accessions}
   The endpoint \ty{accessions} used to be called levels.
   The following sections will closely resemble neverV1
   In our implementation of \ty{accessions} we extract the accessions, get
@@ -1133,6 +1136,7 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{accession}
   The endpoint \ty{accession} is used to retrieve single
   resources of the accessions collection.
   This is \ty{accession}' io:
@@ -1189,6 +1193,7 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{taxa}
   The enpoint \ty{taxa} takes as input the name of a taxon, whether to use
   the scientific name only, a matching mode, a page number, a page size
   and an identifier for the kind of fields that should be returned. It
@@ -1528,6 +1533,7 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{taxon}
   The enpoint \ty{taxon} takes as input the taxon id of a taxon and 
   an identifier for the kind of fields that should be returned. It
   writes as response for each matching taxon the taxon ID, its parent's
@@ -1536,7 +1542,7 @@ type Node struct {
   This is \ty{taxon}'s io:
   Params:
     Path:
-      taxon_id string
+      taxon_id id
     Query:
       field_composite string
       plain_data bool
@@ -1564,15 +1570,25 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get taxon data, Pa. \ref{pa:api}>>=
-  idStr := r.PathValue("taxon_id")
-  id, err := strconv.Atoi(idStr)
-  if err != nil {
-    writeBadRequestResp(w, "Taxon id is not an integer.")
-  }
+  //<<Parse taxon id, Pa. \ref{pa:api}>>
   tax, err := getTaxonData(id, true, fieldComposite, neidb)
   var out ResponseBody[Taxon] 
   if err == nil {
     out.Data = tax
+  }
+#+end_src
+
+#+begin_export latex
+  We extract the taxon id as a string via the \ty{PathValue}
+  function. Expecting an integer, we convert the string and
+  return an error response, if it was malformed.
+#+end_export
+
+#+begin_src go <<Parse taxon id, Pa. \ref{pa:api}>>=
+  idStr := r.PathValue("taxon_id")
+  id, err := strconv.Atoi(idStr)
+  if err != nil {
+    writeBadRequestResp(w, "Taxon id is not an integer.")
   }
 #+end_src
 
@@ -1589,11 +1605,98 @@ type Node struct {
   out.Links = links
 #+end_src
 
+
+
+#+begin_export latex
+  \subsection{ancestors}
+  The endpoint \ty{ancestors} executes a system call. We use this endpoint
+  to call the \ty{ants} program via this api. Given the id of a taxon, \ty{ants}
+  retrieves all ancestors of a taxon. The program does not provide a wide 
+  variety in call arguments, so the only thing we need to pass is the taxon's id.
+
+  This is \ty{ancestors}'s io:
+  Params:
+    Path:
+      taxon_id id
+    Query:
+      none
+  Writes:
+    string
+
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get taxon id, Pa. \ref{pa:api}>>
+    //<<Get db path, Pa. \ref{pa:api}>>
+    //<<Call \ty{ants}, Pa. \ref{pa:api}>>
+    //<<Write plain output, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  The taxon's id is stored in as a path parameter.
+  A system call takes only strings as input, so we 
+  don't need to convert the path parameter.
+#+end_export
+
+#+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
+  id := r.PathValue("taxon_id")
+#+end_src
+
+#+begin_export latex
+  As \ty{ancestors} is one of the endpoints that don't need the 
+  database - not making any calls to it, it instead receives the
+  path to the database file.
+#+end_export
+
+#+begin_src go <<Get db path, Pa. \ref{pa:api}>>=
+  dbPath := args[0].(string)
+#+end_src
+
+#+begin_export latex
+  Calling a local program entails making a sysCall. 
+  This may be done with the \ty{Command} function provided
+  by the \ty{exec} package.
+  Then we use \ty{Output} as a blocking execution, that returns 
+  whatever was written to \ty{stdout} and \ty{stderr}.
+#+end_export
+
+#+begin_src go <<Call \ty{ants}, Pa. \ref{pa:api}>>=
+	out, err := exec.Command("./ants", id, dbPath).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing fintac: ", err)
+	}
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{exec}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "os/exec"
+#+end_src
+
+#+begin_export latex
+  We need to implement a new function for writing plain data.
+  Let's call it \ty{writePlainOutput}
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writePlainOutput(w http.ResponseWriter, out []byte) {
+    w.Header().Set("Content-Type", plainCt.String())
+    fmt.Fprintf(w, "%s", out)
+  }
+#+end_src
+
+#+begin_src go <<Write plain output, Pa. \ref{pa:api}>>=
+  writePlainOutput(w, out)
+#+end_src
+
+
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
     writeJsonOutput(w, out)
@@ -1627,11 +1730,13 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{fintac}
   The endpoint \ty{fintac} executes a system call. We use this endpoint
   to call the \ty{fintac} program via this api. In order to do so we
   need to recreate the io of the program excluding the obvious \ty{-h},
   \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
   allows to pass files as arguments, this creates the need for some new handling.
+
   This is \ty{accession}' io:
   Params:
     Path:
@@ -1650,7 +1755,7 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Check request content types, Pa. \ref{pa:api}>>
     //<<Handle arguments, Pa. \ref{pa:api}>>
-    //<<Call program, Pa. \ref{pa:api}>>
+    //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -1945,40 +2050,14 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We make a sysCall to execute \ty{fintac}. \ty{Output}
-  is a blocking command, that returns whatever was written
-  to \ty{stdout} and \ty{stderr}.
+  We already know how to call a program.
 #+end_export
 
-#+begin_src go <<Call program, Pa. \ref{pa:api}>>=
+#+begin_src go <<Call \ty{fintac}, Pa. \ref{pa:api}>>=
 	out, err := exec.Command("./fintac", fintacArgs...).Output()
 	if err != nil {
 		log.Fatal("apiv2: Error executing fintac: ", err)
 	}
-#+end_src
-
-#+begin_export latex
-  \ty{exec} is part of the \ty{os/exec} package.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "os/exec"
-#+end_src
-
-#+begin_export latex
-  We need to implement a new function for writing plain data.
-  Let's call it \ty{writePlainOutput}
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func writePlainOutput(w http.ResponseWriter, out []byte) {
-    w.Header().Set("Content-Type", plainCt.String())
-    fmt.Fprintf(w, "%s", out)
-  }
-#+end_src
-
-#+begin_src go <<Write plain output, Pa. \ref{pa:api}>>=
-  writePlainOutput(w, out)
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
