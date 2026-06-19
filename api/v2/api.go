@@ -8,8 +8,6 @@ import (
 	"github.com/evolbioinf/neighbors/tdb"
 	"log"
 
-	"slices"
-
 	"strings"
 
 	"strconv"
@@ -17,6 +15,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/evolbioinf/never/util"
+
+	"slices"
 
 	"errors"
 
@@ -40,49 +40,27 @@ type GenomeCount struct {
 	Count int    `json:"count"`
 	Links []Link `json:"links,omitempty"`
 }
-type TaxId struct {
-	TaxId int    `json:"tax_id"`
-	Links []Link `json:"links,omitempty"`
-}
 type Rank struct {
 	TaxId int    `json:"tax_id"`
 	Rank  string `json:"rank"`
 	Links []Link `json:"links,omitempty"`
-}
-type TaxonAccessions struct {
-	TaxId      int         `json:"tax_id"`
-	Accessions []Accession `json:"accessions"`
-	Links      []Link      `json:"links,omitempty"`
-}
-type TaxonMid struct {
-	TaxId      int    `json:"tax_id"`
-	Name       string `json:"name"`
-	CommonName string `json:"common_name"`
-	Parent     int    `json:"parent"`
-	Links      []Link `json:"links,omitempty"`
-}
-type TaxonNT struct {
-	TaxId      int         `json:"tax_id"`
-	Type       string      `json:"type"`
-	Name       string      `json:"name"`
-	Accessions []Accession `json:"parent"`
-	Links      []Link      `json:"links,omitempty"`
 }
 type Image struct {
 	Id          int    `json:"id"`
 	Url         string `json:"url"`
 	Attribution string `json:"attribution"`
 }
-type TaxonInfo struct {
+type Taxon struct {
 	TaxId          int           `json:"tax_id"`
-	Parent         int           `json:"parent"`
-	IsLeaf         bool          `json:"is_leaf"`
-	Name           string        `json:"name"`
-	CommonName     string        `json:"common_name"`
-	Rank           string        `json:"rank"`
-	RawGenomeCount []GenomeCount `json:"raw_genome_counts"`
-	RecGenomeCount []GenomeCount `json:"rec_genome_counts"`
-	Images         []Image       `json:"images"`
+	Parent         int           `json:"parent,omitempty"`
+	IsLeaf         bool          `json:"is_leaf,omitempty"`
+	Name           string        `json:"name,omitempty"`
+	CommonName     string        `json:"common_name,omitempty"`
+	Rank           string        `json:"rank,omitempty"`
+	Accessions     []Accession   `json:"accessions,omitempty"`
+	RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
+	RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
+	Images         []Image       `json:"images,omitempty"`
 	Links          []Link        `json:"links,omitempty"`
 }
 
@@ -136,10 +114,10 @@ var root Node
 
 var prefix string
 
-var jsonct = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-var plainct = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 
-var multipartct = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
+var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 
 func RegisterRoutes(pref, dbPath string) {
 	var neidb *tdb.TaxonomyDB
@@ -158,153 +136,153 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "rootDocument",
 		BasePath: prefix,
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(rootDocL, rootDocument, neidb) // new
+	makeRoute(&rootDocL, rootDocument, neidb) // new
 
 	accessionsL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "accessions",
 		BasePath: prefix + "/accessions",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(accessionsL, accessions, neidb) // previously known as levels
+	makeRoute(&accessionsL, accessions, neidb) // previously known as levels
 
 	accessionL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "accession",
 		BasePath: prefix + "/accessions/{accession_id}",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(accessionL, accession, neidb) // new
+	makeRoute(&accessionL, accession, neidb) // new
 
 	taxaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(taxaL, taxa, neidb) // previously known as taxi
+	makeRoute(&taxaL, taxa, neidb) // previously known as taxi
 
 	taxonL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(taxonL, taxon, neidb) // new
+	makeRoute(&taxonL, taxon, neidb) // new
 
 	ancestorsL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "ancestors",
 		BasePath: prefix + "/taxa/{taxon_id}/ancestors",
 		Action:   get,
-		Types:    []contenttype.MediaType{plainct},
+		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(ancestorsL, ancestors, neidb) // new - calls ants program
+	makeRoute(&ancestorsL, ancestors, neidb) // new - calls ants program
 
 	childrenL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "children",
 		BasePath: prefix + "/taxa/{taxon_id}/children",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(childrenL, children, neidb) // previously just children
+	makeRoute(&childrenL, children, neidb) // previously just children
 
 	genomeCountL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "genomeCount",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(genomeCountL, genomeCount, neidb) // previously known as num_genomes
+	makeRoute(&genomeCountL, genomeCount, neidb) // previously known as num_genomes
 
 	genomeCountRecL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "genomeCountRec",
 		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
+	makeRoute(&genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
 
 	parentL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "parent",
 		BasePath: prefix + "/taxa/{taxon_id}/parent",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(parentL, parent, neidb) // previously known as parent
+	makeRoute(&parentL, parent, neidb) // previously known as parent
 
 	rankDistL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "rankDistribution",
 		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
 		Action:   post,
-		Types:    []contenttype.MediaType{plainct},
+		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(rankDistL, rankDistribution, neidb) // new - calls ranks program
+	makeRoute(&rankDistL, rankDistribution, neidb) // new - calls ranks program
 
 	subtreeL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct, plainct},
+		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(subtreeL, subtree, neidb) // previously just subtree
+	makeRoute(&subtreeL, subtree, neidb) // previously just subtree
 
 	taxonomyL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "taxonomy",
 		BasePath: prefix + "/taxonomy",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(taxonomyL, taxonomy, neidb) // new
+	makeRoute(&taxonomyL, taxonomy, neidb) // new
 
 	fintacL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "fintac",
 		BasePath: prefix + "/taxonomy/fintac",
 		Action:   post,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(fintacL, fintac, dbPath) // new - calls fintac program
+	makeRoute(&fintacL, fintac, dbPath) // new - calls fintac program
 
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "mrca",
 		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(mrcaL, mrca, neidb) // previously just mrca
+	makeRoute(&mrcaL, mrca, neidb) // previously just mrca
 
 	neighborsL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "neighbors",
 		BasePath: prefix + "/taxonomy/neighbors",
 		Action:   get,
-		Types:    []contenttype.MediaType{plainct},
+		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(neighborsL, neighbors, neidb) // new - calls neighbors program
+	makeRoute(&neighborsL, neighbors, neidb) // new - calls neighbors program
 
 	pathL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "path",
 		BasePath: prefix + "/taxonomy/path",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonct},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(pathL, path, neidb) // previously just path
+	makeRoute(&pathL, path, neidb) // previously just path
 
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
@@ -353,15 +331,14 @@ func RegisterRoutes(pref, dbPath string) {
 	root = rootDocL
 
 }
-func makeRoute(node Node, fn func(http.ResponseWriter, *http.Request, ...any), args ...any) {
+func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), args ...any) {
 	http.HandleFunc(node.Action+" "+node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-		fn(w, r, args...)
+		fn(w, r, node, args...)
 	})
 }
 
-func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
+func rootDocument(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[*any]{}
-	selfNode := root
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -379,14 +356,17 @@ func rootDocument(w http.ResponseWriter, r *http.Request, args ...any) {
 }
 
 func writeJsonOutput(w http.ResponseWriter, out any) {
-	b, err := json.MarshalIndent(out, "", "  ")
+	w.Header().Set("Content-Type", jsonCt.String())
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err := encoder.Encode(out)
 	util.Check(err)
-	w.Header().Set("Content-Type", jsonct.String())
-	fmt.Fprintf(w, "%s\n", string(b))
+	w.Write(buf.Bytes())
 }
 
-func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
-	selfNode := root.getService("accessions")
+func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -424,7 +404,8 @@ func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
 			acc := Accession{Accession: accession, Level: level}
 			if !plain {
 				accNode := *root.getService("accession")
-				acc.Links = append(acc.Links, accNode.makeLink("self", fillTemplate(accNode, map[string]string{"accession_id": acc.Accession})))
+				acc.Links = append(acc.Links, accNode.makeLink("self",
+					fillTemplate(accNode, map[string]string{}, map[string]string{})))
 
 			}
 			data = append(data, acc)
@@ -432,6 +413,7 @@ func accessions(w http.ResponseWriter, r *http.Request, args ...any) {
 	}
 
 	out := ResponseBody[[]Accession]{Data: data}
+
 	if !plain {
 		var links []Link
 		links = append(links, selfNode.makeLink("self", r.URL.String()))
@@ -457,12 +439,17 @@ func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
 	for _, arg := range args {
 		p := r.URL.Query().Get(arg)
 		if p == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Missing required parameter."))
+			writeBadRequestResp(w, "Missing required parameter.")
+
 			return false
 		}
 	}
 	return true
+}
+
+func writeBadRequestResp(w http.ResponseWriter, text string) {
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write([]byte(text))
 }
 
 func extractPaging(r *http.Request) (offset, size int) {
@@ -491,15 +478,25 @@ func extractPaging(r *http.Request) (offset, size int) {
 	return
 }
 
-func fillTemplate(node Node, vals map[string]string) string {
-	for k := range vals {
-		node.BasePath = strings.Replace(node.BasePath, "{"+k+"}", vals[k], 1)
+func fillTemplate(node Node, pathParams map[string]string, queryParams map[string]string) string {
+	for k := range pathParams {
+		node.BasePath = strings.Replace(node.BasePath, "{"+k+"}", pathParams[k], 1)
+	}
+	i := 0
+	for k := range queryParams {
+		str := ""
+		if i == 0 {
+			str += "?"
+		} else {
+			str += "&"
+		}
+		node.BasePath = fmt.Sprintf("%s%s%s=%s", node.BasePath, str, k, queryParams[k])
+		i++
 	}
 	return node.BasePath
 }
 
-func accession(w http.ResponseWriter, r *http.Request, args ...any) {
-	selfNode := root.getService("accession")
+func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -517,11 +514,11 @@ func accession(w http.ResponseWriter, r *http.Request, args ...any) {
 
 	accession := r.PathValue("accession_id")
 	level, err := neidb.Level(accession)
-	out := ResponseBody[Accession]{}
+	var data Accession
+	var links []Link
 	if err == nil {
-		out.Data = Accession{Accession: accession, Level: level}
+		data = Accession{Accession: accession, Level: level}
 		if !plain {
-			var links []Link
 			links = append(links, selfNode.makeLink("self", r.URL.String()))
 
 			for link := range selfNode.Links {
@@ -530,12 +527,214 @@ func accession(w http.ResponseWriter, r *http.Request, args ...any) {
 				}
 			}
 
-			out.Links = links
-
 		}
 	}
 
+	out := ResponseBody[Accession]{Data: data, Links: links}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
+}
+
+func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	valid := checkParams(w, r, "name")
+	if !valid {
+		return
+	}
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	offset, size := extractPaging(r)
+
+	name := r.URL.Query().Get("name")
+	strExact := r.URL.Query().Get("exact")
+	strScientific := r.URL.Query().Get("scientific")
+	fieldComposite := r.URL.Query().Get("field_composite")
+	if fieldComposite == "" {
+		fieldComposite = "default"
+	}
+
+	exact, err := strconv.ParseBool(strExact)
+	if err != nil {
+		exact = false
+	}
+	scientific, err := strconv.ParseBool(strScientific)
+	if err != nil {
+		scientific = false
+	}
+	if !exact {
+		name = strings.ReplaceAll(name, " ", "% %")
+		name = "%" + name + "%"
+	}
+
+	var ids []int
+	if scientific {
+		ids, err = neidb.Taxids(name, size, offset)
+	} else {
+		ids, err = neidb.CommonTaxids(name, size, offset)
+	}
+	util.Check(err)
+	data := []Taxon{}
+	for _, id := range ids {
+		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+		if err == nil {
+			data = append(data, tax)
+		}
+
+	}
+
+	out := ResponseBody[[]Taxon]{Data: data}
+
+	if !plain {
+		var links []Link
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
+			}
+		}
+
+		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+
+		out.Links = links
+	}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
+}
+
+func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
+	tax.TaxId = id
+	if fieldComposite == "rank" || fieldComposite == "all" {
+		rank, err := neidb.Rank(id)
+		util.Check(err)
+		tax.Rank = rank
+
+	}
+	if fieldComposite == "default" || fieldComposite == "all" {
+		sciName, err := neidb.Name(id)
+		util.Check(err)
+		tax.Name = sciName
+		comName, err := neidb.CommonName(id)
+		util.Check(err)
+		tax.CommonName = comName
+
+		parent, err := neidb.Parent(id)
+		util.Check(err)
+		tax.Parent = parent
+
+	}
+	if fieldComposite == "all" {
+		isLeaf, err := neidb.IsLeaf(id)
+		util.Check(err)
+		tax.IsLeaf = isLeaf
+
+		var raw, rec []GenomeCount
+		for _, level := range tdb.AssemblyLevels() {
+			count, err := neidb.NumGenomes(id, level)
+			util.Check(err)
+			gc := GenomeCount{Count: count, Level: level}
+			raw = append(raw, gc)
+			count, err = neidb.NumGenomesRec(id, level)
+			util.Check(err)
+			gc = GenomeCount{Count: count, Level: level}
+			rec = append(rec, gc)
+		}
+
+		var neiImages []Image
+		images, err := neidb.Images(id)
+		util.Check(err)
+		for _, image := range images {
+			i := Image{Id: image.Id,
+				Url:         image.Url,
+				Attribution: image.Attribution}
+			neiImages = append(neiImages, i)
+		}
+
+	}
+	if !plain {
+		taxNode := *root.getService("taxon")
+		tax.Links = append(tax.Links, taxNode.makeLink("self", fillTemplate(
+			taxNode,
+			map[string]string{"taxon_id": strconv.Itoa(id)},
+			map[string]string{"field_composite": fieldComposite},
+		)))
+
+	}
+	return
+}
+
+func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
+	available := []string{"id", "rank", "default", "all"}
+	queryName := "field_composite"
+	u := *r.URL
+	for _, v := range available {
+		if v != fieldComposite {
+			q := u.Query()
+			q.Set(queryName, v)
+			u.RawQuery = q.Encode()
+			links = append(links, node.makeLink("more fields", u.String()))
+
+		}
+	}
+	return
+}
+
+func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	fieldComposite := r.URL.Query().Get("field_composite")
+	if fieldComposite == "" {
+		fieldComposite = "default"
+	}
+
+	idStr := r.PathValue("taxon_id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeBadRequestResp(w, "Taxon id is not an integer.")
+	}
+	tax, err := getTaxonData(id, true, fieldComposite, neidb)
+	var out ResponseBody[Taxon]
+	if err == nil {
+		out.Data = tax
+	}
+
 	var links []Link
+	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
 	links = append(links, selfNode.makeLink("self", r.URL.String()))
 
 	for link := range selfNode.Links {
@@ -554,104 +753,40 @@ func accession(w http.ResponseWriter, r *http.Request, args ...any) {
 
 }
 
-func taxa(w http.ResponseWriter, r *http.Request, args ...any) {
-	valid := checkParams(w, r, "name")
-	if !valid {
-		return
-	}
-
-	neidb := args[0].(*tdb.TaxonomyDB)
-
-	offset, size := extractPaging(r)
-
-	name := r.URL.Query().Get("name")
-	strExact := r.URL.Query().Get("exact")
-	strScientific := r.URL.Query().Get("scientific")
-
-	exact, err := strconv.ParseBool(strExact)
-	if err != nil {
-		exact = false
-	}
-
-	scientific, err := strconv.ParseBool(strScientific)
-	if err != nil {
-		scientific = false
-	}
-
-	if !exact {
-		name = strings.ReplaceAll(name, " ", "% %")
-		name = "%" + name + "%"
-	}
-
-	var ids []int
-	if scientific {
-		ids, err = neidb.Taxids(name, size, offset)
-	} else {
-		ids, err = neidb.CommonTaxids(name, size, offset)
-	}
-
-	util.Check(err)
-	out := []TaxonMid{}
-	for _, id := range ids {
-		sciName, err := neidb.Name(id)
-		util.Check(err)
-		comName, err := neidb.CommonName(id)
-		util.Check(err)
-		tout := TaxonMid{}
-		parent, err := neidb.Parent(id)
-		if err == nil {
-			tout = TaxonMid{TaxId: id, Parent: parent,
-				Name: sciName, CommonName: comName}
-		}
-
-		if err == nil {
-			out = append(out, tout)
-		}
-
-	}
-
-	writeJsonOutput(w, out)
-}
-
-func taxon(w http.ResponseWriter, r *http.Request, args ...any) {
+func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func ancestors(w http.ResponseWriter, r *http.Request, args ...any) {
+func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func children(w http.ResponseWriter, r *http.Request, args ...any) {
+func genomeCount(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func genomeCount(w http.ResponseWriter, r *http.Request, args ...any) {
+func genomeCountRec(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func genomeCountRec(w http.ResponseWriter, r *http.Request, args ...any) {
+func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func parent(w http.ResponseWriter, r *http.Request, args ...any) {
+func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func rankDistribution(w http.ResponseWriter, r *http.Request, args ...any) {
+func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func subtree(w http.ResponseWriter, r *http.Request, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
-}
-func taxonomy(w http.ResponseWriter, r *http.Request, args ...any) {
+func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
 
-func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
-	selfNode := root.getService("accession")
+func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -660,7 +795,7 @@ func fintac(w http.ResponseWriter, r *http.Request, args ...any) {
 	}
 
 	ct, err := contenttype.GetMediaType(r)
-	if !ct.EqualsMIME(multipartct) {
+	if !ct.EqualsMIME(multipartCt) {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		w.Write([]byte("Use multipart/form-data"))
 		return
@@ -750,14 +885,12 @@ func filesFromFormData(w http.ResponseWriter, r *http.Request) (paths []string, 
 func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
 	err = r.ParseMultipartForm(3_000_000)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Malformed multipart form request"))
+		writeBadRequestResp(w, "Malformed multipart form request.")
 		return err
 	}
 
 	if len(r.MultipartForm.File) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Provide at least one file"))
+		writeBadRequestResp(w, "Provide at least one file.")
 		return errors.New("no files in body")
 	}
 
@@ -765,19 +898,19 @@ func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
 }
 
 func writePlainOutput(w http.ResponseWriter, out []byte) {
-	w.Header().Set("Content-Type", plainct.String())
+	w.Header().Set("Content-Type", plainCt.String())
 	fmt.Fprintf(w, "%s", out)
 }
 
-func mrca(w http.ResponseWriter, r *http.Request, args ...any) {
+func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func neighbors(w http.ResponseWriter, r *http.Request, args ...any) {
+func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
-func path(w http.ResponseWriter, r *http.Request, args ...any) {
+func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
