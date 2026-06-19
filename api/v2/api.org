@@ -242,8 +242,6 @@ type Node struct {
   //<<Initialize \ty{taxon}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{ancestors}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{children}, Pa. \ref{pa:api}>>
-  //<<Initialize \ty{genomeCount}, Pa. \ref{pa:api}>>
-  //<<Initialize \ty{genomeCountRec}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{parent}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{rankDistribution}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
@@ -368,37 +366,6 @@ type Node struct {
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&childrenL, children, neidb) // previously just children
-#+end_src
-
-#+begin_export latex
-  \ty{genomeCount} is yet another subservice of \ty{taxa}, but it does not respond with taxon
-  entities.
-#+end_export
-
-#+begin_src go <<Initialize \ty{genomeCount}, Pa. \ref{pa:api}>>=
-	genomeCountL := Node{
-		Links:    make(map[string][]Node),
-    Name:     "genomeCount",
-		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&genomeCountL, genomeCount, neidb) // previously known as num_genomes
-#+end_src
-
-#+begin_export latex
-  \ty{genomeCountRec} registration works just like before.
-#+end_export
-
-#+begin_src go <<Initialize \ty{genomeCountRec}, Pa. \ref{pa:api}>>=
-	genomeCountRecL := Node{
-		Links:    make(map[string][]Node),
-    Name:     "genomeCountRec",
-		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
 #+end_src
 
 #+begin_export latex
@@ -558,7 +525,7 @@ type Node struct {
 #+begin_export latex
   With the subservices we know that, each endpoint should be contained in the links of the \ty{rootDocument}.
   Then there \ty{accession} which is a subservice of \ty{accessions}; \ty{taxon}, \ty{ancestors}, \ty{children},
-  \ty{genomeCount}, \ty{genomeCountRec}, \ty{parent}, \ty{rankDistribution} and \ty{subtree} which are subservices
+  \ty{parent}, \ty{rankDistribution} and \ty{subtree} which are subservices
   of \ty{taxa}. Lastly \ty{fintac}, \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
 #+end_export
 
@@ -570,8 +537,6 @@ type Node struct {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], ancestorsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], genomeCountL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], genomeCountRecL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], rankDistL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
@@ -583,8 +548,6 @@ type Node struct {
 	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], ancestorsL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], genomeCountL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], genomeCountRecL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
@@ -1229,7 +1192,7 @@ type Node struct {
     //<<Extract taxi query, Pa. \ref{pa:api}>>
     //<<Execute taxi query, Pa. \ref{pa:api}>>
     //<<Store taxon output, Pa. \ref{pa:api}>>
-    //<<Add links \ty{taxa}, Pa. \ref{pa:api}>>
+    //<<Add taxa links, Pa. \ref{pa:api}>>
     //<<Write json output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -1303,6 +1266,12 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
     tax.TaxId = id
+    if fieldComposite == "genCount" || fieldComposite == "all" {
+      //<<Get raw genome counts, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "genCountRec" || fieldComposite == "all" {
+      //<<Get rec genome counts, Pa. \ref{pa:api}>>
+    }
     if fieldComposite == "rank" || fieldComposite == "all" {
       //<<Retrieve rank fields, Pa. \ref{pa:api}>>
     }
@@ -1319,16 +1288,31 @@ type Node struct {
   }
 #+end_src
 
+#+begin_src go <<Get raw genome counts, Pa. \ref{pa:api}>>=
+  var raw []GenomeCount
+  for _, level := range tdb.AssemblyLevels() {
+    count, err := neidb.NumGenomes(id, level)
+    util.Check(err)
+    gc := GenomeCount{Count: count, Level: level}
+    raw = append(raw, gc)
+  }
+  tax.RawGenomeCount = raw
+#+end_src
+
 #+begin_export latex
-  We get the accessions specific data.
+  We look up the recursive genome counts across the assembly
+  levels.
 #+end_export
 
-#+begin_src go <<Retrieve accessions, Pa. \ref{pa:api}>>=
-  accs, err := neidb.Accessions(id)
-  util.Check(err)
-  if len(accs) > 0 {
-    //<<Store accessions, Pa. \ref{pa:api}>>
+#+begin_src go <<Get rec genome counts, Pa. \ref{pa:api}>>=
+  var rec []GenomeCount
+  for _, level := range tdb.AssemblyLevels() {
+    count, err := neidb.NumGenomesRec(id, level)
+    util.Check(err)
+    gc := GenomeCount{Count: count, Level: level}
+    rec = append(rec, gc)
   }
+  tax.RecGenomeCount = rec
 #+end_src
 
 #+begin_export latex
@@ -1380,7 +1364,6 @@ type Node struct {
 
 #+begin_src go <<Retrieve all remaining fields, Pa. \ref{pa:api}>>=
   //<<Is the taxon a leaf? Pa. \ref{pa:api}>>
-  //<<Get genome counts, Pa. \ref{pa:api}>>
   //<<Get images, Pa. \ref{pa:api}>>
 #+end_src
 
@@ -1395,23 +1378,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We look up the raw and recursive genome counts across the assembly
+  We look up the raw genome counts across the assembly
   levels.
 #+end_export
-
-#+begin_src go <<Get genome counts, Pa. \ref{pa:api}>>=
-  var raw, rec []GenomeCount
-  for _, level := range tdb.AssemblyLevels() {
-    count, err := neidb.NumGenomes(id, level)
-    util.Check(err)
-    gc := GenomeCount{Count: count, Level: level}
-    raw = append(raw, gc)
-    count, err = neidb.NumGenomesRec(id, level)
-    util.Check(err)
-    gc = GenomeCount{Count: count, Level: level}
-    rec = append(rec, gc)
-  }
-#+end_src
 
 #+begin_export latex
   We look up the images associated with the taxon.
@@ -1469,7 +1438,7 @@ type Node struct {
   and a link for all other available composites.
 #+end_export
 
-#+begin_src go <<Add links \ty{taxa}, Pa. \ref{pa:api}>>=
+#+begin_src go <<Add taxa links, Pa. \ref{pa:api}>>=
   if !plain {
 		var links []Link
     //<<Add endpoint's self link, Pa. \ref{pa:api}>>
@@ -1482,7 +1451,7 @@ type Node struct {
 
 #+begin_export latex
   Every endpoint returning taxon entities is faced with
-  adding links for the available available composites.
+  adding links for the available composites.
   This means we write a function that does this for us.
   The function \ty{getTaxonCompositeLinks} takes the node
   of the endpoint, the \ty{fieldComposite} currently in use
@@ -1494,7 +1463,7 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
-    available := []string{"id", "rank", "default", "all"}
+    available := []string{"id", "rank", "genCount", "genCountRec", "default", "all"}
     queryName := "field_composite"
     u := *r.URL
     for _, v := range available {
@@ -1557,7 +1526,7 @@ type Node struct {
     //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Get field composite, Pa. \ref{pa:api}>>
     //<<Get taxon data, Pa. \ref{pa:api}>>
-    //<<Add links \ty{taxon}, Pa. \ref{pa:api}>>
+    //<<Add links taxon entity, Pa. \ref{pa:api}>>
     //<<Write json output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -1571,7 +1540,7 @@ type Node struct {
 
 #+begin_src go <<Get taxon data, Pa. \ref{pa:api}>>=
   //<<Parse taxon id, Pa. \ref{pa:api}>>
-  tax, err := getTaxonData(id, true, fieldComposite, neidb)
+  tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
   var out ResponseBody[Taxon] 
   if err == nil {
     out.Data = tax
@@ -1585,8 +1554,8 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Parse taxon id, Pa. \ref{pa:api}>>=
-  idStr := r.PathValue("taxon_id")
-  id, err := strconv.Atoi(idStr)
+  taxIdStr := r.PathValue("taxon_id")
+  taxId, err := strconv.Atoi(taxIdStr)
   if err != nil {
     writeBadRequestResp(w, "Taxon id is not an integer.")
   }
@@ -1597,7 +1566,7 @@ type Node struct {
   is easy as well.
 #+end_export
 
-#+begin_src go <<Add links \ty{taxon}, Pa. \ref{pa:api}>>=
+#+begin_src go <<Add links taxon entity, Pa. \ref{pa:api}>>=
   var links []Link
   links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
   //<<Add endpoint's self link, Pa. \ref{pa:api}>>
@@ -1695,24 +1664,140 @@ type Node struct {
 #+end_src
 
 
+#+begin_export latex
+  \subsection{children}
+  The service \ty{children} takes as argument a taxon id and returns its
+  children as a slice of their taxon id. We implement the service by 
+  first getting the taxon id and the corresponding children. 
+  Then we iterate over the children and construct the output object 
+  for each one, before we write the output.
+
+  This is \ty{children}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      page int
+      page_size int
+      field_composite string
+      plain_data bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
+#+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Parse taxon id, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Execute children query, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Define link parameters, Pa. \ref{pa:api}>>
+    //<<Add filled taxa links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
-  func genomeCount(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+#+end_src
+
+#+begin_export latex
+  There is a function called \ty{Children} in \ty{tdb}, which returns
+  a slice of integers containing taxon ids. We need to account for
+  pagination, so we add the limit and offset into the loop.
+#+end_export
+
+#+begin_src go <<Execute children query, Pa. \ref{pa:api}>>=
+    children, err := neidb.Children(taxId)
+	  util.Check(err)
+    if size == -1 {
+      size = len(children)
+    }
+    data := []Taxon{}
+    for i := offset; i < min(offset + size, len(children)); i++ {
+      id := children[i]
+		  //<<Construct taxon output, Pa. \ref{pa:api}>>
+	  }
+#+end_src
+
+#+begin_export latex
+  While we don't have any query parameters we need to add to the
+  template, there is a path parameter that needs handling.
+#+end_export
+
+#+begin_src go <<Define link parameters, Pa. \ref{pa:api}>>=
+  pathParams := map[string]string{"taxon_id": taxIdStr}
+  queryParams := map[string]string{}
+#+end_src
+
+#+begin_export latex
+  Now we need to add our usual links, keeping in mind to fill
+  the templates with the requested parameters.  
+#+end_export
+
+#+begin_src go <<Add filled taxa links, Pa. \ref{pa:api}>>=
+  if !plain {
+		var links []Link
+    //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+    //<<Add pagination links, Pa. \ref{pa:api}>>
+    for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, fillTemplate(node, pathParams, queryParams)))
+			}
+		}
+    //<<Add field composite links, Pa. \ref{pa:api}>>
+		out.Links = links
   }
-  func genomeCountRec(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
-  }
+#+end_src
+
+
+
+#+begin_export latex
+  \subsection{parent}
+  The service \ty{children} takes as argument a taxon id and returns its
+  parent.
+
+  This is \ty{parent}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      field_composite string
+      plain_data bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Parse taxon id, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Execute parent query, Pa. \ref{pa:api}>>
+    //<<Add links taxon entity, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  We call the \ty{Parent} function from \ty{tdb} and
+  use its response to get the requested data on the parent.
+#+end_export
+
+#+begin_src go <<Execute parent query, Pa. \ref{pa:api}>>=
+  parent, err := neidb.Parent(taxId)
+  tax, err := getTaxonData(parent, true, fieldComposite, neidb)
+  var out ResponseBody[Taxon] 
+  if err == nil {
+    out.Data = tax
+  }
+#+end_src
+
+
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
     writeJsonOutput(w, out)

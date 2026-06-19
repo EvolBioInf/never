@@ -194,24 +194,6 @@ func RegisterRoutes(pref, dbPath string) {
 	}
 	makeRoute(&childrenL, children, neidb) // previously just children
 
-	genomeCountL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "genomeCount",
-		BasePath: prefix + "/taxa/{taxon_id}/genome_count",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&genomeCountL, genomeCount, neidb) // previously known as num_genomes
-
-	genomeCountRecL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "genomeCountRec",
-		BasePath: prefix + "/taxa/{taxon_id}/genome_count_recursive",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&genomeCountRecL, genomeCountRec, neidb) // previously known as num_genomes_rec
-
 	parentL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "parent",
@@ -291,8 +273,6 @@ func RegisterRoutes(pref, dbPath string) {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], ancestorsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], genomeCountL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], genomeCountRecL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], rankDistL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
@@ -304,8 +284,6 @@ func RegisterRoutes(pref, dbPath string) {
 	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], ancestorsL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], genomeCountL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], genomeCountRecL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
@@ -626,6 +604,28 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 
 func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
 	tax.TaxId = id
+	if fieldComposite == "genCount" || fieldComposite == "all" {
+		var raw []GenomeCount
+		for _, level := range tdb.AssemblyLevels() {
+			count, err := neidb.NumGenomes(id, level)
+			util.Check(err)
+			gc := GenomeCount{Count: count, Level: level}
+			raw = append(raw, gc)
+		}
+		tax.RawGenomeCount = raw
+
+	}
+	if fieldComposite == "genCountRec" || fieldComposite == "all" {
+		var rec []GenomeCount
+		for _, level := range tdb.AssemblyLevels() {
+			count, err := neidb.NumGenomesRec(id, level)
+			util.Check(err)
+			gc := GenomeCount{Count: count, Level: level}
+			rec = append(rec, gc)
+		}
+		tax.RecGenomeCount = rec
+
+	}
 	if fieldComposite == "rank" || fieldComposite == "all" {
 		rank, err := neidb.Rank(id)
 		util.Check(err)
@@ -649,18 +649,6 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		isLeaf, err := neidb.IsLeaf(id)
 		util.Check(err)
 		tax.IsLeaf = isLeaf
-
-		var raw, rec []GenomeCount
-		for _, level := range tdb.AssemblyLevels() {
-			count, err := neidb.NumGenomes(id, level)
-			util.Check(err)
-			gc := GenomeCount{Count: count, Level: level}
-			raw = append(raw, gc)
-			count, err = neidb.NumGenomesRec(id, level)
-			util.Check(err)
-			gc = GenomeCount{Count: count, Level: level}
-			rec = append(rec, gc)
-		}
 
 		var neiImages []Image
 		images, err := neidb.Images(id)
@@ -686,7 +674,7 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 }
 
 func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
-	available := []string{"id", "rank", "default", "all"}
+	available := []string{"id", "rank", "genCount", "genCountRec", "default", "all"}
 	queryName := "field_composite"
 	u := *r.URL
 	for _, v := range available {
@@ -722,13 +710,13 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 		fieldComposite = "default"
 	}
 
-	idStr := r.PathValue("taxon_id")
-	id, err := strconv.Atoi(idStr)
+	taxIdStr := r.PathValue("taxon_id")
+	taxId, err := strconv.Atoi(taxIdStr)
 	if err != nil {
 		writeBadRequestResp(w, "Taxon id is not an integer.")
 	}
 
-	tax, err := getTaxonData(id, true, fieldComposite, neidb)
+	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
 	var out ResponseBody[Taxon]
 	if err == nil {
 		out.Data = tax
@@ -781,21 +769,130 @@ func writePlainOutput(w http.ResponseWriter, out []byte) {
 }
 
 func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	taxIdStr := r.PathValue("taxon_id")
+	taxId, err := strconv.Atoi(taxIdStr)
+	if err != nil {
+		writeBadRequestResp(w, "Taxon id is not an integer.")
+	}
+
+	offset, size := extractPaging(r)
+
+	fieldComposite := r.URL.Query().Get("field_composite")
+	if fieldComposite == "" {
+		fieldComposite = "default"
+	}
+
+	children, err := neidb.Children(taxId)
+	util.Check(err)
+	if size == -1 {
+		size = len(children)
+	}
+	data := []Taxon{}
+	for i := offset; i < min(offset+size, len(children)); i++ {
+		id := children[i]
+		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+		if err == nil {
+			data = append(data, tax)
+		}
+
+	}
+
+	out := ResponseBody[[]Taxon]{Data: data}
+
+	pathParams := map[string]string{"taxon_id": taxIdStr}
+	queryParams := map[string]string{}
+
+	if !plain {
+		var links []Link
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, fillTemplate(node, pathParams, queryParams)))
+			}
+		}
+		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+
+		out.Links = links
+	}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
 }
-func genomeCount(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
-}
-func genomeCountRec(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
-}
+
 func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	taxIdStr := r.PathValue("taxon_id")
+	taxId, err := strconv.Atoi(taxIdStr)
+	if err != nil {
+		writeBadRequestResp(w, "Taxon id is not an integer.")
+	}
+
+	fieldComposite := r.URL.Query().Get("field_composite")
+	if fieldComposite == "" {
+		fieldComposite = "default"
+	}
+
+	parent, err := neidb.Parent(taxId)
+	tax, err := getTaxonData(parent, true, fieldComposite, neidb)
+	var out ResponseBody[Taxon]
+	if err == nil {
+		out.Data = tax
+	}
+
+	var links []Link
+	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+	links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+	for link := range selfNode.Links {
+		for _, node := range selfNode.Links[link] {
+			links = append(links, node.makeLink(link, ""))
+		}
+	}
+
+	out.Links = links
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
 }
+
 func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
