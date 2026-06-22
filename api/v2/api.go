@@ -115,6 +115,7 @@ var root Node
 var prefix string
 
 var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 
 var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
@@ -217,9 +218,9 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt, plainCt},
+		Types:    []contenttype.MediaType{jsonCt, graphvizCt, plainCt},
 	}
-	makeRoute(&subtreeL, subtree, neidb) // previously just subtree
+	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
 
 	taxonomyL := Node{
 		Links:    make(map[string][]Node),
@@ -320,7 +321,7 @@ func rootDocument(w http.ResponseWriter, r *http.Request, selfNode *Node, args .
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -348,7 +349,7 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -478,7 +479,7 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -522,7 +523,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -604,7 +605,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 
 func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
 	tax.TaxId = id
-	if fieldComposite == "genCount" || fieldComposite == "all" {
+	if fieldComposite == "gen_count" || fieldComposite == "all" {
 		var raw []GenomeCount
 		for _, level := range tdb.AssemblyLevels() {
 			count, err := neidb.NumGenomes(id, level)
@@ -615,7 +616,7 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		tax.RawGenomeCount = raw
 
 	}
-	if fieldComposite == "genCountRec" || fieldComposite == "all" {
+	if fieldComposite == "gen_count_rec" || fieldComposite == "all" {
 		var rec []GenomeCount
 		for _, level := range tdb.AssemblyLevels() {
 			count, err := neidb.NumGenomesRec(id, level)
@@ -674,7 +675,7 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 }
 
 func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
-	available := []string{"id", "rank", "genCount", "genCountRec", "default", "all"}
+	available := []string{"id", "rank", "gen_count", "gen_count_rec", "default", "all"}
 	queryName := "field_composite"
 	u := *r.URL
 	for _, v := range available {
@@ -693,7 +694,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -746,7 +747,7 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -772,7 +773,7 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -843,7 +844,7 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -897,7 +898,7 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
@@ -914,8 +915,7 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 	if listStr != "" && err != nil {
 		writeBadRequestResp(w, "list_genomes argument is not a bool.")
 		return
-	}
-	if l {
+	} else if l {
 		ranksArgs = append(ranksArgs, "-l")
 	}
 
@@ -924,8 +924,7 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 	if tabStr != "" && err != nil {
 		writeBadRequestResp(w, "tabular_output argument is not a bool.")
 		return
-	}
-	if t {
+	} else if t {
 		ranksArgs = append(ranksArgs, "-t")
 	}
 
@@ -1004,11 +1003,11 @@ func validateMultipartForm(w http.ResponseWriter, r *http.Request, minFiles, max
 	}
 
 	if len(r.MultipartForm.File) < minFiles {
-		writeBadRequestResp(w, fmt.Sprintf("Provide at least %s file(s).", minFiles))
+		writeBadRequestResp(w, fmt.Sprintf("Provide at least %d file(s).", minFiles))
 		return errors.New("not enough files in body")
 	}
 	if maxFiles != -1 && len(r.MultipartForm.File) > maxFiles {
-		writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %s file(s) per request.", maxFiles))
+		writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %d file(s) per request.", maxFiles))
 		return errors.New("too many files in body")
 	}
 
@@ -1016,9 +1015,133 @@ func validateMultipartForm(w http.ResponseWriter, r *http.Request, minFiles, max
 }
 
 func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	taxIdStr := r.PathValue("taxon_id")
+	taxId, err := strconv.Atoi(taxIdStr)
+	if err != nil {
+		writeBadRequestResp(w, "Taxon id is not an integer.")
+	}
+
+	if ct.EqualsMIME(jsonCt) {
+		strPlain := r.URL.Query().Get("plain_data")
+		plain, err := strconv.ParseBool(strPlain)
+		if err != nil {
+			plain = false
+		}
+
+		offset, size := extractPaging(r)
+
+		fieldComposite := r.URL.Query().Get("field_composite")
+		if fieldComposite == "" {
+			fieldComposite = "default"
+		}
+
+		taxa, err := neidb.Subtree(taxId)
+		util.Check(err)
+
+		if size == -1 {
+			size = len(taxa)
+		}
+
+		data := []Taxon{}
+		for i := offset; i < min(offset+size, len(taxa)); i++ {
+			id := taxa[i]
+			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+			if err == nil {
+				data = append(data, tax)
+			}
+
+		}
+
+		out := ResponseBody[[]Taxon]{Data: data}
+
+		if !plain {
+			var links []Link
+			links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+			for link := range selfNode.Links {
+				for _, node := range selfNode.Links[link] {
+					links = append(links, node.makeLink(link, ""))
+				}
+			}
+
+			links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+
+			out.Links = links
+		}
+
+		if plain {
+			writeJsonOutput(w, out.Data)
+		} else {
+			writeJsonOutput(w, out)
+		}
+
+	} else if ct.EqualsMIME(plainCt) || ct.EqualsMIME(graphvizCt) {
+		dreeArgs := []string{}
+		levels := r.URL.Query().Get("assembly_levels")
+		if levels != "" {
+			dreeArgs = append(dreeArgs, "-L", levels)
+		}
+
+		genStr := r.URL.Query().Get("genomes_only")
+		g, err := strconv.ParseBool(genStr)
+		if genStr != "" && err != nil {
+			writeBadRequestResp(w, "genomes_only argument is not a bool.")
+			return
+		} else if g {
+			dreeArgs = append(dreeArgs, "-g")
+		}
+
+		namesStr := r.URL.Query().Get("print_names")
+		n, err := strconv.ParseBool(namesStr)
+		if namesStr != "" && err != nil {
+			writeBadRequestResp(w, "print_names argument is not a bool.")
+			return
+		} else if n {
+			dreeArgs = append(dreeArgs, "-n")
+		}
+
+		depthStr := r.URL.Query().Get("max_depth")
+		if depthStr != "" {
+			dreeArgs = append(dreeArgs, "-m", depthStr)
+		}
+
+		if ct.EqualsMIME(plainCt) {
+			dreeArgs = append(dreeArgs, "-l")
+		}
+
+		dbPath := args[1].(string)
+		dreeArgs = append(dreeArgs, taxIdStr, dbPath)
+		out, err := exec.Command("./dree", dreeArgs...).Output()
+		if err != nil {
+			log.Fatal("apiv2: Error executing dree: ", err)
+		}
+
+		if ct.EqualsMIME(plainCt) {
+			writePlainOutput(w, out)
+
+		} else {
+			writeGraphvizOutput(w, out)
+
+		}
+
+	}
+
 }
+
+func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
+	w.Header().Set("Content-Type", graphvizCt.String())
+	fmt.Fprintf(w, "%s", out)
+}
+
 func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
@@ -1028,7 +1151,7 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 

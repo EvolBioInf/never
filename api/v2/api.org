@@ -129,13 +129,14 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  With this imported we might as well define the two content types we are going
+  With this imported we might as well define the o content types we are going
   to use. As they will be used frequently and should not be redefined over
   the course of this document, we will save them as global variables.
 #+end_export
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
 	var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+	var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 	var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 #+end_src
 
@@ -399,7 +400,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  \ty{subtree} provides json and plain text representations.
+  \ty{subtree} provides json, graphviz and plain text representations.
 #+end_export
 
 #+begin_src go <<Initialize \ty{subtree}, Pa. \ref{pa:api}>>=
@@ -408,9 +409,9 @@ type Node struct {
     Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt, plainCt},
+		Types:    []contenttype.MediaType{jsonCt, graphvizCt, plainCt},
 	}
-	makeRoute(&subtreeL, subtree, neidb) // previously just subtree
+	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
 #+end_src
 
 #+begin_export latex
@@ -683,7 +684,7 @@ type Node struct {
 #+begin_src go <<React no match, Pa. \ref{pa:api}>>=
   if err != nil {
     w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types."))
     return
   }
 #+end_src
@@ -1266,10 +1267,10 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
     tax.TaxId = id
-    if fieldComposite == "genCount" || fieldComposite == "all" {
+    if fieldComposite == "gen_count" || fieldComposite == "all" {
       //<<Get raw genome counts, Pa. \ref{pa:api}>>
     }
-    if fieldComposite == "genCountRec" || fieldComposite == "all" {
+    if fieldComposite == "gen_count_rec" || fieldComposite == "all" {
       //<<Get rec genome counts, Pa. \ref{pa:api}>>
     }
     if fieldComposite == "rank" || fieldComposite == "all" {
@@ -1463,7 +1464,7 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
-    available := []string{"id", "rank", "genCount", "genCountRec", "default", "all"}
+    available := []string{"id", "rank", "gen_count", "gen_count_rec", "default", "all"}
     queryName := "field_composite"
     u := *r.URL
     for _, v := range available {
@@ -1678,10 +1679,10 @@ type Node struct {
     Path:
       taxon_id int
     Query:
-      page int
-      page_size int
       field_composite string
-      plain_data bool
+      page            int
+      page_size       int
+      plain_data      bool
   Writes:
     ResponseBody[ []Partial<Taxon> ]
 #+end_export
@@ -1812,8 +1813,8 @@ type Node struct {
       taxon_id int
     Query:
       assembly_levels []string
-      list_genomes bool
-      tabular_output bool
+      list_genomes    bool
+      tabular_output  bool
   Body:
     File
   Writes:
@@ -1861,8 +1862,7 @@ type Node struct {
   if listStr != "" && err != nil {
     writeBadRequestResp(w, "list_genomes argument is not a bool.")
     return
-  }
-  if l {
+  } else if l {
 		ranksArgs = append(ranksArgs, "-l")
   }
 
@@ -1871,8 +1871,7 @@ type Node struct {
   if tabStr != "" && err != nil {
     writeBadRequestResp(w, "tabular_output argument is not a bool.")
     return
-  }
-  if t {
+  } else if t {
 		ranksArgs = append(ranksArgs, "-t")
   }
 #+end_src
@@ -1941,11 +1940,11 @@ type Node struct {
 
 #+begin_src go <<Check for files, Pa. \ref{pa:api}>>=
 	if len(r.MultipartForm.File) < minFiles {
-    writeBadRequestResp(w, fmt.Sprintf("Provide at least %s file(s).", minFiles))
+    writeBadRequestResp(w, fmt.Sprintf("Provide at least %d file(s).", minFiles))
 		return errors.New("not enough files in body")
 	}
   if maxFiles != -1 && len(r.MultipartForm.File) > maxFiles {
-    writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %s file(s) per request.", maxFiles))
+    writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %d file(s) per request.", maxFiles))
 		return errors.New("too many files in body")
 	}
 #+end_src
@@ -2136,11 +2135,189 @@ type Node struct {
 	}
 #+end_src
 
+
+
+#+begin_export latex
+  \subsection{subtree}
+  The endpoint \ty{subtree} returns all taxa in a subtree, including the
+  root. It provides two response structures: plain text and json. 
+  When requesting plain text we respond with the result of \ty{dree},
+  we use our usual response schemes if json was requested.
+
+  This is \ty{subtree}' io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      assembly_levels []string
+      field_composite string
+      genomes_only     bool
+      max_depth       int
+      page            int
+      page_size       int
+      plain_data      bool
+      print_names     bool
+    Writes:
+      string
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Get content type, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Parse taxon id, Pa. \ref{pa:api}>>
+    //<<Act on content type, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  We use the \ty{contenttype} to get to do content negotiation.
+  If the server is providing a content type, that the client is requesting
+  we act on the requested content type. 
+#+end_export
+
+#+begin_src go <<Get content type, Pa. \ref{pa:api}>>=
+  ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+  //<<React no match, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  We need to change our logic depending on the content type requested by the client.
+  We follow our usual scheme of writing taxa with composite fields, if the client
+  requests \ty{application/json} format. When they request \ty{text/plain},
+  we make a system call to dree instead.
+#+end_export
+
+#+begin_src go <<Act on content type, Pa. \ref{pa:api}>>=
+  if ct.EqualsMIME(jsonCt) {
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Execute subtree query, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Add taxa links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  } else if ct.EqualsMIME(plainCt) || ct.EqualsMIME(graphvizCt) {
+    //<<Handle arguments \ty{dree}, Pa. \ref{pa:api}>>
+    //<<Call \ty{dree}, Pa. \ref{pa:api}>>
+    //<<Write output \ty{dree}, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  When executing the subtree query, we call the corresponding
+  \ty{tdb} function. Each taxon is then handled as usual.
+#+end_export
+
+#+begin_src go <<Execute subtree query, Pa. \ref{pa:api}>>=
+  taxa, err := neidb.Subtree(taxId)
+  util.Check(err)
+  
+  if size == -1 {
+    size = len(taxa)
+  }
+
+  data := []Taxon{}
+  for i := offset; i < min(offset + size, len(taxa)); i++ {
+    id := taxa[i]
+    //<<Construct taxon output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  \ty{dree} takes five arguments: \ty{L}, \ty{g}, \ty{l}, \ty{m} and
+  \ty{n}. We already listed their api counterparts in \ty{subtree}'s io,
+  except for \ty{l} which is determined by the accepted media type.
+  Each of these arguments needs to be extracted, some validated and then 
+  appended to the call arguments.
+#+end_export
+
+#+begin_src go <<Handle arguments \ty{dree}, Pa. \ref{pa:api}>>=
+  dreeArgs := []string{}
+	levels := r.URL.Query().Get("assembly_levels")
+  if levels != "" {
+		dreeArgs = append(dreeArgs, "-L", levels)
+  }
+
+  genStr := r.URL.Query().Get("genomes_only")
+	g, err := strconv.ParseBool(genStr)
+  if genStr != "" && err != nil {
+    writeBadRequestResp(w, "genomes_only argument is not a bool.")
+    return
+  } else if g {
+		dreeArgs = append(dreeArgs, "-g")
+  }
+
+  namesStr := r.URL.Query().Get("print_names")
+	n, err := strconv.ParseBool(namesStr)
+  if namesStr != "" && err != nil {
+    writeBadRequestResp(w, "print_names argument is not a bool.")
+    return
+  } else if n {
+		dreeArgs = append(dreeArgs, "-n")
+  }
+
+  depthStr := r.URL.Query().Get("max_depth")
+  if depthStr != "" {
+		dreeArgs = append(dreeArgs, "-m", depthStr)
+  }
+
+  if ct.EqualsMIME(plainCt) {
+		dreeArgs = append(dreeArgs, "-l")
+  }
+#+end_src
+
+#+begin_export latex
+  We run \ty{dree} with the call arguments.
+  The call arguments are still missing the taxon id and the path 
+  to the database. As this endpoint uses both the db and it's path
+  the path is not located at args[0], but args[1].
+#+end_export
+
+#+begin_src go <<Call \ty{dree}, Pa. \ref{pa:api}>>=
+  dbPath := args[1].(string)
+  dreeArgs = append(dreeArgs, taxIdStr, dbPath)
+	out, err := exec.Command("./dree", dreeArgs...).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing dree: ", err)
+	}
+#+end_src
+
+#+begin_export latex
+  Just like we decided whether to use the list or tree output
+  of \ty{dree}, we need to decide which media type we are sending
+  as a response.
+#+end_export
+
+#+begin_src go <<Write output \ty{dree}, Pa. \ref{pa:api}>>=
+  if ct.EqualsMIME(plainCt) {
+    //<<Write plain output, Pa. \ref{pa:api}>>
+  } else {
+    //<<Write graphviz output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  This is similar to writing a plain response.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
+    w.Header().Set("Content-Type", graphvizCt.String())
+    fmt.Fprintf(w, "%s", out)
+  }
+#+end_src
+
+#+begin_export latex
+  Now we just call the function to write our output.
+#+end_export
+
+#+begin_src go <<Write graphviz output, Pa. \ref{pa:api}>>=
+  writeGraphvizOutput(w, out)
+#+end_src
+
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
     writeJsonOutput(w, out)
@@ -2157,7 +2334,7 @@ type Node struct {
   \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
   allows to pass files as arguments, this creates the need for some new handling.
 
-  This is \ty{accession}' io:
+  This is \ty{fintac}' io:
   Params:
     Path:
       none
