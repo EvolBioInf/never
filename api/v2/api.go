@@ -24,6 +24,8 @@ import (
 
 	"sort"
 
+	"mime/multipart"
+
 	"os"
 	"time"
 
@@ -379,16 +381,19 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 	for i := offset; i < min(offset+size, len(accessions)); i++ {
 		accession := accessions[i]
 		level, err := neidb.Level(accession)
-		if err == nil {
-			acc := Accession{Accession: accession, Level: level}
-			if !plain {
-				accNode := *root.getService("accession")
-				acc.Links = append(acc.Links, accNode.makeLink("self",
-					fillTemplate(accNode, map[string]string{}, map[string]string{})))
+		if err != nil {
+			writeServerError(w)
+			return
 
-			}
-			data = append(data, acc)
 		}
+		acc := Accession{Accession: accession, Level: level}
+		if !plain {
+			accNode := *root.getService("accession")
+			acc.Links = append(acc.Links, accNode.makeLink("self",
+				fillTemplate(accNode, map[string]string{}, map[string]string{})))
+
+		}
+		data = append(data, acc)
 	}
 
 	out := ResponseBody[[]Accession]{Data: data}
@@ -457,6 +462,11 @@ func extractPaging(r *http.Request) (offset, size int) {
 	return
 }
 
+func writeServerError(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte("Internal server error."))
+}
+
 func fillTemplate(node Node, pathParams map[string]string, queryParams map[string]string) string {
 	for k := range pathParams {
 		node.BasePath = strings.Replace(node.BasePath, "{"+k+"}", pathParams[k], 1)
@@ -495,18 +505,22 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	level, err := neidb.Level(accession)
 	var data Accession
 	var links []Link
-	if err == nil {
-		data = Accession{Accession: accession, Level: level}
-		if !plain {
-			links = append(links, selfNode.makeLink("self", r.URL.String()))
+	if err != nil {
+		writeServerError(w)
+		return
 
-			for link := range selfNode.Links {
-				for _, node := range selfNode.Links[link] {
-					links = append(links, node.makeLink(link, ""))
-				}
+	}
+
+	data = Accession{Accession: accession, Level: level}
+	if !plain {
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
 			}
-
 		}
+
 	}
 
 	out := ResponseBody[Accession]{Data: data, Links: links}
@@ -568,13 +582,20 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	} else {
 		ids, err = neidb.CommonTaxids(name, size, offset)
 	}
-	util.Check(err)
+	if err != nil {
+		writeServerError(w)
+		return
+
+	}
 	data := []Taxon{}
 	for _, id := range ids {
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-		if err == nil {
-			data = append(data, tax)
+		if err != nil {
+			writeServerError(w)
+			return
+
 		}
+		data = append(data, tax)
 
 	}
 
@@ -609,7 +630,9 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		var raw []GenomeCount
 		for _, level := range tdb.AssemblyLevels() {
 			count, err := neidb.NumGenomes(id, level)
-			util.Check(err)
+			if err != nil {
+
+			}
 			gc := GenomeCount{Count: count, Level: level}
 			raw = append(raw, gc)
 		}
@@ -620,7 +643,9 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		var rec []GenomeCount
 		for _, level := range tdb.AssemblyLevels() {
 			count, err := neidb.NumGenomesRec(id, level)
-			util.Check(err)
+			if err != nil {
+
+			}
 			gc := GenomeCount{Count: count, Level: level}
 			rec = append(rec, gc)
 		}
@@ -629,31 +654,43 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 	}
 	if fieldComposite == "rank" || fieldComposite == "all" {
 		rank, err := neidb.Rank(id)
-		util.Check(err)
+		if err != nil {
+
+		}
 		tax.Rank = rank
 
 	}
 	if fieldComposite == "default" || fieldComposite == "all" {
 		sciName, err := neidb.Name(id)
-		util.Check(err)
+		if err != nil {
+
+		}
 		tax.Name = sciName
 		comName, err := neidb.CommonName(id)
-		util.Check(err)
+		if err != nil {
+
+		}
 		tax.CommonName = comName
 
 		parent, err := neidb.Parent(id)
-		util.Check(err)
+		if err != nil {
+
+		}
 		tax.Parent = parent
 
 	}
 	if fieldComposite == "all" {
 		isLeaf, err := neidb.IsLeaf(id)
-		util.Check(err)
+		if err != nil {
+
+		}
 		tax.IsLeaf = isLeaf
 
 		var neiImages []Image
 		images, err := neidb.Images(id)
-		util.Check(err)
+		if err != nil {
+
+		}
 		for _, image := range images {
 			i := Image{Id: image.Id,
 				Url:         image.Url,
@@ -718,10 +755,13 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	}
 
 	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
-	var out ResponseBody[Taxon]
-	if err == nil {
-		out.Data = tax
+	if err != nil {
+		writeServerError(w)
+		return
+
 	}
+	var out ResponseBody[Taxon]
+	out.Data = tax
 
 	var links []Link
 	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
@@ -757,7 +797,9 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 
 	out, err := exec.Command("./ants", taxId, dbPath).Output()
 	if err != nil {
-		log.Fatal("apiv2: Error executing fintac: ", err)
+		writeServerError(w)
+		return
+
 	}
 
 	writePlainOutput(w, out)
@@ -799,7 +841,11 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	}
 
 	children, err := neidb.Children(taxId)
-	util.Check(err)
+	if err != nil {
+		writeServerError(w)
+		return
+
+	}
 	if size == -1 {
 		size = len(children)
 	}
@@ -807,9 +853,12 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	for i := offset; i < min(offset+size, len(children)); i++ {
 		id := children[i]
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-		if err == nil {
-			data = append(data, tax)
+		if err != nil {
+			writeServerError(w)
+			return
+
 		}
+		data = append(data, tax)
 
 	}
 
@@ -869,10 +918,13 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 
 	parent, err := neidb.Parent(taxId)
 	tax, err := getTaxonData(parent, true, fieldComposite, neidb)
-	var out ResponseBody[Taxon]
-	if err == nil {
-		out.Data = tax
+	if err != nil {
+		writeServerError(w)
+		return
+
 	}
+	var out ResponseBody[Taxon]
+	out.Data = tax
 
 	var links []Link
 	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
@@ -947,7 +999,9 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 	ranksArgs = append(ranksArgs, taxId, dbPath)
 	out, err := exec.Command("./ranks", ranksArgs...).Output()
 	if err != nil {
-		log.Fatal("apiv2: Error executing ranks: ", err)
+		writeServerError(w)
+		return
+
 	}
 
 	writePlainOutput(w, out)
@@ -970,9 +1024,12 @@ func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFile
 		files := r.MultipartForm.File[key]
 		if len(files) > 0 {
 			h := *files[0]
-			rf, err := h.Open()
+			var rf multipart.File
+			rf, err = h.Open()
 			if err != nil {
-				log.Fatal("apiv2: Error while reading file from fintac request: ", err)
+				writeServerError(w)
+				return
+
 			}
 			b := make([]byte, h.Size)
 			rf.Read(b)
@@ -980,9 +1037,12 @@ func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFile
 
 			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
 			paths = append(paths, path)
-			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			var tf *os.File
+			tf, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+				writeServerError(w)
+				return
+
 			}
 
 			buffer := bytes.NewBuffer(b)
@@ -1045,7 +1105,11 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		}
 
 		taxa, err := neidb.Subtree(taxId)
-		util.Check(err)
+		if err != nil {
+			writeServerError(w)
+			return
+
+		}
 
 		if size == -1 {
 			size = len(taxa)
@@ -1055,9 +1119,12 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		for i := offset; i < min(offset+size, len(taxa)); i++ {
 			id := taxa[i]
 			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-			if err == nil {
-				data = append(data, tax)
+			if err != nil {
+				writeServerError(w)
+				return
+
 			}
+			data = append(data, tax)
 
 		}
 
@@ -1143,7 +1210,25 @@ func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
 }
 
 func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
+	out := ResponseBody[*any]{}
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	var links []Link
+	links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+	for link := range selfNode.Links {
+		for _, node := range selfNode.Links[link] {
+			links = append(links, node.makeLink(link, ""))
+		}
+	}
+
+	out.Links = links
+
 	writeJsonOutput(w, out)
 }
 
@@ -1195,7 +1280,9 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 
 	out, err := exec.Command("./fintac", fintacArgs...).Output()
 	if err != nil {
-		log.Fatal("apiv2: Error executing fintac: ", err)
+		writeServerError(w)
+		return
+
 	}
 
 	writePlainOutput(w, out)
@@ -1203,9 +1290,80 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 }
 
 func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	fieldComposite := r.URL.Query().Get("field_composite")
+	if fieldComposite == "" {
+		fieldComposite = "default"
+	}
+
+	idsStr := r.URL.Query().Get("taxon_ids")
+	var taxIds []int
+	split := strings.Split(idsStr, ",")
+	if len(split) == 1 && split[0] == "" {
+		return
+	}
+	for _, id := range split {
+		p, err := strconv.Atoi(id)
+		if err != nil {
+			writeBadRequestResp(w, "At least one taxon id is not an integer.")
+			return
+		}
+		taxIds = append(taxIds, p)
+	}
+
+	var out ResponseBody[Taxon]
+	if len(taxIds) > 0 {
+		id, err := neidb.MRCA(taxIds)
+		if err != nil {
+			writeServerError(w)
+			return
+
+		}
+
+		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+		if err != nil {
+			writeServerError(w)
+			return
+
+		}
+		out.Data = tax
+
+		var links []Link
+		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
+			}
+		}
+
+		out.Links = links
+
+	}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
 }
+
 func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)

@@ -30,8 +30,8 @@
 #+begin_export latex
 First off we declare the types. This is an easy task as they are already
 defined within the openApi document. We can leave out a few \ty{Taxon} types
-here by just using the \ty{Taxon} type offering the most attributes and adding 
-\ty{omitempty} tags for most properties. Every type also needs a \ty{Links} 
+here by just using the \ty{Taxon} type offering the most attributes and adding
+\ty{omitempty} tags for most properties. Every type also needs a \ty{Links}
 attribute which is going to be explained later on.
 #+end_export
 
@@ -643,7 +643,7 @@ type Node struct {
 
 #+begin_export latex
   \subsection{root document}
-  Having delcared all the endpoints we need to begin implementing them.
+  Having declared all the endpoints we need to begin implementing them.
   We start with the root document \ty{/}. It just provides links
   to all the endpoints provided by this api.
   This is \ty{/}'s io:
@@ -952,14 +952,37 @@ type Node struct {
   for i := offset; i < min(offset + size, len(accessions)); i++ {
     accession := accessions[i]
     level, err := neidb.Level(accession)
-    if err == nil {
-      acc := Accession{Accession: accession, Level: level}
-      if !plain {
-        //<<Add link to accession object, Pa. \ref{pa:api}>>
-      }
-      data = append(data, acc)
+    if err != nil {
+      //<<Write server error, Pa. \ref{pa:api}>>
     }
+    acc := Accession{Accession: accession, Level: level}
+    if !plain {
+      //<<Add link to accession object, Pa. \ref{pa:api}>>
+    }
+    data = append(data, acc)
   }
+#+end_src
+
+#+begin_export latex
+  A server error is a response with a 5XX response code.
+  We send it whenever there is an unexpected error on the
+  server side.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writeServerError(w http.ResponseWriter) {
+  	w.WriteHeader(http.StatusInternalServerError)
+  	w.Write([]byte("Internal server error."))
+  }
+#+end_src
+
+#+begin_export latex
+  We call this function if there is an error and return right away.
+#+end_export
+
+#+begin_src go <<Write server error, Pa. \ref{pa:api}>>=
+  writeServerError(w)
+  return
 #+end_src
 
 #+begin_export latex
@@ -1039,7 +1062,7 @@ type Node struct {
 
 #+begin_src go <<Add link to accession object, Pa. \ref{pa:api}>>=
   accNode := *root.getService("accession")
-	acc.Links = append(acc.Links, accNode.makeLink("self", 
+	acc.Links = append(acc.Links, accNode.makeLink("self",
 		fillTemplate(accNode, map[string]string{}, map[string]string{})))
 #+end_src
 
@@ -1134,11 +1157,13 @@ type Node struct {
   level, err := neidb.Level(accession)
   var data Accession
   var links []Link
-  if err == nil {
-    data = Accession{Accession: accession, Level: level}
-		if !plain {
-      //<<Add links \ty{accession}, Pa. \ref{pa:api}>>
-    }
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
+
+  data = Accession{Accession: accession, Level: level}
+  if !plain {
+    //<<Add links \ty{accession}, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -1227,7 +1252,7 @@ type Node struct {
 
 #+begin_export latex
   The field composite is a query parameter which determines
-  the fields of the response. If the parameter is missing 
+  the fields of the response. If the parameter is missing
   we set it to \ty{default}
 #+end_export
 
@@ -1250,7 +1275,9 @@ type Node struct {
   } else {
     ids, err = neidb.CommonTaxids(name, size, offset)
   }
-  util.Check(err)
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
   data := []Taxon{}
   for _, id := range ids {
     //<<Construct taxon output, Pa. \ref{pa:api}>>
@@ -1293,7 +1320,9 @@ type Node struct {
   var raw []GenomeCount
   for _, level := range tdb.AssemblyLevels() {
     count, err := neidb.NumGenomes(id, level)
-    util.Check(err)
+    if err != nil {
+      //<<Log server error, Pa. \ref{pa:api}>>
+    }
     gc := GenomeCount{Count: count, Level: level}
     raw = append(raw, gc)
   }
@@ -1309,7 +1338,9 @@ type Node struct {
   var rec []GenomeCount
   for _, level := range tdb.AssemblyLevels() {
     count, err := neidb.NumGenomesRec(id, level)
-    util.Check(err)
+    if err != nil {
+      //<<Log server error, Pa. \ref{pa:api}>>
+    }
     gc := GenomeCount{Count: count, Level: level}
     rec = append(rec, gc)
   }
@@ -1322,7 +1353,9 @@ type Node struct {
 
 #+begin_src go <<Retrieve rank fields, Pa. \ref{pa:api}>>=
   rank, err := neidb.Rank(id)
-  util.Check(err)
+  if err != nil {
+    //<<Log server error, Pa. \ref{pa:api}>>
+  }
   tax.Rank = rank
 #+end_src
 
@@ -1342,10 +1375,14 @@ type Node struct {
 
 #+begin_src go <<Get names, Pa. \ref{pa:api}>>=
   sciName, err := neidb.Name(id)
-  util.Check(err)
+  if err != nil {
+    //<<Log server error, Pa. \ref{pa:api}>>
+  }
   tax.Name = sciName
   comName, err := neidb.CommonName(id)
-  util.Check(err)
+  if err != nil {
+    //<<Log server error, Pa. \ref{pa:api}>>
+  }
   tax.CommonName = comName
 #+end_src
 
@@ -1355,7 +1392,9 @@ type Node struct {
 
 #+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
   parent, err := neidb.Parent(id)
-  util.Check(err)
+  if err != nil {
+    //<<Log server error, Pa. \ref{pa:api}>>
+  }
   tax.Parent = parent
 #+end_src
 
@@ -1374,7 +1413,9 @@ type Node struct {
 
 #+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
   isLeaf, err := neidb.IsLeaf(id)
-  util.Check(err)
+  if err != nil {
+    //<<Log server error, Pa. \ref{pa:api}>>
+  }
   tax.IsLeaf = isLeaf
 #+end_src
 
@@ -1390,7 +1431,9 @@ type Node struct {
 #+begin_src go <<Get images, Pa. \ref{pa:api}>>=
   var neiImages []Image
   images, err := neidb.Images(id)
-  util.Check(err)
+  if err != nil {
+    //<<Log server error, Pa. \ref{pa:api}>>
+  }
   for _, image := range images {
     i := Image{Id: image.Id,
       Url: image.Url,
@@ -1415,15 +1458,16 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We cal get \ty{getTaxonData}, to get data on our taxon
+  We call get \ty{getTaxonData}, to get data on our taxon
   using the correct composite of fields and links.
 #+end_export
 
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-  if err == nil {
-    data = append(data, tax)
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
   }
+  data = append(data, tax)
 #+end_src
 
 #+begin_export latex
@@ -1456,7 +1500,7 @@ type Node struct {
   This means we write a function that does this for us.
   The function \ty{getTaxonCompositeLinks} takes the node
   of the endpoint, the \ty{fieldComposite} currently in use
-  and the request. It defines all available composites, 
+  and the request. It defines all available composites,
   iterates through them and creates a matching link.
   We use a dereferenced variable to access the \ty{url},
   so we don't alter the passed parameter.
@@ -1479,7 +1523,7 @@ type Node struct {
 #+begin_export latex
   When creating the new link, we want to keep the requested
   Link as it is, except for the \ty{field_composite} parameter
-  of the query. We can make use of the \ty{Query} map used in 
+  of the query. We can make use of the \ty{Query} map used in
   the request. By setting and resetting the \ty{field_composite}
   parameter, we can render the link exactly as it was before,
   except for the swapped \ty{field_composite}.
@@ -1504,7 +1548,7 @@ type Node struct {
 
 #+begin_export latex
   \subsection{taxon}
-  The enpoint \ty{taxon} takes as input the taxon id of a taxon and 
+  The enpoint \ty{taxon} takes as input the taxon id of a taxon and
   an identifier for the kind of fields that should be returned. It
   writes as response for each matching taxon the taxon ID, its parent's
   taxon ID, its scientific name and or its common name.
@@ -1542,10 +1586,11 @@ type Node struct {
 #+begin_src go <<Get taxon data, Pa. \ref{pa:api}>>=
   //<<Parse taxon id, Pa. \ref{pa:api}>>
   tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
-  var out ResponseBody[Taxon] 
-  if err == nil {
-    out.Data = tax
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
   }
+  var out ResponseBody[Taxon]
+  out.Data = tax
 #+end_src
 
 #+begin_export latex
@@ -1581,7 +1626,7 @@ type Node struct {
   \subsection{ancestors}
   The endpoint \ty{ancestors} executes a system call. We use this endpoint
   to call the \ty{ants} program via this api. Given the id of a taxon, \ty{ants}
-  retrieves all ancestors of a taxon. The program does not provide a wide 
+  retrieves all ancestors of a taxon. The program does not provide a wide
   variety in call arguments, so the only thing we need to pass is the taxon's id.
 
   This is \ty{ancestors}'s io:
@@ -1607,7 +1652,7 @@ type Node struct {
 
 #+begin_export latex
   The taxon's id is stored in as a path parameter.
-  A system call takes only strings as input, so we 
+  A system call takes only strings as input, so we
   don't need to convert the path parameter.
 #+end_export
 
@@ -1616,7 +1661,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  As \ty{ancestors} is one of the endpoints that don't need the 
+  As \ty{ancestors} is one of the endpoints that don't need the
   database - not making any calls to it, it instead receives the
   path to the database file.
 #+end_export
@@ -1626,18 +1671,18 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Calling a local program entails making a sysCall. 
+  Calling a local program entails making a sysCall.
   This may be done with the \ty{Command} function provided
   by the \ty{exec} package.
-  Then we use \ty{Output} as a blocking execution, that returns 
+  Then we use \ty{Output} as a blocking execution, that returns
   whatever was written to \ty{stdout} and \ty{stderr}.
 #+end_export
 
 #+begin_src go <<Call \ty{ants}, Pa. \ref{pa:api}>>=
 	out, err := exec.Command("./ants", taxId, dbPath).Output()
-	if err != nil {
-		log.Fatal("apiv2: Error executing fintac: ", err)
-	}
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
@@ -1669,9 +1714,9 @@ type Node struct {
 #+begin_export latex
   \subsection{children}
   The service \ty{children} takes as argument a taxon id and returns its
-  children as a slice of their taxon id. We implement the service by 
-  first getting the taxon id and the corresponding children. 
-  Then we iterate over the children and construct the output object 
+  children as a slice of their taxon id. We implement the service by
+  first getting the taxon id and the corresponding children.
+  Then we iterate over the children and construct the output object
   for each one, before we write the output.
 
   This is \ty{children}'s io:
@@ -1711,7 +1756,9 @@ type Node struct {
 
 #+begin_src go <<Execute children query, Pa. \ref{pa:api}>>=
     children, err := neidb.Children(taxId)
-	  util.Check(err)
+	  if err != nil {
+      //<<Write server error, Pa. \ref{pa:api}>>
+    }
     if size == -1 {
       size = len(children)
     }
@@ -1734,7 +1781,7 @@ type Node struct {
 
 #+begin_export latex
   Now we need to add our usual links, keeping in mind to fill
-  the templates with the requested parameters.  
+  the templates with the requested parameters.
 #+end_export
 
 #+begin_src go <<Add filled taxa links, Pa. \ref{pa:api}>>=
@@ -1791,18 +1838,19 @@ type Node struct {
 #+begin_src go <<Execute parent query, Pa. \ref{pa:api}>>=
   parent, err := neidb.Parent(taxId)
   tax, err := getTaxonData(parent, true, fieldComposite, neidb)
-  var out ResponseBody[Taxon] 
-  if err == nil {
-    out.Data = tax
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
   }
+  var out ResponseBody[Taxon]
+  out.Data = tax
 #+end_src
 
 
 
 #+begin_export latex
   \subsection{rankDistribution}
-  The service \ty{rankDistribution} takes as argument a taxon id and returns the 
-  distribution of genomes among taxonomic ranks. \ty{rankDistribution} executes a 
+  The service \ty{rankDistribution} takes as argument a taxon id and returns the
+  distribution of genomes among taxonomic ranks. \ty{rankDistribution} executes a
   system call to the \ty{ranks} program. This program takes the options \ty{-L}
   which provides a list of assembly-levels and \ty{-g} which provides a file
   of genome accessions. \ty{rankDistribution} writes its response in plain text.
@@ -1889,7 +1937,7 @@ type Node struct {
 
 #+begin_export latex
   Handling files is a quite tedious process, which we need to do
-  for at least one more service. This means we should write a function 
+  for at least one more service. This means we should write a function
   for this behaviour. The services take a different amount of files.
   We should add a parameters that check for these bounds.
 #+end_export
@@ -1900,7 +1948,7 @@ type Node struct {
     //<<Sort files, Pa. \ref{pa:api}>>
     //<<Create temporary files, Pa. \ref{pa:api}>>
     return
-  } 
+  }
 #+end_src
 
 #+begin_export latex
@@ -1958,9 +2006,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Now we may just call the validation function to check 
-  the incoming form. The validation function already 
-  writes an error response, so in case of an error 
+  Now we may just call the validation function to check
+  the incoming form. The validation function already
+  writes an error response, so in case of an error
   we simply stop processing here. We also do this, if
   there are no files within the request.
 #+end_export
@@ -1973,7 +2021,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The files should be sorted by some criterium. 
+  The files should be sorted by some criterium.
   We use the keys that indicate the files to do so.
 #+end_export
 
@@ -1994,11 +2042,11 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The local programs take filenames as input. This means 
+  The local programs take filenames as input. This means
   we have to have files to make the program call. For this I
-  thought of the following: We extract the file data from 
+  thought of the following: We extract the file data from
   the request, create a temporary file and save it's path,
-  write the data to this temporary file, use the paths for 
+  write the data to this temporary file, use the paths for
   the program call and remove the temporary files afterwards.
   So these are the steps we are going to follow.
 #+end_export
@@ -2015,35 +2063,44 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We expect that each key contains exactly one file. When 
-  accesing the \ty{files} variable, we get pointers to the 
+  We expect that each key contains exactly one file. When
+  accesing the \ty{files} variable, we get pointers to the
   header of a file. Now working with this is rather similar
-  to working with any other file. We may open the file via 
+  to working with any other file. We may open the file via
   the header, read it's data to a byte slice and close it again.
 #+end_export
 
 #+begin_src go <<Extract request's file data, Pa. \ref{pa:api}>>=
 	h := *files[0]
-	rf, err := h.Open()
-	if err != nil {
-		log.Fatal("apiv2: Error while reading file from fintac request: ", err)
-	}
+  var rf multipart.File
+	rf, err = h.Open()
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
 	b := make([]byte, h.Size)
 	rf.Read(b)
 	rf.Close()
 #+end_src
 
 #+begin_export latex
+  We need to import \ty{mime/multipart}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"mime/multipart"
+#+end_src
+
+#+begin_export latex
   In order to open a file we need to define where this file
-  should be stored. This name should include the name of the 
+  should be stored. This name should include the name of the
   package, a \ty{temp} marker and postpend something making
-  the filename unique. We are going to postpend a timestamp. 
+  the filename unique. We are going to postpend a timestamp.
   Making this file temporary is necessary
-  to avoid flooding the hard drive. Sadly we can't make a 
+  to avoid flooding the hard drive. Sadly we can't make a
   deferred remove call right now, as we are in a subfunction.
   This means the calling function needs to take care of the
-  file removal. 
-  To open/create the file we call \ty{os.Open} adding 
+  file removal.
+  To open/create the file we call \ty{os.Open} adding
   the create and write only flags. The \ty{0644} defines unix
   permissions for a file. \ty{0644} means the owner may execute
   read and write operation, while everyone else has read only rights.
@@ -2052,10 +2109,11 @@ type Node struct {
 #+begin_src go <<Open temporary file, Pa. \ref{pa:api}>>=
 	path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
   paths = append(paths, path)
-	tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	var tf * os.File
+  tf, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
   if err != nil {
-		panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
-	}
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
@@ -2100,8 +2158,8 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Now we can call \ty{filesFromFormData}, if the content type requires it. 
-  We also need to make a deferred call to \ty{os.Remove} to make the 
+  Now we can call \ty{filesFromFormData}, if the content type requires it.
+  We also need to make a deferred call to \ty{os.Remove} to make the
   files temporary.
 #+end_export
 
@@ -2122,7 +2180,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We already know how to call a program. But the 
+  We already know how to call a program. But the
   call arguments are still missing the taxon id
   and the database path.
 #+end_export
@@ -2130,9 +2188,9 @@ type Node struct {
 #+begin_src go <<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>=
 	ranksArgs = append(ranksArgs, taxId, dbPath)
 	out, err := exec.Command("./ranks", ranksArgs...).Output()
-	if err != nil {
-		log.Fatal("apiv2: Error executing ranks: ", err)
-	}
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 
@@ -2140,7 +2198,7 @@ type Node struct {
 #+begin_export latex
   \subsection{subtree}
   The endpoint \ty{subtree} returns all taxa in a subtree, including the
-  root. It provides two response structures: plain text and json. 
+  root. It provides two response structures: plain text and json.
   When requesting plain text we respond with the result of \ty{dree},
   we use our usual response schemes if json was requested.
 
@@ -2173,7 +2231,7 @@ type Node struct {
 #+begin_export latex
   We use the \ty{contenttype} to get to do content negotiation.
   If the server is providing a content type, that the client is requesting
-  we act on the requested content type. 
+  we act on the requested content type.
 #+end_export
 
 #+begin_src go <<Get content type, Pa. \ref{pa:api}>>=
@@ -2211,8 +2269,10 @@ type Node struct {
 
 #+begin_src go <<Execute subtree query, Pa. \ref{pa:api}>>=
   taxa, err := neidb.Subtree(taxId)
-  util.Check(err)
-  
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
+
   if size == -1 {
     size = len(taxa)
   }
@@ -2228,7 +2288,7 @@ type Node struct {
   \ty{dree} takes five arguments: \ty{L}, \ty{g}, \ty{l}, \ty{m} and
   \ty{n}. We already listed their api counterparts in \ty{subtree}'s io,
   except for \ty{l} which is determined by the accepted media type.
-  Each of these arguments needs to be extracted, some validated and then 
+  Each of these arguments needs to be extracted, some validated and then
   appended to the call arguments.
 #+end_export
 
@@ -2269,7 +2329,7 @@ type Node struct {
 
 #+begin_export latex
   We run \ty{dree} with the call arguments.
-  The call arguments are still missing the taxon id and the path 
+  The call arguments are still missing the taxon id and the path
   to the database. As this endpoint uses both the db and it's path
   the path is not located at args[0], but args[1].
 #+end_export
@@ -2317,11 +2377,42 @@ type Node struct {
 #+end_src
 
 
+#+begin_export latex
+  \subsection{taxonomy}
+  \subsection{taxonomy} is an endpoint grouping a set of rather
+  miscellaneous services. These services are related to taxa, but
+  rather than being tied to a single taxon, like the subservices of
+  \ty{taxa}, these services are a concern of multiple taxa. Requesting
+  \ty{taxonomy} returns an object of links to its subservices.
+  This is taxonomy's io:
+  Params:
+    Path:
+      none
+    Query:
+      none
+  Writes:
+    \ty{ResponseBody[nil]}
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
+    out := ResponseBody[*any]{}
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Write \ty{taxonomy}'s links, Pa. \ref{pa:api}>>
     writeJsonOutput(w, out)
   }
+#+end_src
+
+#+begin_export latex
+  We already know how to add links of a service grouping other services;
+  \ty{rootDocument} does the same.
+#+end_export
+
+#+begin_src go <<Write \ty{taxonomy}'s links, Pa. \ref{pa:api}>>=
+  var links []Link
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
+  out.Links = links
 #+end_src
 
 
@@ -2363,7 +2454,7 @@ type Node struct {
   After checking whether the client is going to accept our response format,
   we need to check, whether the request is using the correct media type. We
   do this by extracting the request's media type and running \ty{EqualsMIME}
-  against \ty{multipart/form-data}. If the types don't equal we return a 
+  against \ty{multipart/form-data}. If the types don't equal we return a
   415 (Unsupported Media Type).
 #+end_export
 
@@ -2429,8 +2520,8 @@ type Node struct {
 
 #+begin_export latex
   We implemented the function \ty{filesFromFormData} earlier
-  Calling it with the range [1,) of files handles all of the 
-  file extraction for us. We need to remove the temporary files, 
+  Calling it with the range [1,) of files handles all of the
+  file extraction for us. We need to remove the temporary files,
   before leaving this current function.
 #+end_export
 
@@ -2451,24 +2542,173 @@ type Node struct {
 
 #+begin_src go <<Call \ty{fintac}, Pa. \ref{pa:api}>>=
 	out, err := exec.Command("./fintac", fintacArgs...).Output()
-	if err != nil {
-		log.Fatal("apiv2: Error executing fintac: ", err)
-	}
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 
+#+begin_export latex
+  \subsection{\ty{mrca}}
+  The service \ty{mrca} taks as argument a slice of taxon IDs and
+  returns their most recent common ancestor. We implement the service
+  by getting the taxon ids, calculating their most recent common ancestor,
+  and writing the output. If there is no most recent common ancestor, we
+  return an empty data object.
+
+  This is \ty{taxa/mrca}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      field_composite string
+      plain_data      bool
+      taxon_ids       []int
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
+#+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Parse taxon ids, Pa. \ref{pa:api}>>
+    //<<Execute mrca query, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  The taxon ids are stored in a query parameter as a comma delimited string.
+  We need to get them, cut at each comma and parse them one-by-one.
+#+end_export
+
+#+begin_src go <<Parse taxon ids, Pa. \ref{pa:api}>>=
+  idsStr := r.URL.Query().Get("taxon_ids")
+  var taxIds []int
+  split := strings.Split(idsStr, ",")
+  if len(split) == 1 && split[0] == "" {
+    return
+  }
+  for _, id := range split {
+    p, err := strconv.Atoi(id)
+    if err != nil {
+      writeBadRequestResp(w, "At least one taxon id is not an integer.")
+      return
+    }
+    taxIds = append(taxIds, p)
+  }
+#+end_src
+
+#+begin_export latex
+  We call \ty{tdb}'s \ty{MRCA} function, to find the most recent common ancestor.
+  Using it's id we retrieve its requested fields. If no taxa were requested, we
+  respond with an empty object.
+#+end_export
+
+#+begin_src go <<Execute mrca query, Pa. \ref{pa:api}>>=
+	var out ResponseBody[Taxon]
+  if len(taxIds) > 0 {
+	  id, err := neidb.MRCA(taxIds)
+    if err != nil {
+      //<<Write server error, Pa. \ref{pa:api}>>
+    }
+
+  //<<Get data of taxon, Pa. \ref{pa:api}>>
+  //<<Add links taxon entity, Pa. \ref{pa:api}>>
+	}
+#+end_src
+
+#+begin_export latex
+  We call get \ty{getTaxonData}, to get data on our taxon
+  using the correct composite of fields and links.
+#+end_export
+
+#+begin_src go <<Get data of taxon, Pa. \ref{pa:api}>>=
+  tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
+  out.Data = tax
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     out := ResponseBody[string]{Data:"Not implemented"}
     writeJsonOutput(w, out)
   }
+#+end_src
+
+#+begin_export latex
+  The service \ty{path} takes as input the taxon ids of a start and an
+  end node in the taxonomy, where the end is closer to the root than the
+  start. It returns the array of taxon ids that form the path from the
+  start to the end. If no such path exists, an empty array is returned.
+
+  This is \ty{path}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      end_id          int
+      field_composite string
+      page            int
+      page_size       int
+      plain_data      bool
+      start_id        int
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Get start and end, Pa. \ref{pa:api}>>
+    //<<Execute path query, Pa. \ref{pa:api}>>
+    //<<Add links taxon entity, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  Start and end are provided as query arguments.
+#+end_export
+
+#+begin_src go <<Get start and end, Pa. \ref{pa:api}>>=
+  startStr := r.URL.Query().Get("start_id")
+  start, err := strconv.Atoi(startStr)
+  if err != nil {
+    writeBadRequestResp(w, "start id is not an integer.")
+  }
+  endStr := r.URL.Query().Get("end_id")
+  end, err := strconv.Atoi(endStr)
+  if err != nil {
+    writeBadRequestResp(w, "end id is not an integer.")
+  }
+#+end_src
+
+#+begin_export latex
+  We execute the \ty{Path} function of \ty{tdb},
+  using the resulting ids for retrieving the requested taxon fields.
+#+end_export
+
+#+begin_src go <<Execute path query, Pa. \ref{pa:api}>>=
+  path, err := neidb.Path(start, end)
+	if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
+  if size == -1 {
+    size = len(path)
+  }
+  data := []Taxon{}
+  for i := offset; i < min(offset + size, len(path)); i++ {
+    id := path[i]
+	  //<<Construct taxon output, Pa. \ref{pa:api}>>
+	}
 #+end_src
