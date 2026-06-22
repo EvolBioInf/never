@@ -395,7 +395,7 @@ type Node struct {
 		Action:   post,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&rankDistL, rankDistribution, neidb) // new - calls ranks program
+	makeRoute(&rankDistL, rankDistribution, dbPath) // new - calls ranks program
 #+end_src
 
 #+begin_export latex
@@ -1611,7 +1611,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
-  id := r.PathValue("taxon_id")
+  taxId := r.PathValue("taxon_id")
 #+end_src
 
 #+begin_export latex
@@ -1633,7 +1633,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Call \ty{ants}, Pa. \ref{pa:api}>>=
-	out, err := exec.Command("./ants", id, dbPath).Output()
+	out, err := exec.Command("./ants", taxId, dbPath).Output()
 	if err != nil {
 		log.Fatal("apiv2: Error executing fintac: ", err)
 	}
@@ -1662,6 +1662,7 @@ type Node struct {
 #+begin_src go <<Write plain output, Pa. \ref{pa:api}>>=
   writePlainOutput(w, out)
 #+end_src
+
 
 
 #+begin_export latex
@@ -1754,7 +1755,7 @@ type Node struct {
 
 #+begin_export latex
   \subsection{parent}
-  The service \ty{children} takes as argument a taxon id and returns its
+  The service \ty{parent} takes as argument a taxon id and returns its
   parent.
 
   This is \ty{parent}'s io:
@@ -1797,79 +1798,36 @@ type Node struct {
 
 
 
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
-  }
-  func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
-  }
-  func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
-  }
-#+end_src
-
-
-
 #+begin_export latex
-  \subsection{fintac}
-  The endpoint \ty{fintac} executes a system call. We use this endpoint
-  to call the \ty{fintac} program via this api. In order to do so we
-  need to recreate the io of the program excluding the obvious \ty{-h},
-  \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
-  allows to pass files as arguments, this creates the need for some new handling.
+  \subsection{rankDistribution}
+  The service \ty{rankDistribution} takes as argument a taxon id and returns the 
+  distribution of genomes among taxonomic ranks. \ty{rankDistribution} executes a 
+  system call to the \ty{ranks} program. This program takes the options \ty{-L}
+  which provides a list of assembly-levels and \ty{-g} which provides a file
+  of genome accessions. \ty{rankDistribution} writes its response in plain text.
 
-  This is \ty{accession}' io:
+  This is \ty{rankDistribution}'s io:
   Params:
     Path:
-      none
+      taxon_id int
     Query:
-      all_splits bool
-      neighbor string
-      target string
-      unknown string
-    Writes:
-      string
+      assembly_levels []string
+      list_genomes bool
+      tabular_output bool
+  Body:
+    File
+  Writes:
+    string
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Check content types, Pa. \ref{pa:api}>>
-    //<<Check request content types, Pa. \ref{pa:api}>>
-    //<<Handle arguments, Pa. \ref{pa:api}>>
-    //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
+    //<<Get taxon id, Pa. \ref{pa:api}>>
+    //<<Handle arguments \ty{rankDistribution}, Pa. \ref{pa:api}>>
+    //<<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
-#+end_src
-
-#+begin_export latex
-  After checking whether the client is going to accept our response format,
-  we need to check, whether the request is using the correct media type. For
-  this we use the \ty{conttentype} package. The expected media type is
-  \ty{multipart/form-data}. We are going to use this more than once, so
-  we add it to the globally defined content types
-#+end_export
-
-#+begin_src go <<Content types, Pa. \ref{pa:api}>>=
-  var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
-#+end_src
-
-#+begin_export latex
-  For checking the request type, we extract the request's media
-  type, run \ty{EqualsMIME} and return a 415 (Unsupported Media Type)
-  if it does not match \ty{multipart/form-data}.
-#+end_export
-
-#+begin_src go <<Check request content types, Pa. \ref{pa:api}>>=
-	ct, err := contenttype.GetMediaType(r)
-	if !ct.EqualsMIME(multipartCt) {
-		w.WriteHeader(http.StatusUnsupportedMediaType)
-		w.Write([]byte("Use multipart/form-data"))
-		return
-	}
 #+end_src
 
 #+begin_export latex
@@ -1878,63 +1836,71 @@ type Node struct {
   prepare it, so we can use it, as if all it were local.
 #+end_export
 
-#+begin_src go <<Handle arguments, Pa. \ref{pa:api}>>=
-  //<<Retrieve query parameters, Pa. \ref{pa:api}>>
-  //<<Add db parameter, Pa. \ref{pa:api}>>
-  //<<Handle files, Pa. \ref{pa:api}>>
+#+begin_src go <<Handle arguments \ty{rankDistribution}, Pa. \ref{pa:api}>>=
+  //<<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>
+  //<<Get db path from parameters, Pa. \ref{pa:api}>>
+  //<<Handle file, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-  \ty{fintac} takes the parameters \ty{a}, \ty{n}, \ty{t} and \ty{u}.
-  We retrieve them from the query of the url and add them to the
-  call arguments, if they exist.
+  \ty{ranks} takes the parameters \ty{L}, \ty{g}, \ty{l} and \ty{t}.
+  We retrieve \ty{L}, \ty{l} and \ty{t} from the query of the url and add them to the
+  call arguments, if they exist. The data for \ty{g} is not contained in the query.
+  We are going to retrieve it later on.
 #+end_export
 
-#+begin_src go <<Retrieve query parameters, Pa. \ref{pa:api}>>=
-	fintacArgs := []string{}
-	aStr := r.URL.Query().Get("all_splits")
-	a, _ := strconv.ParseBool(aStr)
-	n := r.URL.Query().Get("neighbor")
-	t := r.URL.Query().Get("target")
-	u := r.URL.Query().Get("unknown")
-	if a {
-		fintacArgs = append(fintacArgs, "-a")
-	}
-	if n != "" {
-		fintacArgs = append(fintacArgs, "-n", n)
-	}
-	if t != "" {
-		fintacArgs = append(fintacArgs, "-t", t)
-	}
-	if u != "" {
-		fintacArgs = append(fintacArgs, "-u", u)
-	}
+#+begin_src go <<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>=
+	ranksArgs := []string{}
+	levels := r.URL.Query().Get("assembly_levels")
+  if levels != "" {
+		ranksArgs = append(ranksArgs, "-L", levels)
+  }
+
+	listStr := r.URL.Query().Get("list_genomes")
+	l, err := strconv.ParseBool(listStr)
+  if listStr != "" && err != nil {
+    writeBadRequestResp(w, "list_genomes argument is not a bool.")
+    return
+  }
+  if l {
+		ranksArgs = append(ranksArgs, "-l")
+  }
+
+  tabStr := r.URL.Query().Get("tabular_output")
+	t, err := strconv.ParseBool(tabStr)
+  if tabStr != "" && err != nil {
+    writeBadRequestResp(w, "tabular_output argument is not a bool.")
+    return
+  }
+  if t {
+		ranksArgs = append(ranksArgs, "-t")
+  }
 #+end_src
 
 #+begin_export latex
-  When calling fintac remotely we want to use the database.
+  When calling \ty{ranks} remotely we want to use the database.
   In order to do so we need to specify it via a call argument.
   The path of the database is specified as the first parameter
   passed to this function.
 #+end_export
 
-#+begin_src go <<Add db parameter, Pa. \ref{pa:api}>>=
+#+begin_src go <<Get db path from parameters, Pa. \ref{pa:api}>>=
   dbPath := args[0].(string)
-	fintacArgs = append(fintacArgs, "-N", dbPath)
 #+end_src
 
 #+begin_export latex
-  Handling the files is a quite tedious process, which need to do
+  Handling files is a quite tedious process, which we need to do
   for at least one more service. This means we should write a function 
-  for this behaviour. 
+  for this behaviour. The services take a different amount of files.
+  We should add a parameters that check for these bounds.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func filesFromFormData(w http.ResponseWriter, r *http.Request) (paths []string, err error) {
-      //<<Validate form, Pa. \ref{pa:api}>>
-      //<<Sort files, Pa. \ref{pa:api}>>
-      //<<Create temporary files, Pa. \ref{pa:api}>>
-      return
+  func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFiles int) (paths []string, err error) {
+    //<<Validate form, Pa. \ref{pa:api}>>
+    //<<Sort files, Pa. \ref{pa:api}>>
+    //<<Create temporary files, Pa. \ref{pa:api}>>
+    return
   } 
 #+end_src
 
@@ -1943,10 +1909,10 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
-      //<<Parse form data, Pa. \ref{pa:api}>>
-      //<<Check for files, Pa. \ref{pa:api}>>
-      return nil
+  func validateMultipartForm(w http.ResponseWriter, r *http.Request, minFiles, maxFiles int) (err error) {
+    //<<Parse form data, Pa. \ref{pa:api}>>
+    //<<Check for files, Pa. \ref{pa:api}>>
+    return nil
   }
 #+end_src
 
@@ -1969,15 +1935,18 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  \ty{fintac} requires at least one file, so we should check whether
-  one was provided. We return a 400 (Bad Request) if there is no
-  file.
+  We return a 400 (Bad Request), if the number of files
+  exceeds or falls short of the required range.
 #+end_export
 
 #+begin_src go <<Check for files, Pa. \ref{pa:api}>>=
-	if len(r.MultipartForm.File) == 0 {
-    writeBadRequestResp(w, "Provide at least one file.")
-		return errors.New("no files in body")
+	if len(r.MultipartForm.File) < minFiles {
+    writeBadRequestResp(w, fmt.Sprintf("Provide at least %s file(s).", minFiles))
+		return errors.New("not enough files in body")
+	}
+  if maxFiles != -1 && len(r.MultipartForm.File) > maxFiles {
+    writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %s file(s) per request.", maxFiles))
+		return errors.New("too many files in body")
 	}
 #+end_src
 
@@ -1991,20 +1960,22 @@ type Node struct {
 
 #+begin_export latex
   Now we may just call the validation function to check 
-  the incoming form.
+  the incoming form. The validation function already 
+  writes an error response, so in case of an error 
+  we simply stop processing here. We also do this, if
+  there are no files within the request.
 #+end_export
 
 #+begin_src go <<Validate form, Pa. \ref{pa:api}>>=
-  err = validateMultipartForm(w, r)
-  if err != nil {
+  err = validateMultipartForm(w, r, minFiles, maxFiles)
+  if err != nil || len(r.MultipartForm.File) == 0 {
     return
   }
 #+end_src
 
 #+begin_export latex
-  We need to pass the provided files in some defined
-  order. We use the keys that indicate the files to
-  do so.
+  The files should be sorted by some criterium. 
+  We use the keys that indicate the files to do so.
 #+end_export
 
 #+begin_src go <<Sort files, Pa. \ref{pa:api}>>=
@@ -2024,12 +1995,12 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  \ty{fintac} works with specified file names. This means 
+  The local programs take filenames as input. This means 
   we have to have files to make the program call. For this I
   thought of the following: We extract the file data from 
   the request, create a temporary file and save it's path,
   write the data to this temporary file, use the paths for 
-  the \ty{fintac} call and remove the temporary files afterwards.
+  the program call and remove the temporary files afterwards.
   So these are the steps we are going to follow.
 #+end_export
 
@@ -2119,12 +2090,175 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Now we can call \ty{filesFromFormData}. We also need to make a deferred call
-  to \ty{os.Remove} to make the files temporary.
+  We need to do this file handling whenever the requests conten type is
+  \ty{multipart/form-data}. Checking against this requires creating a
+  struct containing the content types information. We are going to use
+  this more than once, so we add it to the globally defined content types.
 #+end_export
 
-#+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
-  paths, err := filesFromFormData(w, r)
+#+begin_src go <<Content types, Pa. \ref{pa:api}>>=
+  var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
+#+end_src
+
+#+begin_export latex
+  Now we can call \ty{filesFromFormData}, if the content type requires it. 
+  We also need to make a deferred call to \ty{os.Remove} to make the 
+  files temporary.
+#+end_export
+
+#+begin_src go <<Handle file, Pa. \ref{pa:api}>>=
+	ct, err := contenttype.GetMediaType(r)
+	if ct.EqualsMIME(multipartCt) {
+    paths, err := filesFromFormData(w, r, 0, 1)
+    if err != nil {
+      return
+    }
+    if len(paths) > 0 {
+	  	ranksArgs = append(ranksArgs, "-g", paths[0])
+      for _, p := range paths {
+        defer os.Remove(p)
+      }
+    }
+	}
+#+end_src
+
+#+begin_export latex
+  We already know how to call a program. But the 
+  call arguments are still missing the taxon id
+  and the database path.
+#+end_export
+
+#+begin_src go <<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>=
+	ranksArgs = append(ranksArgs, taxId, dbPath)
+	out, err := exec.Command("./ranks", ranksArgs...).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing ranks: ", err)
+	}
+#+end_src
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    writeJsonOutput(w, out)
+  }
+  func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    out := ResponseBody[string]{Data:"Not implemented"}
+    writeJsonOutput(w, out)
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  \subsection{fintac}
+  The endpoint \ty{fintac} executes a system call. We use this endpoint
+  to call the \ty{fintac} program via this api. In order to do so we
+  need to recreate the io of the program excluding the obvious \ty{-h},
+  \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
+  allows to pass files as arguments, this creates the need for some new handling.
+
+  This is \ty{accession}' io:
+  Params:
+    Path:
+      none
+    Query:
+      all_splits bool
+      neighbor string
+      target string
+      unknown string
+    Body:
+      Files
+    Writes:
+      string
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Check multipart content types, Pa. \ref{pa:api}>>
+    //<<Handle arguments \ty{fintac}, Pa. \ref{pa:api}>>
+    //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
+    //<<Write plain output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  After checking whether the client is going to accept our response format,
+  we need to check, whether the request is using the correct media type. We
+  do this by extracting the request's media type and running \ty{EqualsMIME}
+  against \ty{multipart/form-data}. If the types don't equal we return a 
+  415 (Unsupported Media Type).
+#+end_export
+
+#+begin_src go <<Check multipart content types, Pa. \ref{pa:api}>>=
+	ct, err := contenttype.GetMediaType(r)
+	if !ct.EqualsMIME(multipartCt) {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		w.Write([]byte("Use multipart/form-data"))
+		return
+	}
+#+end_src
+
+#+begin_export latex
+  Handling the arguments is about checking the data submitted via the form
+  and via the query parameters. We need to get all this data, combine and
+  prepare it, so we can use it, as if all it were local.
+#+end_export
+
+#+begin_src go <<Handle arguments \ty{fintac}, Pa. \ref{pa:api}>>=
+  //<<Retrieve query parameters \ty{fintac}, Pa. \ref{pa:api}>>
+  //<<Add db parameter \ty{fintac}, Pa. \ref{pa:api}>>
+  //<<Handle files \ty{fintac}, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} takes the parameters \ty{a}, \ty{n}, \ty{t} and \ty{u}.
+  We retrieve them from the query of the url and add them to the
+  call arguments, if they exist.
+#+end_export
+
+#+begin_src go <<Retrieve query parameters \ty{fintac}, Pa. \ref{pa:api}>>=
+	fintacArgs := []string{}
+	aStr := r.URL.Query().Get("all_splits")
+	a, _ := strconv.ParseBool(aStr)
+	n := r.URL.Query().Get("neighbor")
+	t := r.URL.Query().Get("target")
+	u := r.URL.Query().Get("unknown")
+	if a {
+		fintacArgs = append(fintacArgs, "-a")
+	}
+	if n != "" {
+		fintacArgs = append(fintacArgs, "-n", n)
+	}
+	if t != "" {
+		fintacArgs = append(fintacArgs, "-t", t)
+	}
+	if u != "" {
+		fintacArgs = append(fintacArgs, "-u", u)
+	}
+#+end_src
+
+#+begin_export latex
+  When calling \ty{fintac} remotely we want to use the database.
+  In order to do so we need to specify it via a call argument.
+  The path of the database is specified as the first parameter
+  passed to this function.
+#+end_export
+
+#+begin_src go <<Add db parameter \ty{fintac}, Pa. \ref{pa:api}>>=
+  dbPath := args[0].(string)
+	fintacArgs = append(fintacArgs, "-N", dbPath)
+#+end_src
+
+#+begin_export latex
+  We implemented the function \ty{filesFromFormData} earlier
+  Calling it with the range [1,) of files handles all of the 
+  file extraction for us. We need to remove the temporary files, 
+  before leaving this current function.
+#+end_export
+
+#+begin_src go <<Handle files \ty{fintac}, Pa. \ref{pa:api}>>=
+  paths, err := filesFromFormData(w, r, 1, -1)
   if err != nil {
     return
   }
@@ -2144,6 +2278,8 @@ type Node struct {
 		log.Fatal("apiv2: Error executing fintac: ", err)
 	}
 #+end_src
+
+
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {

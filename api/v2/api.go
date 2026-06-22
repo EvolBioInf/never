@@ -210,7 +210,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Action:   post,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&rankDistL, rankDistribution, neidb) // new - calls ranks program
+	makeRoute(&rankDistL, rankDistribution, dbPath) // new - calls ranks program
 
 	subtreeL := Node{
 		Links:    make(map[string][]Node),
@@ -750,11 +750,11 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		return
 	}
 
-	id := r.PathValue("taxon_id")
+	taxId := r.PathValue("taxon_id")
 
 	dbPath := args[0].(string)
 
-	out, err := exec.Command("./ants", id, dbPath).Output()
+	out, err := exec.Command("./ants", taxId, dbPath).Output()
 	if err != nil {
 		log.Fatal("apiv2: Error executing fintac: ", err)
 	}
@@ -894,9 +894,127 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 }
 
 func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Serverd does not provide any of the accepted content types."))
+		return
+	}
+
+	taxId := r.PathValue("taxon_id")
+
+	ranksArgs := []string{}
+	levels := r.URL.Query().Get("assembly_levels")
+	if levels != "" {
+		ranksArgs = append(ranksArgs, "-L", levels)
+	}
+
+	listStr := r.URL.Query().Get("list_genomes")
+	l, err := strconv.ParseBool(listStr)
+	if listStr != "" && err != nil {
+		writeBadRequestResp(w, "list_genomes argument is not a bool.")
+		return
+	}
+	if l {
+		ranksArgs = append(ranksArgs, "-l")
+	}
+
+	tabStr := r.URL.Query().Get("tabular_output")
+	t, err := strconv.ParseBool(tabStr)
+	if tabStr != "" && err != nil {
+		writeBadRequestResp(w, "tabular_output argument is not a bool.")
+		return
+	}
+	if t {
+		ranksArgs = append(ranksArgs, "-t")
+	}
+
+	dbPath := args[0].(string)
+
+	ct, err := contenttype.GetMediaType(r)
+	if ct.EqualsMIME(multipartCt) {
+		paths, err := filesFromFormData(w, r, 0, 1)
+		if err != nil {
+			return
+		}
+		if len(paths) > 0 {
+			ranksArgs = append(ranksArgs, "-g", paths[0])
+			for _, p := range paths {
+				defer os.Remove(p)
+			}
+		}
+	}
+
+	ranksArgs = append(ranksArgs, taxId, dbPath)
+	out, err := exec.Command("./ranks", ranksArgs...).Output()
+	if err != nil {
+		log.Fatal("apiv2: Error executing ranks: ", err)
+	}
+
+	writePlainOutput(w, out)
+
 }
+
+func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFiles int) (paths []string, err error) {
+	err = validateMultipartForm(w, r, minFiles, maxFiles)
+	if err != nil || len(r.MultipartForm.File) == 0 {
+		return
+	}
+
+	keys := []string{}
+	for key := range r.MultipartForm.File {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for i, key := range keys {
+		files := r.MultipartForm.File[key]
+		if len(files) > 0 {
+			h := *files[0]
+			rf, err := h.Open()
+			if err != nil {
+				log.Fatal("apiv2: Error while reading file from fintac request: ", err)
+			}
+			b := make([]byte, h.Size)
+			rf.Read(b)
+			rf.Close()
+
+			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
+			paths = append(paths, path)
+			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
+			}
+
+			buffer := bytes.NewBuffer(b)
+			buffer.WriteTo(tf)
+			tf.Close()
+
+		}
+	}
+
+	return
+}
+
+func validateMultipartForm(w http.ResponseWriter, r *http.Request, minFiles, maxFiles int) (err error) {
+	err = r.ParseMultipartForm(3_000_000)
+	if err != nil {
+		writeBadRequestResp(w, "Malformed multipart form request.")
+		return err
+	}
+
+	if len(r.MultipartForm.File) < minFiles {
+		writeBadRequestResp(w, fmt.Sprintf("Provide at least %s file(s).", minFiles))
+		return errors.New("not enough files in body")
+	}
+	if maxFiles != -1 && len(r.MultipartForm.File) > maxFiles {
+		writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %s file(s) per request.", maxFiles))
+		return errors.New("too many files in body")
+	}
+
+	return nil
+}
+
 func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
@@ -943,7 +1061,7 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	dbPath := args[0].(string)
 	fintacArgs = append(fintacArgs, "-N", dbPath)
 
-	paths, err := filesFromFormData(w, r)
+	paths, err := filesFromFormData(w, r, 1, -1)
 	if err != nil {
 		return
 	}
@@ -959,62 +1077,6 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 
 	writePlainOutput(w, out)
 
-}
-
-func filesFromFormData(w http.ResponseWriter, r *http.Request) (paths []string, err error) {
-	err = validateMultipartForm(w, r)
-	if err != nil {
-		return
-	}
-
-	keys := []string{}
-	for key := range r.MultipartForm.File {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for i, key := range keys {
-		files := r.MultipartForm.File[key]
-		if len(files) > 0 {
-			h := *files[0]
-			rf, err := h.Open()
-			if err != nil {
-				log.Fatal("apiv2: Error while reading file from fintac request: ", err)
-			}
-			b := make([]byte, h.Size)
-			rf.Read(b)
-			rf.Close()
-
-			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
-			paths = append(paths, path)
-			tf, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				panic(fmt.Sprintf("Could not open %s: %s\n", path, err))
-			}
-
-			buffer := bytes.NewBuffer(b)
-			buffer.WriteTo(tf)
-			tf.Close()
-
-		}
-	}
-
-	return
-}
-
-func validateMultipartForm(w http.ResponseWriter, r *http.Request) (err error) {
-	err = r.ParseMultipartForm(3_000_000)
-	if err != nil {
-		writeBadRequestResp(w, "Malformed multipart form request.")
-		return err
-	}
-
-	if len(r.MultipartForm.File) == 0 {
-		writeBadRequestResp(w, "Provide at least one file.")
-		return errors.New("no files in body")
-	}
-
-	return nil
 }
 
 func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
