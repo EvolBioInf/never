@@ -69,6 +69,11 @@ type Taxon struct {
   Images         []Image       `json:"images,omitempty"`
   Links          []Link        `json:"links,omitempty"`
 }
+type TaxonAccession struct {
+  TaxId      int         `json:"tax_id"`
+  Accessions []Accession `json:"accessions,omitempty"`
+  Links      []Link      `json:"links,omitempty"`
+}
 #+end_src
 
 #+begin_export latex
@@ -84,14 +89,14 @@ type Taxon struct {
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type ResponseBody[T any] struct {
-  Data  T    `json:"data,omitempty"`
+  Data  T      `json:"data,omitempty"`
   Links []Link `json:"links,omitempty"`
 }
 type Link struct {
-  Rel            string   `json:"rel"`
-  Href           string   `json:"href"`
-  Action         string   `json:"action"`
-  Types          []string `json:"types"`
+  Rel    string   `json:"rel"`
+  Href   string   `json:"href"`
+  Action string   `json:"action"`
+  Types  []string `json:"types"`
 }
 #+end_src
 
@@ -247,6 +252,7 @@ type Node struct {
   //<<Initialize \ty{rankDistribution}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxonAccessions}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{fintac}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{mrca}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>
@@ -430,8 +436,23 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
+  \ty{taxonAccessions} is a subservice of \ty{taxonomy} providing json output.
+#+end_export
+
+#+begin_src go <<Initialize \ty{taxonAccessions}, Pa. \ref{pa:api}>>=
+	taxonAccessionsL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "taxonAccessions",
+		BasePath: prefix + "/taxonomy/accessions",
+		Action:   get,
+		Types:    []contenttype.MediaType{jsonCt},
+	}
+	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
+#+end_src
+
+#+begin_export latex
   \ty{fintac} is a subservice of \ty{taxonomy} providing plain text.
-  Takes a path to the database, as an argument, instead of the database itself.
+  It takes a path to the database, as an argument, instead of the database itself.
 #+end_export
 
 #+begin_src go <<Initialize \ty{fintac}, Pa. \ref{pa:api}>>=
@@ -440,7 +461,7 @@ type Node struct {
     Name:     "fintac",
 		BasePath: prefix + "/taxonomy/fintac",
 		Action:   post,
-		Types:    []contenttype.MediaType{jsonCt},
+		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&fintacL, fintac, dbPath) // new - calls fintac program
 #+end_src
@@ -527,13 +548,12 @@ type Node struct {
   With the subservices we know that, each endpoint should be contained in the links of the \ty{rootDocument}.
   Then there \ty{accession} which is a subservice of \ty{accessions}; \ty{taxon}, \ty{ancestors}, \ty{children},
   \ty{parent}, \ty{rankDistribution} and \ty{subtree} which are subservices
-  of \ty{taxa}. Lastly \ty{fintac}, \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
+  of \ty{taxa}. Lastly \ty{taxonAccessions}, \ty{fintac}, \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
 #+end_export
 
 #+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], fintacL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], ancestorsL)
@@ -542,6 +562,8 @@ type Node struct {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], rankDistL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], fintacL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], neighborsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
@@ -552,6 +574,7 @@ type Node struct {
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], fintacL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
@@ -775,37 +798,36 @@ type Node struct {
   This is \ty{accessions}' io:
   Params:
     Query:
-      accession_ids []string
-      page []int
-      page_size []int
-      plain_data bool
+      accession_ids []string *required
+      page          int
+      page_size     int
+      plain_data    bool
   Writes:
-    \ty{ResponseBody[ []Accession ]}
+    ResponseBody[ []Accession ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Check content types, Pa. \ref{pa:api}>>
-    //<<Check Parameters, Pa. \ref{pa:api}>>
+    //<<Check parameters \ty{accessions}, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Extract accessions, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Look up levels, Pa. \ref{pa:api}>>
     //<<Store output \ty{accessions}, Pa. \ref{pa:api}>>
-    //<<Add links \ty{accessions}, Pa. \ref{pa:api}>>
+    //<<Add collection links, Pa. \ref{pa:api}>>
     //<<Write json output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
 #+begin_export latex
   A lot of endpoints that we are defining here allow for or even require parameters.
-  We are going to define a function that a) checks whether the required parameters
-  exist and b) whether they are safe. In this context I consider a parameter to be safe if it
-  cannot be used for code injection.
+  We are going to define a function that checks whether the required parameters
+  exist.
 #+end_export
 
-#+begin_src go <<Check Parameters, Pa. \ref{pa:api}>>=
+#+begin_src go <<Check parameters \ty{accessions}, Pa. \ref{pa:api}>>=
   valid := checkParams(w, r, "accession_ids")
   if !valid {
     return
@@ -1072,7 +1094,7 @@ type Node struct {
   links.
 #+end_export
 
-#+begin_src go <<Add links \ty{accessions}, Pa. \ref{pa:api}>>=
+#+begin_src go <<Add collection links, Pa. \ref{pa:api}>>=
   if !plain {
 		var links []Link
     //<<Add endpoint's self link, Pa. \ref{pa:api}>>
@@ -2444,6 +2466,148 @@ type Node struct {
 
 
 #+begin_export latex
+  \subsection{taxonAccessions}
+  The endpoint \ty{taxonAccessions} finds all the accessions
+  associated with the given taxa.
+
+  This is \ty{taxonAccessions}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      page      int
+      page_size int
+      taxon_ids []int *required
+    Writes:
+      ResponseBody[ []TaxonAccession ]
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Parse taxon ids, Pa. \ref{pa:api}>>
+    //<<Look up accessions, Pa. \ref{pa:api}>>
+    //<<Add collection links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We declare a slice of \ty{TaxonAccession} for storing. We get the accessions 
+  for a taxon, then add it's children. We do this as long as there are unprocessed
+  taxa without exceeding the page .
+#+end_export
+
+#+begin_src go <<Look up accessions, Pa. \ref{pa:api}>>=
+  data := []TaxonAccession{}
+  //<<Get link nodes, Pa. \ref{pa:api}>>
+  for len(taxIds) > 0 && (size == -1 || len(data) < size) {
+    taxId := taxIds[0]
+    taxIds = taxIds[1:]
+    accs, err := neidb.Accessions(taxId)
+    if err != nil {
+      //<<Write server error, Pa. \ref{pa:api}>>
+    }
+    if len(accs) > 0 {
+      //<<Store accessions, Pa. \ref{pa:api}>>
+    }
+    //<<Get children, Pa. \ref{pa:api}>>
+  }
+  out := ResponseBody[[]TaxonAccession]{Data: data}
+#+end_src
+
+
+
+#+begin_export latex
+  We are going to use the \ty{Taxon} and \ty{Accession} nodes while creating
+  the data. We should get those nodes before looping to avoid indexing
+  the graph unnecessarily.
+#+end_export
+
+#+begin_src go <<Get link nodes, Pa. \ref{pa:api}>>=
+  taxNode := *root.getService("taxon")
+  accNode := *root.getService("accession")
+
+#+end_src
+
+#+begin_export latex
+  We declare a variable of type \ty{TaxonAccession} based on the \ty{taxId} and
+  store it in our output slice. Then we complete the taxon's accessions by
+  adding their levels before storing them. If we've not yet reached the pagination
+  offset, we decrement the offset instead of storing the accession.
+#+end_export
+
+#+begin_src go <<Store accessions, Pa. \ref{pa:api}>>=
+  if offset > 0 {
+    offset--
+  } else {
+    d := TaxonAccession{TaxId: taxId}
+    //<<Add taxon link, Pa. \ref{pa:api}>>
+    for _, acc := range accs {
+      level, err := neidb.Level(acc)
+      if err != nil {
+        //<<Write server error, Pa. \ref{pa:api}>>
+      }
+      accession := Accession{Accession: acc, Level: level}
+      //<<Add accession link, Pa. \ref{pa:api}>>
+      d.Accessions = append(d.Accessions, accession)
+    }
+    data = append(data, d)
+  }
+#+end_src
+
+#+begin_export latex
+  Each \ty{TaxonAccession} is related to taxon and accession entities.
+  We may add the taxon link to the mid layer struct, i.e. the \ty{TaxonAccession},
+  as it is associated with exactly one taxon. The accessions should be referenced
+  per accession entry.
+#+end_export
+
+#+begin_src go <<Add taxon link, Pa. \ref{pa:api}>>=
+	if !plain {
+    d.Links = append(d.Links, taxNode.makeLink("taxon", fillTemplate(
+	  	taxNode,
+	  	map[string]string{"taxon_id": strconv.Itoa(taxId)},
+	  	map[string]string{},
+	  )))
+  }
+#+end_src
+
+#+begin_export latex
+  Now to add the accession link.
+#+end_export
+
+#+begin_src go <<Add accession link, Pa. \ref{pa:api}>>=
+	if !plain {
+    accession.Links = append(accession.Links, taxNode.makeLink("self", fillTemplate(
+	  	accNode,
+	  	map[string]string{"accession_id": acc},
+	  	map[string]string{},
+	  )))
+  }
+#+end_src
+
+#+begin_export latex
+  We retrieve the children of the current taxon and store them in our
+  slice of taxa, ready for the next iteration.
+#+end_export
+
+#+begin_src go <<Get children, Pa. \ref{pa:api}>>=
+  children, err := neidb.Children(taxId)
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
+  for _, child := range children {
+    taxIds = append(taxIds, child)
+  }
+#+end_src
+
+
+
+#+begin_export latex
   \subsection{fintac}
   The endpoint \ty{fintac} executes a system call. We use this endpoint
   to call the \ty{fintac} program via this api. In order to do so we
@@ -2589,7 +2753,7 @@ type Node struct {
     Query:
       field_composite string
       plain_data      bool
-      taxon_ids       []int
+      taxon_ids       []int *required
   Writes:
     ResponseBody[ []Partial<Taxon> ]
 #+end_export
@@ -2612,12 +2776,13 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Parse taxon ids, Pa. \ref{pa:api}>>=
+  valid := checkParams(w, r, "taxon_ids")
+  if !valid {
+    return
+  }
   idsStr := r.URL.Query().Get("taxon_ids")
   var taxIds []int
   split := strings.Split(idsStr, ",")
-  if len(split) == 1 && split[0] == "" {
-    return
-  }
   for _, id := range split {
     p, err := strconv.Atoi(id)
     if err != nil {

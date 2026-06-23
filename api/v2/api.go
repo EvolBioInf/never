@@ -1,15 +1,12 @@
 package apiv2
 
 import (
-	"runtime/debug"
-
 	"github.com/elnormous/contenttype"
 
 	"net/http"
 
-	"log"
-
 	"github.com/evolbioinf/neighbors/tdb"
+	"log"
 
 	"strings"
 
@@ -17,7 +14,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -68,6 +64,11 @@ type Taxon struct {
 	RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
 	Images         []Image       `json:"images,omitempty"`
 	Links          []Link        `json:"links,omitempty"`
+}
+type TaxonAccession struct {
+	TaxId      int         `json:"tax_id"`
+	Accessions []Accession `json:"accessions,omitempty"`
+	Links      []Link      `json:"links,omitempty"`
 }
 
 type ResponseBody[T any] struct {
@@ -237,12 +238,21 @@ func RegisterRoutes(pref, dbPath string) {
 	}
 	makeRoute(&taxonomyL, taxonomy, neidb) // new
 
+	taxonAccessionsL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "taxonAccessions",
+		BasePath: prefix + "/taxonomy/accessions",
+		Action:   get,
+		Types:    []contenttype.MediaType{jsonCt},
+	}
+	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
+
 	fintacL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "fintac",
 		BasePath: prefix + "/taxonomy/fintac",
 		Action:   post,
-		Types:    []contenttype.MediaType{jsonCt},
+		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&fintacL, fintac, dbPath) // new - calls fintac program
 
@@ -275,7 +285,6 @@ func RegisterRoutes(pref, dbPath string) {
 
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], fintacL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], ancestorsL)
@@ -284,6 +293,8 @@ func RegisterRoutes(pref, dbPath string) {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], rankDistL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"], fintacL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], neighborsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
@@ -294,6 +305,7 @@ func RegisterRoutes(pref, dbPath string) {
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], fintacL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
@@ -467,7 +479,6 @@ func extractPaging(r *http.Request) (offset, size int) {
 }
 
 func writeServerError(w http.ResponseWriter) {
-	debug.PrintStack()
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte("Internal server error."))
 }
@@ -1267,6 +1278,122 @@ func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	writeJsonOutput(w, out)
 }
 
+func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	offset, size := extractPaging(r)
+
+	valid := checkParams(w, r, "taxon_ids")
+	if !valid {
+		return
+	}
+	idsStr := r.URL.Query().Get("taxon_ids")
+	var taxIds []int
+	split := strings.Split(idsStr, ",")
+	for _, id := range split {
+		p, err := strconv.Atoi(id)
+		if err != nil {
+			writeBadRequestResp(w, "At least one taxon id is not an integer.")
+			return
+		}
+		taxIds = append(taxIds, p)
+	}
+
+	data := []TaxonAccession{}
+	taxNode := *root.getService("taxon")
+	accNode := *root.getService("accession")
+
+	for len(taxIds) > 0 && (size == -1 || len(data) < size) {
+		taxId := taxIds[0]
+		taxIds = taxIds[1:]
+		accs, err := neidb.Accessions(taxId)
+		if err != nil {
+			writeServerError(w)
+			return
+
+		}
+		if len(accs) > 0 {
+			if offset > 0 {
+				offset--
+			} else {
+				d := TaxonAccession{TaxId: taxId}
+				if !plain {
+					d.Links = append(d.Links, taxNode.makeLink("taxon", fillTemplate(
+						taxNode,
+						map[string]string{"taxon_id": strconv.Itoa(taxId)},
+						map[string]string{},
+					)))
+				}
+
+				for _, acc := range accs {
+					level, err := neidb.Level(acc)
+					if err != nil {
+						writeServerError(w)
+						return
+
+					}
+					accession := Accession{Accession: acc, Level: level}
+					if !plain {
+						accession.Links = append(accession.Links, taxNode.makeLink("self", fillTemplate(
+							accNode,
+							map[string]string{"accession_id": acc},
+							map[string]string{},
+						)))
+					}
+
+					d.Accessions = append(d.Accessions, accession)
+				}
+				data = append(data, d)
+			}
+
+		}
+		children, err := neidb.Children(taxId)
+		if err != nil {
+			writeServerError(w)
+			return
+
+		}
+		for _, child := range children {
+			taxIds = append(taxIds, child)
+		}
+
+	}
+	out := ResponseBody[[]TaxonAccession]{Data: data}
+
+	if !plain {
+		var links []Link
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
+			}
+		}
+
+		out.Links = links
+	}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
+}
+
 func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
@@ -1345,12 +1472,13 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		fieldComposite = "default"
 	}
 
+	valid := checkParams(w, r, "taxon_ids")
+	if !valid {
+		return
+	}
 	idsStr := r.URL.Query().Get("taxon_ids")
 	var taxIds []int
 	split := strings.Split(idsStr, ",")
-	if len(split) == 1 && split[0] == "" {
-		return
-	}
 	for _, id := range split {
 		p, err := strconv.Atoi(id)
 		if err != nil {
