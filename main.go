@@ -1,8 +1,6 @@
 package main
 
 import (
-	"runtime/debug"
-
 	"github.com/evolbioinf/never/util"
 
 	"github.com/evolbioinf/clio"
@@ -43,7 +41,6 @@ func (w *CustomResponseWriter) Write(b []byte) (int, error) {
 
 func (w *CustomResponseWriter) WriteHeader(statusCode int) {
 	w.code = statusCode
-	debug.PrintStack()
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 

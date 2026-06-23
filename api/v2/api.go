@@ -5,8 +5,9 @@ import (
 
 	"net/http"
 
-	"github.com/evolbioinf/neighbors/tdb"
 	"log"
+
+	"github.com/evolbioinf/neighbors/tdb"
 
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -1416,6 +1418,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		if err != nil {
 			writeServerError(w)
 			return
+
 		}
 		if start == parent {
 			data = data[:0]
@@ -1427,6 +1430,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		if err != nil {
 			writeServerError(w)
 			return
+
 		}
 		data = append(data, tax)
 	}
