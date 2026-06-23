@@ -1,6 +1,8 @@
 package apiv2
 
 import (
+	"runtime/debug"
+
 	"github.com/elnormous/contenttype"
 
 	"net/http"
@@ -247,7 +249,7 @@ func RegisterRoutes(pref, dbPath string) {
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "mrca",
-		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
+		BasePath: prefix + "/taxonomy/mrca",
 		Action:   get,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
@@ -260,7 +262,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Action:   get,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&neighborsL, neighbors, neidb) // new - calls neighbors program
+	makeRoute(&neighborsL, neighbors, dbPath) // new - calls neighbors program
 
 	pathL := Node{
 		Links:    make(map[string][]Node),
@@ -465,6 +467,7 @@ func extractPaging(r *http.Request) (offset, size int) {
 }
 
 func writeServerError(w http.ResponseWriter) {
+	debug.PrintStack()
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte("Internal server error."))
 }
@@ -961,8 +964,23 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 
 	taxId := r.PathValue("taxon_id")
 
+	dbPath := args[0].(string)
+
 	ranksArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
+	if levels != "" {
+		levelsSplit := strings.Split(levels, ",")
+		availableLevels := tdb.AssemblyLevels()
+		sort.Strings(availableLevels)
+		for _, level := range levelsSplit {
+			_, found := slices.BinarySearch(availableLevels, level)
+			if !found {
+				writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
+				return
+			}
+		}
+	}
+
 	if levels != "" {
 		ranksArgs = append(ranksArgs, "-L", levels)
 	}
@@ -984,8 +1002,6 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 	} else if t {
 		ranksArgs = append(ranksArgs, "-t")
 	}
-
-	dbPath := args[0].(string)
 
 	ct, err := contenttype.GetMediaType(r)
 	if ct.EqualsMIME(multipartCt) {
@@ -1160,6 +1176,19 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 	} else if ct.EqualsMIME(plainCt) || ct.EqualsMIME(graphvizCt) {
 		dreeArgs := []string{}
 		levels := r.URL.Query().Get("assembly_levels")
+		if levels != "" {
+			levelsSplit := strings.Split(levels, ",")
+			availableLevels := tdb.AssemblyLevels()
+			sort.Strings(availableLevels)
+			for _, level := range levelsSplit {
+				_, found := slices.BinarySearch(availableLevels, level)
+				if !found {
+					writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
+					return
+				}
+			}
+		}
+
 		if levels != "" {
 			dreeArgs = append(dreeArgs, "-L", levels)
 		}
@@ -1371,8 +1400,112 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 }
 
 func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	neighborsArgs := []string{}
+	levels := r.URL.Query().Get("assembly_levels")
+	if levels != "" {
+		levelsSplit := strings.Split(levels, ",")
+		availableLevels := tdb.AssemblyLevels()
+		sort.Strings(availableLevels)
+		for _, level := range levelsSplit {
+			_, found := slices.BinarySearch(availableLevels, level)
+			if !found {
+				writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
+				return
+			}
+		}
+	}
+
+	if levels != "" {
+		neighborsArgs = append(neighborsArgs, "-L", levels)
+	}
+
+	tfStr := r.URL.Query().Get("targets_only")
+	tf, err := strconv.ParseBool(tfStr)
+	if tfStr != "" && err != nil {
+		writeBadRequestResp(w, "targets_only argument is not a bool.")
+		return
+	} else if tf {
+		neighborsArgs = append(neighborsArgs, "-o")
+	}
+
+	gsStr := r.URL.Query().Get("with_genomes_seq_only")
+	gs, err := strconv.ParseBool(gsStr)
+	if gsStr != "" && err != nil {
+		writeBadRequestResp(w, "with_genomes_seq_only argument is not a bool.")
+		return
+	} else if gs {
+		neighborsArgs = append(neighborsArgs, "-g")
+	}
+
+	tabStr := r.URL.Query().Get("tab_output")
+	tab, err := strconv.ParseBool(tabStr)
+	if tabStr != "" && err != nil {
+		writeBadRequestResp(w, "tab_output argument is not a bool.")
+		return
+	} else if tab {
+		neighborsArgs = append(neighborsArgs, "-T")
+	}
+
+	gtStr := r.URL.Query().Get("genomes_and_taxa")
+	gt, err := strconv.ParseBool(gtStr)
+	if gtStr != "" && err != nil {
+		writeBadRequestResp(w, "genomes_and_taxa argument is not a bool.")
+		return
+	} else if gt {
+		neighborsArgs = append(neighborsArgs, "-l")
+	}
+
+	targetIds := r.URL.Query().Get("target_ids")
+	split := strings.Split(targetIds, ",")
+	hasTargetIds := len(split) > 1 || split[0] != ""
+	if hasTargetIds {
+		for _, id := range split {
+			_, err := strconv.Atoi(id)
+			if err != nil {
+				writeBadRequestResp(w, "At least one target id is not an integer.")
+				return
+			}
+		}
+	}
+	neighborsArgs = append(neighborsArgs, "-t", targetIds)
+
+	dbPath := args[0].(string)
+	neighborsArgs = append(neighborsArgs, dbPath)
+
+	ct, err := contenttype.GetMediaType(r)
+	if ct.EqualsMIME(multipartCt) {
+		paths, err := filesFromFormData(w, r, 0, -1)
+		if err != nil {
+			return
+		}
+
+		if len(paths) > 0 && hasTargetIds {
+			writeBadRequestResp(w, "Can't provide files and target_ids via url.")
+			return
+		}
+
+		for _, p := range paths {
+			neighborsArgs = append(neighborsArgs, p)
+			defer os.Remove(p)
+		}
+	}
+
+	out, err := exec.Command("./neighbors", neighborsArgs...).Output()
+	if err != nil {
+		writeServerError(w)
+		return
+
+	}
+
+	writePlainOutput(w, out)
+
 }
 
 func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {

@@ -453,7 +453,7 @@ type Node struct {
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
     Name:     "mrca",
-		BasePath: prefix + "/taxonomy/most_recent_common_ancestor",
+		BasePath: prefix + "/taxonomy/mrca",
 		Action:   get,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
@@ -472,7 +472,7 @@ type Node struct {
 		Action:   get,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&neighborsL, neighbors, neidb) // new - calls neighbors program
+	makeRoute(&neighborsL, neighbors, dbPath) // new - calls neighbors program
 #+end_src
 
 #+begin_export latex
@@ -642,11 +642,11 @@ type Node struct {
 
 
 #+begin_export latex
-  \subsection{root document}
+  \subsection{rootDocument}
   Having declared all the endpoints we need to begin implementing them.
-  We start with the root document \ty{/}. It just provides links
+  We start with the \ty{rootDocument}. It just provides links
   to all the endpoints provided by this api.
-  This is \ty{/}'s io:
+  This is \ty{rootDocument}'s io:
   Params:
     Path:
       none
@@ -1126,7 +1126,7 @@ type Node struct {
   \subsection{accession}
   The endpoint \ty{accession} is used to retrieve single
   resources of the accessions collection.
-  This is \ty{accession}' io:
+  This is \ty{accession}'s io:
   Params:
     Path:
       none
@@ -1630,7 +1630,7 @@ type Node struct {
   retrieves all ancestors of a taxon. The program does not provide a wide
   variety in call arguments, so the only thing we need to pass is the taxon's id.
 
-  This is \ty{ancestors}'s io:
+  This is \ty{ancestors}' io:
   Params:
     Path:
       taxon_id id
@@ -1887,8 +1887,8 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Handle arguments \ty{rankDistribution}, Pa. \ref{pa:api}>>=
-  //<<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>
   //<<Get db path from parameters, Pa. \ref{pa:api}>>
+  //<<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>
   //<<Handle file, Pa. \ref{pa:api}>>
 #+end_src
 
@@ -1902,6 +1902,7 @@ type Node struct {
 #+begin_src go <<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>=
 	ranksArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
+  //<<Check assembly levels, Pa. \ref{pa:api}>>
   if levels != "" {
 		ranksArgs = append(ranksArgs, "-L", levels)
   }
@@ -1922,6 +1923,29 @@ type Node struct {
     return
   } else if t {
 		ranksArgs = append(ranksArgs, "-t")
+  }
+#+end_src
+
+#+begin_export latex
+  We iterate over all passed levels and check whether they are contained
+  by the assembly levels available at \ty{tdb}. We use a binary search
+  to check for containment. The amount of available levels is constant, 
+  which makes the total containment check run in O(N) anyways, but 
+  using a binary search might still reduce the total processing time.
+#+end_export
+
+#+begin_src go <<Check assembly levels, Pa. \ref{pa:api}>>=
+  if levels != "" {
+	  levelsSplit := strings.Split(levels, ",")
+    availableLevels := tdb.AssemblyLevels()
+    sort.Strings(availableLevels)
+    for _, level := range levelsSplit {
+      _, found := slices.BinarySearch(availableLevels, level)
+      if !found {
+        writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
+        return
+      }
+    }
   }
 #+end_src
 
@@ -2203,7 +2227,7 @@ type Node struct {
   When requesting plain text we respond with the result of \ty{dree},
   we use our usual response schemes if json was requested.
 
-  This is \ty{subtree}' io:
+  This is \ty{subtree}'s io:
   Params:
     Path:
       taxon_id int
@@ -2296,6 +2320,7 @@ type Node struct {
 #+begin_src go <<Handle arguments \ty{dree}, Pa. \ref{pa:api}>>=
   dreeArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
+  //<<Check assembly levels, Pa. \ref{pa:api}>>
   if levels != "" {
 		dreeArgs = append(dreeArgs, "-L", levels)
   }
@@ -2426,7 +2451,7 @@ type Node struct {
   \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
   allows to pass files as arguments, this creates the need for some new handling.
 
-  This is \ty{fintac}' io:
+  This is \ty{fintac}'s io:
   Params:
     Path:
       none
@@ -2557,7 +2582,7 @@ type Node struct {
   and writing the output. If there is no most recent common ancestor, we
   return an empty data object.
 
-  This is \ty{taxa/mrca}'s io:
+  This is \ty{mrca}'s io:
   Params:
     Path:
       none
@@ -2635,12 +2660,194 @@ type Node struct {
   out.Data = tax
 #+end_src
 
+#+begin_export latex
+  \subsection{neighbors}
+  The endpoint \ty{neighbors} calls the \ty{neighbors} program of the \ty{neighbors} package. 
+  \ty{neighbors} finds the closest taxonomic neighbors for a set of targets.
+  \ty{neighbors} takes five arguments: \ty{L}, \ty{T}, \ty{g}, \ty{l}, \ty{o} and \ty{t}.
+  We need to offer these arguments as parameters via the url.
+
+  This is \ty{neighbors}' io:
+  Params:
+    Path:
+      none
+    Query:
+      assembly_levels       []string
+      genomes_and_taxa      bool
+      tab_output            bool
+      target_ids            []int *required
+      targets_only          bool
+      with_genomes_seq_only bool
+    Body:
+      Files
+    Writes:
+      string
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    out := ResponseBody[string]{Data:"Not implemented"}
-    writeJsonOutput(w, out)
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Handle arguments \ty{neighbors}, Pa. \ref{pa:api}>>
+    //<<Call \ty{neighbors}, Pa. \ref{pa:api}>>
+    //<<Write plain output, Pa. \ref{pa:api}>>
   }
 #+end_src
+
+
+#+begin_export latex
+  Handling the arguments is about checking the data submitted via the form
+  and via the query parameters. We need to get all this data, combine and
+  prepare it, so we can use it, as if all it were local.
+#+end_export
+
+#+begin_src go <<Handle arguments \ty{neighbors}, Pa. \ref{pa:api}>>=
+  //<<Retrieve query parameters \ty{neighbors}, Pa. \ref{pa:api}>>
+  //<<Set db path, Pa. \ref{pa:api}>>
+  //<<Handle files \ty{neighbors}, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  We look for parameters defining three different kinds of 
+  behaviour. The target ids are used as an input, the \ty{targets_only},
+  \ty{with_genomes_seq_only} and \ty{assembly_levels} are used for filtering;
+  \ty{tab_output} and \ty{genomes_and_taxa} change the output format. 
+#+end_export
+
+#+begin_src go <<Retrieve query parameters \ty{neighbors}, Pa. \ref{pa:api}>>=
+  neighborsArgs := []string{}
+  //<<Get filter parameters, Pa. \ref{pa:api}>>
+  //<<Get output parameters, Pa. \ref{pa:api}>>
+  //<<Get target ids, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  Now we get and check the \ty{assembly_levels}, as well as the bools,
+  i.e. \ty{targets_only} and \ty{with_genomes_seq_only}, filtering our output.
+#+end_export
+
+#+begin_src go <<Get filter parameters, Pa. \ref{pa:api}>>=
+	levels := r.URL.Query().Get("assembly_levels")
+  //<<Check assembly levels, Pa. \ref{pa:api}>>
+  if levels != "" {
+		neighborsArgs = append(neighborsArgs, "-L", levels)
+  }
+
+  tfStr := r.URL.Query().Get("targets_only")
+	tf, err := strconv.ParseBool(tfStr)
+  if tfStr != "" && err != nil {
+    writeBadRequestResp(w, "targets_only argument is not a bool.")
+    return
+  } else if tf {
+		neighborsArgs = append(neighborsArgs, "-o")
+  }
+
+  gsStr := r.URL.Query().Get("with_genomes_seq_only")
+	gs, err := strconv.ParseBool(gsStr)
+  if gsStr != "" && err != nil {
+    writeBadRequestResp(w, "with_genomes_seq_only argument is not a bool.")
+    return
+  } else if gs {
+		neighborsArgs = append(neighborsArgs, "-g")
+  }
+#+end_src
+
+#+begin_export latex
+  Then there are the parameters: \ty{tab_output} and \ty{genomes_and_taxa}, 
+  changing the output format.
+#+end_export
+
+#+begin_src go <<Get output parameters, Pa. \ref{pa:api}>>=
+	tabStr := r.URL.Query().Get("tab_output")
+	tab, err := strconv.ParseBool(tabStr)
+  if tabStr != "" && err != nil {
+    writeBadRequestResp(w, "tab_output argument is not a bool.")
+    return
+  } else if tab {
+		neighborsArgs = append(neighborsArgs, "-T")
+  }
+
+  gtStr := r.URL.Query().Get("genomes_and_taxa")
+	gt, err := strconv.ParseBool(gtStr)
+  if gtStr != "" && err != nil {
+    writeBadRequestResp(w, "genomes_and_taxa argument is not a bool.")
+    return
+  } else if gt {
+		neighborsArgs = append(neighborsArgs, "-l")
+  }
+#+end_src
+
+#+begin_export latex
+  The target ids are stored in a query parameter as a comma delimited string.
+  We need to get them and check that they indeed are integers.
+#+end_export
+
+#+begin_src go <<Get target ids, Pa. \ref{pa:api}>>=
+  targetIds := r.URL.Query().Get("target_ids")
+  split := strings.Split(targetIds, ",")
+  hasTargetIds := len(split) > 1 || split[0] != ""
+  if hasTargetIds {
+    for _, id := range split {
+      _, err := strconv.Atoi(id)
+      if err != nil {
+        writeBadRequestResp(w, "At least one target id is not an integer.")
+        return
+      }
+    }
+  }
+  neighborsArgs = append(neighborsArgs, "-t", targetIds)
+#+end_src
+
+#+begin_export latex
+  \ty{neighbors} expects the database parameter after setting the targets via -t or
+  before specifying input files.
+#+end_export
+
+#+begin_src go <<Set db path, Pa. \ref{pa:api}>>=
+  dbPath := args[0].(string)
+  neighborsArgs = append(neighborsArgs , dbPath)
+#+end_src
+
+#+begin_export latex
+  Files are optional in \ty{neighbors}, but using them with the \ty{t} argument
+  is forbidden. So we need to check whether both are provided. This also 
+  implies that different content types of a request are valid, meaning we 
+  need to retrieve the provided content type before parsing.
+#+end_export
+
+#+begin_src go <<Handle files \ty{neighbors}, Pa. \ref{pa:api}>>=
+	ct, err := contenttype.GetMediaType(r)
+	if ct.EqualsMIME(multipartCt) {
+    paths, err := filesFromFormData(w, r, 0, -1)
+    if err != nil {
+      return
+    }
+
+    if len(paths) > 0  && hasTargetIds {
+      writeBadRequestResp(w, "Can't provide files and target_ids via url.")
+      return
+    }
+
+    for _, p := range paths {
+	  	neighborsArgs = append(neighborsArgs, p)
+      defer os.Remove(p)
+    }
+	}
+#+end_src
+
+#+begin_export latex
+  By now we know how to call a program.
+#+end_export
+
+#+begin_src go <<Call \ty{neighbors}, Pa. \ref{pa:api}>>=
+	out, err := exec.Command("./neighbors", neighborsArgs...).Output()
+  if err != nil {
+    //<<Write server error, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+
+
+
 
 #+begin_export latex
   The service \ty{path} takes as input the taxon ids of a start and an
