@@ -752,6 +752,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	taxId, err := strconv.Atoi(taxIdStr)
 	if err != nil {
 		writeBadRequestResp(w, "Taxon id is not an integer.")
+		return
 	}
 
 	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
@@ -831,6 +832,7 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	taxId, err := strconv.Atoi(taxIdStr)
 	if err != nil {
 		writeBadRequestResp(w, "Taxon id is not an integer.")
+		return
 	}
 
 	offset, size := extractPaging(r)
@@ -909,6 +911,7 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	taxId, err := strconv.Atoi(taxIdStr)
 	if err != nil {
 		writeBadRequestResp(w, "Taxon id is not an integer.")
+		return
 	}
 
 	fieldComposite := r.URL.Query().Get("field_composite")
@@ -1088,6 +1091,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 	taxId, err := strconv.Atoi(taxIdStr)
 	if err != nil {
 		writeBadRequestResp(w, "Taxon id is not an integer.")
+		return
 	}
 
 	if ct.EqualsMIME(jsonCt) {
@@ -1368,7 +1372,82 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	out := ResponseBody[string]{Data: "Not implemented"}
 	writeJsonOutput(w, out)
 }
+
 func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	out := ResponseBody[string]{Data: "Not implemented"}
-	writeJsonOutput(w, out)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if err != nil {
+		plain = false
+	}
+
+	offset, size := extractPaging(r)
+
+	fieldComposite := r.URL.Query().Get("field_composite")
+	if fieldComposite == "" {
+		fieldComposite = "default"
+	}
+
+	startStr := r.URL.Query().Get("start_id")
+	start, err := strconv.Atoi(startStr)
+	if err != nil {
+		writeBadRequestResp(w, "start id is not an integer.")
+		return
+	}
+	endStr := r.URL.Query().Get("end_id")
+	end, err := strconv.Atoi(endStr)
+	if err != nil {
+		writeBadRequestResp(w, "end id is not an integer.")
+		return
+	}
+
+	var data []Taxon
+	for i := 0; (i < offset+size || size == -1) && start != end; i++ {
+		parent, err := neidb.Parent(start)
+
+		if err != nil {
+			writeServerError(w)
+			return
+		}
+		if start == parent {
+			data = data[:0]
+			break
+		}
+
+		start = parent
+		tax, err := getTaxonData(start, plain, fieldComposite, neidb)
+		if err != nil {
+			writeServerError(w)
+			return
+		}
+		data = append(data, tax)
+	}
+	out := ResponseBody[[]Taxon]{Data: data}
+
+	var links []Link
+	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+	links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+	for link := range selfNode.Links {
+		for _, node := range selfNode.Links[link] {
+			links = append(links, node.makeLink(link, ""))
+		}
+	}
+
+	out.Links = links
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
 }

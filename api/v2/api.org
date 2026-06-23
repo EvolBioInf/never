@@ -1604,6 +1604,7 @@ type Node struct {
   taxId, err := strconv.Atoi(taxIdStr)
   if err != nil {
     writeBadRequestResp(w, "Taxon id is not an integer.")
+    return
   }
 #+end_src
 
@@ -2670,7 +2671,7 @@ type Node struct {
     //<<Extract offset and size, Pa. \ref{pa:api}>>
     //<<Get field composite, Pa. \ref{pa:api}>>
     //<<Get start and end, Pa. \ref{pa:api}>>
-    //<<Execute path query, Pa. \ref{pa:api}>>
+    //<<Climb taxonomy, Pa. \ref{pa:api}>>
     //<<Add links taxon entity, Pa. \ref{pa:api}>>
     //<<Write json output, Pa. \ref{pa:api}>>
   }
@@ -2685,30 +2686,59 @@ type Node struct {
   start, err := strconv.Atoi(startStr)
   if err != nil {
     writeBadRequestResp(w, "start id is not an integer.")
+    return
   }
   endStr := r.URL.Query().Get("end_id")
   end, err := strconv.Atoi(endStr)
   if err != nil {
     writeBadRequestResp(w, "end id is not an integer.")
+    return
   }
 #+end_src
 
 #+begin_export latex
-  We execute the \ty{Path} function of \ty{tdb},
-  using the resulting ids for retrieving the requested taxon fields.
+  We climb the taxonomy until we reach its end or the root, whichever comes
+  first. As we accomodate paging with this endpoint, we also stop if
+  go past the last entry of the current page. We need to begin at the start
+  node either way, because we cant't index the path by our offset.
+  Using the resulting ids for retrieving the requested taxon fields.
 #+end_export
 
-#+begin_src go <<Execute path query, Pa. \ref{pa:api}>>=
-  path, err := neidb.Path(start, end)
-	if err != nil {
+#+begin_src go <<Climb taxonomy, Pa. \ref{pa:api}>>=
+  var data []Taxon
+  for i := 0; (i < offset + size || size == -1) && start != end; i++ {
+	  parent, err := neidb.Parent(start)
+
+    if err != nil {
+      //<<Write server error, Pa. \ref{pa:api}>>
+    }
+	  //<<Has the path reached the root?, Pa. \ref{pa:api}>>
+	  start = parent
+	  //<<Store new node on path, Pa. \ref{pa:api}>>
+  }
+  out := ResponseBody[[]Taxon]{Data: data}
+#+end_src
+
+#+begin_export latex
+  If the path has reached the root, we empty the output slice and break
+  from climbing the tree.
+#+end_export
+
+#+begin_src go <<Has the path reached the root?, Pa. \ref{pa:api}>>=
+  if start == parent {
+	  data = data[:0]
+	  break
+  }
+#+end_src
+
+#+begin_export latex
+  We construct and store the new node on the path.
+#+end_export
+
+#+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
+  tax, err := getTaxonData(start, plain, fieldComposite, neidb)
+  if err != nil {
     //<<Write server error, Pa. \ref{pa:api}>>
   }
-  if size == -1 {
-    size = len(path)
-  }
-  data := []Taxon{}
-  for i := offset; i < min(offset + size, len(path)); i++ {
-    id := path[i]
-	  //<<Construct taxon output, Pa. \ref{pa:api}>>
-	}
+  data = append(data, tax)
 #+end_src
