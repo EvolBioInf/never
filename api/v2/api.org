@@ -1667,6 +1667,7 @@ type Node struct {
   func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get taxon id, Pa. \ref{pa:api}>>
+    //<<Validate user input \ty{ancestors}, Pa. \ref{pa:api}>>
     //<<Get db path, Pa. \ref{pa:api}>>
     //<<Call \ty{ants}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
@@ -1681,6 +1682,36 @@ type Node struct {
 
 #+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
   taxId := r.PathValue("taxon_id")
+#+end_src
+
+#+begin_export latex
+  As we are executing external programs, we should check the user input 
+  which we pass. The \ty{taxId} should be an integer. This should not be 
+  a problem, when adding to a program call. I think it would be nice if
+  the validation data for a single variable of a certain data type was 
+  contained in a function. So we are going to write the function
+  \ty{checkParamInt} first and then call it in \ty{ancestors}.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func checkParamInt(w http.ResponseWriter, param string) bool {
+    _, err = strconv.Atoi(param)
+    if err != nil {
+      writeBadRequestResp(w, "Malformed integer.")
+    }
+    return err != nil
+  }
+#+end_src
+
+#+begin_export latex
+  Now we call \ty{checkParamInt}
+#+end_export
+
+#+begin_src go <<Validate user input \ty{ancestors}, Pa. \ref{pa:api}>>=
+  valid := checkParamInt(w, taxIdStr)
+  if !valid {
+    return
+  }
 #+end_src
 
 #+begin_export latex
@@ -1897,6 +1928,7 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get taxon id, Pa. \ref{pa:api}>>
     //<<Handle arguments \ty{rankDistribution}, Pa. \ref{pa:api}>>
+    //<<Validate user input \ty{rankDistribution}, Pa. \ref{pa:api}>>
     //<<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
@@ -1924,7 +1956,6 @@ type Node struct {
 #+begin_src go <<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>=
 	ranksArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
-  //<<Check assembly levels, Pa. \ref{pa:api}>>
   if levels != "" {
 		ranksArgs = append(ranksArgs, "-L", levels)
   }
@@ -1945,29 +1976,6 @@ type Node struct {
     return
   } else if t {
 		ranksArgs = append(ranksArgs, "-t")
-  }
-#+end_src
-
-#+begin_export latex
-  We iterate over all passed levels and check whether they are contained
-  by the assembly levels available at \ty{tdb}. We use a binary search
-  to check for containment. The amount of available levels is constant, 
-  which makes the total containment check run in O(N) anyways, but 
-  using a binary search might still reduce the total processing time.
-#+end_export
-
-#+begin_src go <<Check assembly levels, Pa. \ref{pa:api}>>=
-  if levels != "" {
-	  levelsSplit := strings.Split(levels, ",")
-    availableLevels := tdb.AssemblyLevels()
-    sort.Strings(availableLevels)
-    for _, level := range levelsSplit {
-      _, found := slices.BinarySearch(availableLevels, level)
-      if !found {
-        writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
-        return
-      }
-    }
   }
 #+end_src
 
@@ -2227,6 +2235,51 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
+  We pass a taxon id, the assembly levels and a bunch of bools to \ty{ranks}.
+  We already wrote a function for validating integers like a taxon id. The assembly
+  levels are defined by a set of strings we should check against. If one of the
+  passed parameters is not part of the available levels, we return an error response.
+  The bools don't need extra checking, as the input never actually reaches arguments.
+#+end_export
+
+#+begin_src go <<Validate user input \ty{rankDistribution}, Pa. \ref{pa:api}>>=
+  valid := checkParamInt(w, taxIdStr)
+  if !valid {
+    return
+  }
+  valid = checkParamLevels(w, levels)
+  if !valid {
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  We iterate over all passed levels and check whether they are contained
+  by the assembly levels available at \ty{tdb}. We use a binary search
+  to check for containment. The amount of available levels is constant, 
+  which makes the total containment check run in O(N) anyways, but 
+  using a binary search might still reduce the total processing time.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func checkParamLevels(w http.ResponseWriter, levels string) bool {
+    if levels != "" {
+	    levelsSplit := strings.Split(levels, ",")
+      availableLevels := tdb.AssemblyLevels()
+      sort.Strings(availableLevels)
+      for _, level := range levelsSplit {
+        _, found := slices.BinarySearch(availableLevels, level)
+        if !found {
+          writeBadRequestResp(w, "Malformed assembly level.")
+          return false
+        }
+      }
+    }
+    return true
+  }
+#+end_src
+
+#+begin_export latex
   We already know how to call a program. But the
   call arguments are still missing the taxon id
   and the database path.
@@ -2304,6 +2357,7 @@ type Node struct {
     //<<Write json output, Pa. \ref{pa:api}>>
   } else if ct.EqualsMIME(plainCt) || ct.EqualsMIME(graphvizCt) {
     //<<Handle arguments \ty{dree}, Pa. \ref{pa:api}>>
+    //<<Validate user input \ty{dree}, Pa. \ref{pa:api}>>
     //<<Call \ty{dree}, Pa. \ref{pa:api}>>
     //<<Write output \ty{dree}, Pa. \ref{pa:api}>>
   }
@@ -2342,7 +2396,6 @@ type Node struct {
 #+begin_src go <<Handle arguments \ty{dree}, Pa. \ref{pa:api}>>=
   dreeArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
-  //<<Check assembly levels, Pa. \ref{pa:api}>>
   if levels != "" {
 		dreeArgs = append(dreeArgs, "-L", levels)
   }
@@ -2374,6 +2427,24 @@ type Node struct {
 		dreeArgs = append(dreeArgs, "-l")
   }
 #+end_src
+
+#+begin_export latex
+  We pass assembly levels, three bools and an integer to \ty{dree}.
+  We've already got functions for those.
+#+end_export
+
+#+begin_src go <<Validate user input \ty{dree}, Pa. \ref{pa:api}>>=
+  valid = checkParamLevels(w, levels)
+  if !valid {
+    return
+  valid := checkParamInt(w, depthStr)
+  if !valid {
+    return
+  }
+  }
+#+end_src
+
+
 
 #+begin_export latex
   We run \ty{dree} with the call arguments.
@@ -2635,6 +2706,7 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Check multipart content types, Pa. \ref{pa:api}>>
     //<<Handle arguments \ty{fintac}, Pa. \ref{pa:api}>>
+    //<<Validate user input \ty{fintac}, Pa. \ref{pa:api}>>
     //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
@@ -2678,7 +2750,11 @@ type Node struct {
 #+begin_src go <<Retrieve query parameters \ty{fintac}, Pa. \ref{pa:api}>>=
 	fintacArgs := []string{}
 	aStr := r.URL.Query().Get("all_splits")
-	a, _ := strconv.ParseBool(aStr)
+	a, err := strconv.ParseBool(aStr)
+  if err != nil {
+	  writeBadRequestResp(w, "all_splits argument is not a bool.")
+    return
+  }
 	n := r.URL.Query().Get("neighbor")
 	t := r.URL.Query().Get("target")
 	u := r.URL.Query().Get("unknown")
@@ -2724,6 +2800,14 @@ type Node struct {
     defer os.Remove(p)
     fintacArgs = append(fintacArgs, p)
   }
+#+end_src
+
+#+begin_export latex
+
+#+end_export
+
+#+begin_src go <<Validate user input \ty{fintac}, Pa. \ref{pa:api}>>=
+
 #+end_src
 
 #+begin_export latex

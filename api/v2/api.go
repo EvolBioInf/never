@@ -5,8 +5,9 @@ import (
 
 	"net/http"
 
-	"github.com/evolbioinf/neighbors/tdb"
 	"log"
+
+	"github.com/evolbioinf/neighbors/tdb"
 
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -1245,7 +1247,6 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 			writeGraphvizOutput(w, out)
 
 		}
-
 	}
 
 }
