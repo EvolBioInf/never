@@ -21,13 +21,15 @@ import (
 
 	"slices"
 
-	"github.com/evolbioinf/neighbors/ants"
+	"github.com/evolbioinf/neighbors/taxi"
 
 	"sync"
 
 	"flag"
 
 	"io"
+
+	"github.com/evolbioinf/neighbors/ants"
 
 	"sort"
 
@@ -188,9 +190,9 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
+		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(&taxaL, taxa, neidb) // previously known as taxi
+	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
 
 	taxonL := Node{
 		Links:    make(map[string][]Node),
@@ -397,8 +399,9 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	str := r.URL.Query().Get("accession_ids")
@@ -536,8 +539,9 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	accession := r.PathValue("accession_id")
@@ -571,7 +575,7 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 }
 
 func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
 		w.Write([]byte("Server does not provide any of the accepted content types."))
@@ -582,14 +586,6 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	if !valid {
 		return
 	}
-	neidb := args[0].(*tdb.TaxonomyDB)
-
-	strPlain := r.URL.Query().Get("plain_data")
-	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
-	}
-
 	offset, size := extractPaging(r)
 
 	name := r.URL.Query().Get("name")
@@ -599,72 +595,109 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	fieldComposite = parseFieldComposite(fieldComposite)
 
 	exact, err := strconv.ParseBool(strExact)
-	if err != nil {
-		exact = false
+	if strExact != "" && err != nil {
+		writeBadRequestResp(w, "exact is not a bool.")
+		return
 	}
 	scientific, err := strconv.ParseBool(strScientific)
-	if err != nil {
-		scientific = false
-	}
-	if !exact {
-		name = strings.ReplaceAll(name, " ", "% %")
-		name = "%" + name + "%"
+	if strScientific != "" && err != nil {
+		writeBadRequestResp(w, "scientific is not a bool.")
+		return
 	}
 
-	var ids []int
-	if scientific {
-		ids, err = neidb.Taxids(name, size, offset)
-		if err != nil {
-			writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
+	if ct.EqualsMIME(jsonCt) {
+		neidb := args[0].(*tdb.TaxonomyDB)
+
+		if !exact {
+			name = strings.ReplaceAll(name, " ", "% %")
+			name = "%" + name + "%"
+		}
+
+		strPlain := r.URL.Query().Get("plain_data")
+		plain, err := strconv.ParseBool(strPlain)
+		if strPlain != "" && err != nil {
+			writeBadRequestResp(w, "plain is not a bool.")
 			return
 		}
-	} else {
-		ids, err = neidb.CommonTaxids(name, size, offset)
-		if err != nil {
-			writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
-			return
-		}
-	}
-	data := []Taxon{}
-	for _, id := range ids {
-		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-		if err != nil {
-			writeServerError(w, "Error from getTaxonData", err)
-			return
-		}
-		data = append(data, tax)
 
-	}
-
-	out := ResponseBody[[]Taxon]{Data: data}
-
-	if !plain {
-		var links []Link
-		links = append(links, selfNode.makeLink("self", r.URL.String()))
-
-		for link := range selfNode.Links {
-			for _, node := range selfNode.Links[link] {
-				links = append(links, node.makeLink(link, ""))
+		var ids []int
+		if scientific {
+			ids, err = neidb.Taxids(name, size, offset)
+			if err != nil {
+				writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
+				return
+			}
+		} else {
+			ids, err = neidb.CommonTaxids(name, size, offset)
+			if err != nil {
+				writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
+				return
 			}
 		}
+		data := []Taxon{}
+		for _, id := range ids {
+			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+			if err != nil {
+				writeServerError(w, "Error from getTaxonData", err)
+				return
+			}
+			data = append(data, tax)
 
-		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+		}
 
-		out.Links = links
-	}
+		out := ResponseBody[[]Taxon]{Data: data}
 
-	if plain {
-		writeJsonOutput(w, out.Data)
+		if !plain {
+			var links []Link
+			links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+			for link := range selfNode.Links {
+				for _, node := range selfNode.Links[link] {
+					links = append(links, node.makeLink(link, ""))
+				}
+			}
+
+			links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+
+			out.Links = links
+		}
+
+		if plain {
+			writeJsonOutput(w, out.Data)
+		} else {
+			writeJsonOutput(w, out)
+		}
+
 	} else {
-		writeJsonOutput(w, out)
+		dbPath := args[1].(string)
+		taxiArgs := []string{"./taxi"}
+		if exact {
+			taxiArgs = append(taxiArgs, "-e")
+		}
+		taxiArgs = append(
+			taxiArgs,
+			"-l",
+			strconv.Itoa(size),
+			"-o",
+			strconv.Itoa(offset),
+			name,
+			dbPath,
+		)
+
+		out, errMsg := callPackage(taxiArgs, taxi.Run)
+		if len(errMsg) > 0 {
+			writeServerError(w, "fn taxa - Error while calling package taxi: "+string(errMsg), nil)
+			return
+		}
+
+		writePlainOutput(w, out)
+
 	}
 
 }
 
 func parseFieldComposite(arg string) string {
 	availableComps := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
-	sort.Strings(availableComps)
-	fmt.Println(availableComps)
 	_, found := slices.BinarySearch(availableComps, arg)
 	if !found {
 		arg = "default"
@@ -783,6 +816,69 @@ func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) 
 	return
 }
 
+func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
+	progMu.Lock()
+
+	serverArgs := os.Args
+	os.Args = callArgs
+
+	oldFlags := flag.CommandLine
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	prevOut := os.Stdout
+	rOut, wOut, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stdout pipe: "+err.Error())...)
+	} else {
+		os.Stdout = wOut
+	}
+
+	prevErr := os.Stderr
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stderr pipe: "+err.Error())...)
+	}
+	os.Stderr = wErr
+
+	if err == nil {
+		runFn()
+	}
+
+	os.Stdout = prevOut
+	os.Stderr = prevErr
+	if wOut != nil {
+		err = wOut.Close()
+		if err != nil {
+			errMsg = append(errMsg, []byte("Error while closing stdout pipe: "+err.Error())...)
+		}
+	}
+	if wErr != nil {
+		wErr.Close()
+		if err != nil {
+			errMsg = append(errMsg, []byte("Error while closing stderr pipe: "+err.Error())...)
+		}
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	_, err = io.Copy(&outBuf, rOut)
+	_, err = io.Copy(&errBuf, rErr)
+	out = outBuf.Bytes()
+	errMsg = append(errMsg, errBuf.Bytes()...)
+
+	flag.CommandLine = oldFlags
+
+	os.Args = serverArgs
+
+	progMu.Unlock()
+
+	return
+}
+
+func writePlainOutput(w http.ResponseWriter, out []byte) {
+	w.Header().Set("Content-Type", plainCt.String())
+	fmt.Fprintf(w, "%s", out)
+}
+
 func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
@@ -795,8 +891,9 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	fieldComposite := r.URL.Query().Get("field_composite")
@@ -868,69 +965,6 @@ func checkParamInt(w http.ResponseWriter, param string) bool {
 	return err != nil
 }
 
-func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
-	progMu.Lock()
-
-	serverArgs := os.Args
-	os.Args = callArgs
-
-	oldFlags := flag.CommandLine
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-
-	prevOut := os.Stdout
-	rOut, wOut, err := os.Pipe()
-	if err != nil {
-		errMsg = append(errMsg, []byte("Error while creating stdout pipe: "+err.Error())...)
-	} else {
-		os.Stdout = wOut
-	}
-
-	prevErr := os.Stderr
-	rErr, wErr, err := os.Pipe()
-	if err != nil {
-		errMsg = append(errMsg, []byte("Error while creating stderr pipe: "+err.Error())...)
-	}
-	os.Stderr = wErr
-
-	if err == nil {
-		runFn()
-	}
-
-	os.Stdout = prevOut
-	os.Stderr = prevErr
-	if wOut != nil {
-		err = wOut.Close()
-		if err != nil {
-			errMsg = append(errMsg, []byte("Error while closing stdout pipe: "+err.Error())...)
-		}
-	}
-	if wErr != nil {
-		wErr.Close()
-		if err != nil {
-			errMsg = append(errMsg, []byte("Error while closing stderr pipe: "+err.Error())...)
-		}
-	}
-
-	var outBuf, errBuf bytes.Buffer
-	_, err = io.Copy(&outBuf, rOut)
-	_, err = io.Copy(&errBuf, rErr)
-	out = outBuf.Bytes()
-	errMsg = append(errMsg, errBuf.Bytes()...)
-
-	flag.CommandLine = oldFlags
-
-	os.Args = serverArgs
-
-	progMu.Unlock()
-
-	return
-}
-
-func writePlainOutput(w http.ResponseWriter, out []byte) {
-	w.Header().Set("Content-Type", plainCt.String())
-	fmt.Fprintf(w, "%s", out)
-}
-
 func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
@@ -943,8 +977,9 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	taxIdStr := r.PathValue("taxon_id")
@@ -1018,8 +1053,9 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	taxIdStr := r.PathValue("taxon_id")
@@ -1231,8 +1267,9 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 	if ct.EqualsMIME(jsonCt) {
 		strPlain := r.URL.Query().Get("plain_data")
 		plain, err := strconv.ParseBool(strPlain)
-		if err != nil {
-			plain = false
+		if strPlain != "" && err != nil {
+			writeBadRequestResp(w, "plain is not a bool.")
+			return
 		}
 
 		offset, size := extractPaging(r)
@@ -1388,8 +1425,9 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	offset, size := extractPaging(r)
@@ -1563,8 +1601,9 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	fieldComposite := r.URL.Query().Get("field_composite")
@@ -1701,7 +1740,7 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	if !valid {
 		return
 	}
-	valid = checkParamLevels(w, targetIds)
+	valid = checkParamInts(w, targetIds)
 	if !valid {
 		return
 	}
@@ -1742,8 +1781,9 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+		return
 	}
 
 	offset, size := extractPaging(r)

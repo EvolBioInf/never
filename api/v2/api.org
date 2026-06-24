@@ -314,7 +314,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  As does \ty{taxa}.
+  \ty{taxa} provides two differen media types as responses.
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxa}, Pa. \ref{pa:api}>>=
@@ -323,9 +323,9 @@ type Node struct {
     Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
+		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(&taxaL, taxa, neidb) // previously known as taxi
+	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
 #+end_src
 
 #+begin_export latex
@@ -886,8 +886,9 @@ type Node struct {
 #+begin_src go <<Get plain param, Pa. \ref{pa:api}>>=
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
-	if err != nil {
-		plain = false
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain is not a bool.")
+    return
 	}
 #+end_src
 
@@ -1219,7 +1220,8 @@ type Node struct {
   the scientific name only, a matching mode, a page number, a page size
   and an identifier for the kind of fields that should be returned. It
   writes as response for each matching taxon the taxon ID, its parent's
-  taxon ID, its scientific name and or its common name.
+  taxon ID, its scientific name and or its common name. If the client
+  requests \ty{text/plain} in calls \ty{taxi} instead.
 
   This is \ty{taxa}'s io:
   Params:
@@ -1239,20 +1241,26 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get content type, Pa. \ref{pa:api}>>
     valid := checkParams(w, r, "name")
     if !valid {
       return
     }
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Extract offset and size, Pa. \ref{pa:api}>>
-    //<<Extract taxi query, Pa. \ref{pa:api}>>
-    //<<Execute taxi query, Pa. \ref{pa:api}>>
-    //<<Store taxon output, Pa. \ref{pa:api}>>
-    //<<Add taxa links, Pa. \ref{pa:api}>>
-    //<<Write json output, Pa. \ref{pa:api}>>
+    //<<Extract query params, Pa. \ref{pa:api}>>
+    //<<Act on content type \ty{taxa}, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  We use the \ty{contenttype} to get to do content negotiation.
+  If the server is providing a content type, that the client is requesting
+  we act on the requested content type.
+#+end_export
+
+#+begin_src go <<Get content type, Pa. \ref{pa:api}>>=
+  ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+  //<<React no match, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
@@ -1262,24 +1270,22 @@ type Node struct {
   name and the blanks it contains by wildcards.
 #+end_export
 
-#+begin_src go <<Extract taxi query, Pa. \ref{pa:api}>>=
+#+begin_src go <<Extract query params, Pa. \ref{pa:api}>>=
   name := r.URL.Query().Get("name")
   strExact := r.URL.Query().Get("exact")
   strScientific := r.URL.Query().Get("scientific")
   //<<Get field composite, Pa. \ref{pa:api}>>
 
   exact, err := strconv.ParseBool(strExact)
-  if err != nil {
-    exact = false
-  }
+	if strExact != "" && err != nil {
+		writeBadRequestResp(w, "exact is not a bool.")
+    return
+	}
   scientific, err := strconv.ParseBool(strScientific)
-  if err != nil {
-    scientific = false
-  }
-  if !exact {
-    name = strings.ReplaceAll(name, " ", "% %")
-    name = "%" + name + "%"
-  }
+  if strScientific != "" && err != nil {
+		writeBadRequestResp(w, "scientific is not a bool.")
+    return
+	}
 #+end_src
 
 #+begin_export latex
@@ -1303,13 +1309,43 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func parseFieldComposite(arg string) string {
     availableComps := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
-    sort.Strings(availableComps)
-    fmt.Println(availableComps)
     _, found := slices.BinarySearch(availableComps, arg)
     if !found {
       arg = "default"
     }
     return arg
+  }
+#+end_src
+
+#+begin_export latex
+  Depending on the requested contentent type we either use the servers
+  taxa implementation and provide json, or we use \ty{taxi}.
+#+end_export
+
+#+begin_src go <<Act on content type \ty{taxa}, Pa. \ref{pa:api}>>=
+  if ct.EqualsMIME(jsonCt) {
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Expand name, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Execute taxi query, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Add taxa links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  } else {
+    //<<Set taxiArgs, Pa. \ref{pa:api}>>
+    //<<Call \ty{taxi}, Pa. \ref{pa:api}>>
+    //<<Write plain output, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  If we are not looking for exact matches, we need to add \ty{%}s to the name.
+#+end_export
+
+#+begin_src go <<Expand name, Pa. \ref{pa:api}>>=
+  if !exact {
+    name = strings.ReplaceAll(name, " ", "% %")
+    name = "%" + name + "%"
   }
 #+end_src
 
@@ -1614,6 +1650,248 @@ type Node struct {
   links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
 #+end_src
 
+#+begin_export latex
+  Now that we are done with processing the json request for \ty{taxa}, we
+  need to think about the plain text request. This is going to be the first of many
+  program/ package calls. This api provides endpoints which basically call program
+  from \ty{neighbors}. All \ty{neighbors} programs may be imported as packages
+  and called via their respective \ty{Run} function. For this we need to 
+  take some prerequisites, like defining the call arguments. We also
+  need to get the path to the database. This path is at \ty{args[1]}, as 
+  \ty{taxa} gets a connection to the database itself as well.
+#+end_export
+
+#+begin_src go <<Set taxiArgs, Pa. \ref{pa:api}>>=
+  dbPath := args[1].(string)
+  taxiArgs := []string{"./taxi"}
+  if exact {
+    taxiArgs = append(taxiArgs, "-e")
+  }
+  taxiArgs = append(
+    taxiArgs, 
+    "-l",
+    strconv.Itoa(size),
+    "-o",
+    strconv.Itoa(offset),
+    name,
+    dbPath,
+    )
+  
+
+#+end_src
+
+#+begin_export latex
+  We should check inputs user inputs for better error handling, but taxi
+  does not provide any arguments, that need checking. We get to that when implementing
+  \ty{ancestors}. Now we call taxi with the \ty{callPackage} function, which still
+  needs implementing.
+#+end_export
+
+#+begin_src go <<Call \ty{taxi}, Pa. \ref{pa:api}>>=
+  out, errMsg := callPackage(taxiArgs, taxi.Run)
+  if len(errMsg) > 0 {
+    writeServerError(w, "fn taxa - Error while calling package taxi: " + string(errMsg), nil)
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  We also need to import \ty{taxi}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "github.com/evolbioinf/neighbors/taxi"
+#+end_src
+
+#+begin_export latex
+  Calling a \ty{neighbors} program/ package via \ty{Run} needs some
+  prerequisites. The packages depent on call arguments, as does the
+  \ty{flag} package they are using. So we need to provide those.
+  Then we also need to redefine \ty{stdout} and \ty{stderr}, to get
+  the package's output. Lastly we need to wrap all of it in a mutex.
+  This is necessary as we read, set and reset server wide variables
+  during these calls.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
+    //<<Lock program mutex, Pa. \ref{pa:api}>>
+    //<<Set call args, Pa. \ref{pa:api}>>
+    //<<Set flag commandline, Pa. \ref{pa:api}>>
+    //<<Set stdout and stderr, Pa. \ref{pa:api}>>
+    //<<Call program, Pa. \ref{pa:api}>>
+    //<<Reset stdout and stderr, Pa. \ref{pa:api}>>
+    //<<Reset flag commandline, Pa. \ref{pa:api}>>
+    //<<Reset call args, Pa. \ref{pa:api}>>
+    //<<Unlock program mutex, Pa. \ref{pa:api}>>
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  First we need to import the \ty{sync} package
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "sync"
+#+end_src
+
+#+begin_export latex
+  Then we declare a mutex for program calls.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  var progMu sync.Mutex
+#+end_src
+
+#+begin_export latex
+  Now we may lock it on entering the function.
+#+end_export
+
+#+begin_src go <<Lock program mutex, Pa. \ref{pa:api}>>=
+  progMu.Lock()
+#+end_src
+
+#+begin_export latex
+  We should save the current call arguments
+  before setting the new ones.
+#+end_export
+
+#+begin_src go <<Set call args, Pa. \ref{pa:api}>>=
+  serverArgs := os.Args
+  os.Args = callArgs
+#+end_src
+
+#+begin_export latex
+  The same goes for the current \ty{flag.CommandLine}
+#+end_export
+
+#+begin_src go <<Set flag commandline, Pa. \ref{pa:api}>>=
+  oldFlags := flag.CommandLine
+  flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+#+end_src
+
+#+begin_export latex
+  Using \ty{flag} requires importing it.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "flag"
+#+end_src
+
+#+begin_export latex
+  We create pipes for redirecting \ty{stdout} and \ty{stderr}.
+  This again allows us to read whatever the packages write
+  as if we were doing system calls. We first save the old
+  pointers for \ty{stdout} and \ty{stderr}. Creating a new pipe
+  lets us set new ones. We report an error if it occurs.
+#+end_export
+
+#+begin_src go <<Set stdout and stderr, Pa. \ref{pa:api}>>=
+	prevOut := os.Stdout
+	rOut, wOut, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stdout pipe: " + err.Error())...)
+	} else {
+	  os.Stdout = wOut
+  }
+
+  prevErr := os.Stderr
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stderr pipe: " + err.Error())...)
+	}
+	os.Stderr = wErr
+#+end_src
+
+#+begin_export latex
+  Now we may call the program, if there is no error. 
+  The program call is already nicely wrapped for us in the \ty{runFn} function.
+#+end_export
+
+#+begin_src go <<Call program, Pa. \ref{pa:api}>>=
+  if err == nil {
+    runFn()
+  }
+#+end_src
+
+#+begin_export latex
+  We begin resetting everything. First up the \ty{stdout} and \ty{stderr}.
+  After resetting them, we may read their outputs.
+#+end_export
+
+#+begin_src go <<Reset stdout and stderr, Pa. \ref{pa:api}>>=
+  os.Stdout = prevOut
+  os.Stderr = prevErr
+  if wOut != nil {
+    err = wOut.Close()
+    if err != nil {
+      errMsg = append(errMsg, []byte("Error while closing stdout pipe: " + err.Error())...)
+    }
+  }
+  if wErr != nil {
+    wErr.Close()
+    if err != nil {
+      errMsg = append(errMsg, []byte("Error while closing stderr pipe: " + err.Error())...)
+    }
+  }
+
+  var outBuf, errBuf bytes.Buffer
+	_, err = io.Copy(&outBuf, rOut)
+	_, err = io.Copy(&errBuf, rErr)
+	out = outBuf.Bytes()
+	errMsg = append(errMsg, errBuf.Bytes()...)
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{io} for copying
+  the data to a buffer.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "io"
+#+end_src
+
+#+begin_export latex
+  Resetting the \ty{flag.CommandLine} is less effort.
+#+end_export
+
+#+begin_src go <<Reset flag commandline, Pa. \ref{pa:api}>>=
+	flag.CommandLine = oldFlags
+#+end_src
+
+#+begin_export latex
+  Then we reset the call arguments.
+#+end_export
+
+#+begin_src go <<Reset call args, Pa. \ref{pa:api}>>=
+  os.Args = serverArgs
+#+end_src
+
+#+begin_export latex
+  Lastly we unlock the mutex.
+#+end_export
+
+#+begin_src go <<Unlock program mutex, Pa. \ref{pa:api}>>=
+  progMu.Unlock()
+#+end_src
+
+#+begin_export latex
+  We also need to implement a new function for writing plain data.
+  Let's call it \ty{writePlainOutput}
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writePlainOutput(w http.ResponseWriter, out []byte) {
+    w.Header().Set("Content-Type", plainCt.String())
+    fmt.Fprintf(w, "%s", out)
+  }
+#+end_src
+
+#+begin_src go <<Write plain output, Pa. \ref{pa:api}>>=
+  writePlainOutput(w, out)
+#+end_src
+
 
 
 #+begin_export latex
@@ -1796,196 +2074,6 @@ type Node struct {
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
   "github.com/evolbioinf/neighbors/ants"
-#+end_src
-
-#+begin_export latex
-  Calling a \ty{neighbors} program/ package via \ty{Run} needs some
-  prerequisites. The packages depent on call arguments, as does the
-  \ty{flag} package they are using. So we need to provide those.
-  Then we also need to redefine \ty{stdout} and \ty{stderr}, to get
-  the package's output. Lastly we need to wrap all of it in a mutex.
-  This is necessary as we read, set and reset server wide variables
-  during these calls.
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
-    //<<Lock program mutex, Pa. \ref{pa:api}>>
-    //<<Set call args, Pa. \ref{pa:api}>>
-    //<<Set flag commandline, Pa. \ref{pa:api}>>
-    //<<Set stdout and stderr, Pa. \ref{pa:api}>>
-    //<<Call program, Pa. \ref{pa:api}>>
-    //<<Reset stdout and stderr, Pa. \ref{pa:api}>>
-    //<<Reset flag commandline, Pa. \ref{pa:api}>>
-    //<<Reset call args, Pa. \ref{pa:api}>>
-    //<<Unlock program mutex, Pa. \ref{pa:api}>>
-    return
-  }
-#+end_src
-
-#+begin_export latex
-  First we need to import the \ty{sync} package
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "sync"
-#+end_src
-
-#+begin_export latex
-  Then we declare a mutex for program calls.
-#+end_export
-
-#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
-  var progMu sync.Mutex
-#+end_src
-
-#+begin_export latex
-  Now we may lock it on entering the function.
-#+end_export
-
-#+begin_src go <<Lock program mutex, Pa. \ref{pa:api}>>=
-  progMu.Lock()
-#+end_src
-
-#+begin_export latex
-  We should save the current call arguments
-  before setting the new ones.
-#+end_export
-
-#+begin_src go <<Set call args, Pa. \ref{pa:api}>>=
-  serverArgs := os.Args
-  os.Args = callArgs
-#+end_src
-
-#+begin_export latex
-  The same goes for the current \ty{flag.CommandLine}
-#+end_export
-
-#+begin_src go <<Set flag commandline, Pa. \ref{pa:api}>>=
-  oldFlags := flag.CommandLine
-  flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-#+end_src
-
-#+begin_export latex
-  Using \ty{flag} requires importing it.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "flag"
-#+end_src
-
-#+begin_export latex
-  We create pipes for redirecting \ty{stdout} and \ty{stderr}.
-  This again allows us to read whatever the packages write
-  as if we were doing system calls. We first save the old
-  pointers for \ty{stdout} and \ty{stderr}. Creating a new pipe
-  lets us set new ones. We report an error if it occurs.
-#+end_export
-
-#+begin_src go <<Set stdout and stderr, Pa. \ref{pa:api}>>=
-	prevOut := os.Stdout
-	rOut, wOut, err := os.Pipe()
-	if err != nil {
-		errMsg = append(errMsg, []byte("Error while creating stdout pipe: " + err.Error())...)
-	} else {
-	  os.Stdout = wOut
-  }
-
-  prevErr := os.Stderr
-	rErr, wErr, err := os.Pipe()
-	if err != nil {
-		errMsg = append(errMsg, []byte("Error while creating stderr pipe: " + err.Error())...)
-	}
-	os.Stderr = wErr
-#+end_src
-
-#+begin_export latex
-  Now we may call the program, if there is no error. 
-  The program call is already nicely wrapped for us in the \ty{runFn} function.
-#+end_export
-
-#+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-  if err == nil {
-    runFn()
-  }
-#+end_src
-
-#+begin_export latex
-  We begin resetting everything. First up the \ty{stdout} and \ty{stderr}.
-  After resetting them, we may read their outputs.
-#+end_export
-
-#+begin_src go <<Reset stdout and stderr, Pa. \ref{pa:api}>>=
-  os.Stdout = prevOut
-  os.Stderr = prevErr
-  if wOut != nil {
-    err = wOut.Close()
-    if err != nil {
-      errMsg = append(errMsg, []byte("Error while closing stdout pipe: " + err.Error())...)
-    }
-  }
-  if wErr != nil {
-    wErr.Close()
-    if err != nil {
-      errMsg = append(errMsg, []byte("Error while closing stderr pipe: " + err.Error())...)
-    }
-  }
-
-  var outBuf, errBuf bytes.Buffer
-	_, err = io.Copy(&outBuf, rOut)
-	_, err = io.Copy(&errBuf, rErr)
-	out = outBuf.Bytes()
-	errMsg = append(errMsg, errBuf.Bytes()...)
-#+end_src
-
-#+begin_export latex
-  We need to import \ty{io} for copying
-  the data to a buffer.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "io"
-#+end_src
-
-#+begin_export latex
-  Resetting the \ty{flag.CommandLine} is less effort.
-#+end_export
-
-#+begin_src go <<Reset flag commandline, Pa. \ref{pa:api}>>=
-	flag.CommandLine = oldFlags
-#+end_src
-
-#+begin_export latex
-  Then we reset the call arguments.
-#+end_export
-
-#+begin_src go <<Reset call args, Pa. \ref{pa:api}>>=
-  os.Args = serverArgs
-#+end_src
-
-#+begin_export latex
-  Lastly we unlock the mutex.
-#+end_export
-
-#+begin_src go <<Unlock program mutex, Pa. \ref{pa:api}>>=
-  progMu.Unlock()
-#+end_src
-
-
-#+begin_export latex
-  We need to implement a new function for writing plain data.
-  Let's call it \ty{writePlainOutput}
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func writePlainOutput(w http.ResponseWriter, out []byte) {
-    w.Header().Set("Content-Type", plainCt.String())
-    fmt.Fprintf(w, "%s", out)
-  }
-#+end_src
-
-#+begin_src go <<Write plain output, Pa. \ref{pa:api}>>=
-  writePlainOutput(w, out)
 #+end_src
 
 
@@ -2556,17 +2644,6 @@ type Node struct {
     //<<Parse taxon id, Pa. \ref{pa:api}>>
     //<<Act on content type, Pa. \ref{pa:api}>>
   }
-#+end_src
-
-#+begin_export latex
-  We use the \ty{contenttype} to get to do content negotiation.
-  If the server is providing a content type, that the client is requesting
-  we act on the requested content type.
-#+end_export
-
-#+begin_src go <<Get content type, Pa. \ref{pa:api}>>=
-  ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-  //<<React no match, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
@@ -3332,7 +3409,7 @@ type Node struct {
   if !valid {
     return
   }
-  valid = checkParamLevels(w, targetIds)
+  valid = checkParamInts(w, targetIds)
   if !valid {
     return
   }
