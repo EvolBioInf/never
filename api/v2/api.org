@@ -1376,7 +1376,8 @@ type Node struct {
   for _, level := range tdb.AssemblyLevels() {
     count, err := neidb.NumGenomes(id, level)
     if err != nil {
-      //<<Log server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "Error while executing neidb.NumGenomes", err)
+      return
     }
     gc := GenomeCount{Count: count, Level: level}
     raw = append(raw, gc)
@@ -1394,7 +1395,8 @@ type Node struct {
   for _, level := range tdb.AssemblyLevels() {
     count, err := neidb.NumGenomesRec(id, level)
     if err != nil {
-      //<<Log server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "Error while executing neidb.NumGenomesRec", err)
+      return
     }
     gc := GenomeCount{Count: count, Level: level}
     rec = append(rec, gc)
@@ -1409,7 +1411,8 @@ type Node struct {
 #+begin_src go <<Retrieve rank fields, Pa. \ref{pa:api}>>=
   rank, err := neidb.Rank(id)
   if err != nil {
-    //<<Log server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while executing neidb.Rank", err)
+    return
   }
   tax.Rank = rank
 #+end_src
@@ -1431,12 +1434,14 @@ type Node struct {
 #+begin_src go <<Get names, Pa. \ref{pa:api}>>=
   sciName, err := neidb.Name(id)
   if err != nil {
-    //<<Log server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while executing neidb.Name", err)
+    return
   }
   tax.Name = sciName
   comName, err := neidb.CommonName(id)
   if err != nil {
-    //<<Log server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while executing neidb.CommonName", err)
+    return
   }
   tax.CommonName = comName
 #+end_src
@@ -1448,7 +1453,8 @@ type Node struct {
 #+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
   parent, err := neidb.Parent(id)
   if err != nil {
-    //<<Log server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while executing neidb.Parent", err)
+    return
   }
   tax.Parent = parent
 #+end_src
@@ -1469,7 +1475,8 @@ type Node struct {
 #+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
   isLeaf, err := neidb.IsLeaf(id)
   if err != nil {
-    //<<Log server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while executing neidb.isLeaf", err)
+    return
   }
   tax.IsLeaf = isLeaf
 #+end_src
@@ -1487,7 +1494,8 @@ type Node struct {
   var neiImages []Image
   images, err := neidb.Images(id)
   if err != nil {
-    //<<Log server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while executing neidb.Images", err)
+    return
   }
   for _, image := range images {
     i := Image{Id: image.Id,
