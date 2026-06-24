@@ -234,6 +234,7 @@ type Node struct {
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
   //<<Initialize nodes and make routes, Pa. \ref{pa:api}>>
   //<<Link nodes, Pa. \ref{pa:api}>>
+  //<<Add \ty{OPTIONS} routes \ty{path}, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
@@ -660,6 +661,23 @@ type Node struct {
 	parentL.Links["all ancestors"] = append(parentL.Links["all ancestors"], ancestorsL)
 	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
   root = rootDocL
+#+end_src
+
+#+begin_export latex
+  Having set all the links, we may use the graph for it's first time.
+  Every \ty{GET} endpoint should provide a response to the \ty{OPTION}
+  method. We can easily do this, because all the data making up an \ty{OPTION}
+  response is included in the link nodes. So we take the root as an entry, get
+  all services, check whether they are \ty{GET} and then add some meta data.
+#+end_export
+
+#+begin_src go <<Add \ty{OPTIONS} routes \ty{path}, Pa. \ref{pa:api}>>=
+  services := root.Links["service"]
+  for _, service := range services {
+    if service.Action == "GET" {
+
+    }
+  }
 #+end_src
 
 
