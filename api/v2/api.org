@@ -1284,14 +1284,32 @@ type Node struct {
 
 #+begin_export latex
   The field composite is a query parameter which determines
-  the fields of the response. If the parameter is missing
-  we set it to \ty{default}
+  the fields of the response. We call a function 
+  \ty{parseFieldComposite}, to handle setting defaults etc.
+  We are going to implement in the next step.
 #+end_export
 
 #+begin_src go <<Get field composite, Pa. \ref{pa:api}>>=
   fieldComposite := r.URL.Query().Get("field_composite")
-  if fieldComposite == "" {
-    fieldComposite = "default"
+  fieldComposite = parseFieldComposite(fieldComposite)
+#+end_src
+
+#+begin_export latex
+  This function takes a string, which is supposed to be a field composite 
+  descriptor. It checks whether the \ty{arg} matches any of the options 
+  and returns \ty{default} if it does not.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func parseFieldComposite(arg string) string {
+    availableComps := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
+    sort.Strings(availableComps)
+    fmt.Println(availableComps)
+    _, found := slices.BinarySearch(availableComps, arg)
+    if !found {
+      arg = "default"
+    }
+    return arg
   }
 #+end_src
 
@@ -2915,7 +2933,6 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Check multipart content types, Pa. \ref{pa:api}>>
     //<<Handle arguments \ty{fintac}, Pa. \ref{pa:api}>>
-    //<<Validate user input \ty{fintac}, Pa. \ref{pa:api}>>
     //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
@@ -3014,13 +3031,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  TODO
-#+end_export
-
-#+begin_src go <<Validate user input \ty{fintac}, Pa. \ref{pa:api}>>=
-#+end_src
-
-#+begin_export latex
+  We would usually validate the user's input before calling a program,
+  but \ty{fintac} takes a bool and three arbitrary strings as input.
+  So there is not much to check.
   We already know how to call a \ty{neigbors} program.
 #+end_export
 
@@ -3159,6 +3172,7 @@ type Node struct {
   func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Handle arguments \ty{neighbors}, Pa. \ref{pa:api}>>
+    //<<Validate user input \ty{neighbors}, Pa. \ref{pa:api}>>
     //<<Call \ty{neighbors}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
@@ -3198,7 +3212,6 @@ type Node struct {
 
 #+begin_src go <<Get filter parameters, Pa. \ref{pa:api}>>=
 	levels := r.URL.Query().Get("assembly_levels")
-  //<<Check assembly levels, Pa. \ref{pa:api}>>
   if levels != "" {
 		neighborsArgs = append(neighborsArgs, "-L", levels)
   }
@@ -3254,17 +3267,6 @@ type Node struct {
 
 #+begin_src go <<Get target ids, Pa. \ref{pa:api}>>=
   targetIds := r.URL.Query().Get("target_ids")
-  split := strings.Split(targetIds, ",")
-  hasTargetIds := len(split) > 1 || split[0] != ""
-  if hasTargetIds {
-    for _, id := range split {
-      _, err := strconv.Atoi(id)
-      if err != nil {
-        writeBadRequestResp(w, "At least one target id is not an integer.")
-        return
-      }
-    }
-  }
   neighborsArgs = append(neighborsArgs, "-t", targetIds)
 #+end_src
 
@@ -3293,7 +3295,7 @@ type Node struct {
       return
     }
 
-    if len(paths) > 0  && hasTargetIds {
+    if len(paths) > 0  && targetIds != "" {
       writeBadRequestResp(w, "Can't provide files and target_ids via url.")
       return
     }
@@ -3303,6 +3305,45 @@ type Node struct {
       defer os.Remove(p)
     }
 	}
+#+end_src
+
+#+begin_export latex
+  \ty{neighbors} takes assembly levels, a slice of integers and
+  a bunch of bools as input. We can check the assembly levels as usual and write a
+  function that checks a slice of integers.
+#+end_export
+
+#+begin_src go <<Validate user input \ty{neighbors}, Pa. \ref{pa:api}>>=
+  valid := checkParamLevels(w, levels)
+  if !valid {
+    return
+  }
+  valid = checkParamLevels(w, targetIds)
+  if !valid {
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  \ty{neighbors} takes assembly levels, a slice of integers and
+  a bunch of bools as input. We can check the assembly levels as usual and write a
+  function that checks a slice of integers.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func checkParamInts(w http.ResponseWriter, param string) bool {
+    if param != "" {
+      split := strings.Split(param, ",")
+      for _, id := range split {
+        _, err := strconv.Atoi(id)
+        if err != nil {
+          writeBadRequestResp(w, "At least one target id is not an integer.")
+          return false
+        }
+      }
+    }
+    return true
+  }
 #+end_src
 
 #+begin_export latex
