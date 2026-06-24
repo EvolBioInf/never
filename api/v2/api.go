@@ -20,7 +20,13 @@ import (
 
 	"slices"
 
-	"os/exec"
+	"github.com/evolbioinf/neighbors/ants"
+
+	"sync"
+
+	"flag"
+
+	"io"
 
 	"errors"
 
@@ -32,6 +38,8 @@ import (
 	"time"
 
 	"bytes"
+
+	"os/exec"
 )
 
 type Accession struct {
@@ -122,6 +130,8 @@ func (node *Node) getService(name string) *Node {
 var root Node
 
 var prefix string
+
+var progMu sync.Mutex
 
 var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
@@ -810,19 +820,84 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		return
 	}
 
-	taxId := r.PathValue("taxon_id")
+	taxIdStr := r.PathValue("taxon_id")
 
 	dbPath := args[0].(string)
 
-	out, err := exec.Command("./ants", taxId, dbPath).Output()
-	if err != nil {
+	callArgs := []string{"./ants", taxIdStr, dbPath}
+	out, errMsg := callPackage(callArgs, ants.Run)
+	if len(errMsg) > 0 {
 		writeServerError(w)
 		return
-
 	}
 
 	writePlainOutput(w, out)
 
+}
+
+func checkParamInt(w http.ResponseWriter, param string) bool {
+	_, err := strconv.Atoi(param)
+	if err != nil {
+		writeBadRequestResp(w, "Malformed integer.")
+	}
+	return err != nil
+}
+
+func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
+	progMu.Lock()
+
+	serverArgs := os.Args
+	os.Args = callArgs
+
+	oldFlags := flag.CommandLine
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	prevOut := os.Stdout
+	rOut, wOut, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stdout pipe: "+err.Error())...)
+	} else {
+		os.Stdout = wOut
+	}
+
+	prevErr := os.Stderr
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stderr pipe: "+err.Error())...)
+	}
+	os.Stderr = wErr
+
+	if err == nil {
+		runFn()
+	}
+
+	os.Stdout = prevOut
+	os.Stderr = prevErr
+	if wOut != nil {
+		err = wOut.Close()
+		if err != nil {
+			errMsg = append(errMsg, []byte("Error while closing stdout pipe: "+err.Error())...)
+		}
+	}
+	if wErr != nil {
+		wErr.Close()
+		if err != nil {
+			errMsg = append(errMsg, []byte("Error while closing stderr pipe: "+err.Error())...)
+		}
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	_, err = io.Copy(&outBuf, rOut)
+	_, err = io.Copy(&errBuf, rErr)
+	out = outBuf.Bytes()
+	errMsg = append(errMsg, errBuf.Bytes()...)
+
+	flag.CommandLine = oldFlags
+
+	os.Args = serverArgs
+
+	progMu.Unlock()
+	return
 }
 
 func writePlainOutput(w http.ResponseWriter, out []byte) {
@@ -975,25 +1050,12 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 		return
 	}
 
-	taxId := r.PathValue("taxon_id")
+	taxIdStr := r.PathValue("taxon_id")
 
 	dbPath := args[0].(string)
 
 	ranksArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
-	if levels != "" {
-		levelsSplit := strings.Split(levels, ",")
-		availableLevels := tdb.AssemblyLevels()
-		sort.Strings(availableLevels)
-		for _, level := range levelsSplit {
-			_, found := slices.BinarySearch(availableLevels, level)
-			if !found {
-				writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
-				return
-			}
-		}
-	}
-
 	if levels != "" {
 		ranksArgs = append(ranksArgs, "-L", levels)
 	}
@@ -1030,7 +1092,16 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 		}
 	}
 
-	ranksArgs = append(ranksArgs, taxId, dbPath)
+	valid := checkParamInt(w, taxIdStr)
+	if !valid {
+		return
+	}
+	valid = checkParamLevels(w, levels)
+	if !valid {
+		return
+	}
+
+	ranksArgs = append(ranksArgs, taxIdStr, dbPath)
 	out, err := exec.Command("./ranks", ranksArgs...).Output()
 	if err != nil {
 		writeServerError(w)
@@ -1106,6 +1177,22 @@ func validateMultipartForm(w http.ResponseWriter, r *http.Request, minFiles, max
 	}
 
 	return nil
+}
+
+func checkParamLevels(w http.ResponseWriter, levels string) bool {
+	if levels != "" {
+		levelsSplit := strings.Split(levels, ",")
+		availableLevels := tdb.AssemblyLevels()
+		sort.Strings(availableLevels)
+		for _, level := range levelsSplit {
+			_, found := slices.BinarySearch(availableLevels, level)
+			if !found {
+				writeBadRequestResp(w, "Malformed assembly level.")
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
@@ -1190,19 +1277,6 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		dreeArgs := []string{}
 		levels := r.URL.Query().Get("assembly_levels")
 		if levels != "" {
-			levelsSplit := strings.Split(levels, ",")
-			availableLevels := tdb.AssemblyLevels()
-			sort.Strings(availableLevels)
-			for _, level := range levelsSplit {
-				_, found := slices.BinarySearch(availableLevels, level)
-				if !found {
-					writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
-					return
-				}
-			}
-		}
-
-		if levels != "" {
 			dreeArgs = append(dreeArgs, "-L", levels)
 		}
 
@@ -1233,6 +1307,15 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 			dreeArgs = append(dreeArgs, "-l")
 		}
 
+		valid := checkParamLevels(w, levels)
+		if !valid {
+			return
+		}
+		valid = checkParamInt(w, depthStr)
+		if !valid {
+			return
+		}
+
 		dbPath := args[1].(string)
 		dreeArgs = append(dreeArgs, taxIdStr, dbPath)
 		out, err := exec.Command("./dree", dreeArgs...).Output()
@@ -1247,6 +1330,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 			writeGraphvizOutput(w, out)
 
 		}
+
 	}
 
 }
@@ -1412,7 +1496,11 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 
 	fintacArgs := []string{}
 	aStr := r.URL.Query().Get("all_splits")
-	a, _ := strconv.ParseBool(aStr)
+	a, err := strconv.ParseBool(aStr)
+	if err != nil {
+		writeBadRequestResp(w, "all_splits argument is not a bool.")
+		return
+	}
 	n := r.URL.Query().Get("neighbor")
 	t := r.URL.Query().Get("target")
 	u := r.URL.Query().Get("unknown")
@@ -1538,18 +1626,6 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 
 	neighborsArgs := []string{}
 	levels := r.URL.Query().Get("assembly_levels")
-	if levels != "" {
-		levelsSplit := strings.Split(levels, ",")
-		availableLevels := tdb.AssemblyLevels()
-		sort.Strings(availableLevels)
-		for _, level := range levelsSplit {
-			_, found := slices.BinarySearch(availableLevels, level)
-			if !found {
-				writeBadRequestResp(w, fmt.Sprintf("%s is not a valid assembly level", level))
-				return
-			}
-		}
-	}
 
 	if levels != "" {
 		neighborsArgs = append(neighborsArgs, "-L", levels)

@@ -16,6 +16,7 @@
   package apiv2
   import (
     //<<Imports, Pa. \ref{pa:api}>>
+    "os/exec"
   )
   //<<Types, Pa. \ref{pa:api}>>
   //<<Methods, Pa. \ref{pa:api}>>
@@ -1647,10 +1648,10 @@ type Node struct {
 
 #+begin_export latex
   \subsection{ancestors}
-  The endpoint \ty{ancestors} executes a system call. We use this endpoint
-  to call the \ty{ants} program via this api. Given the id of a taxon, \ty{ants}
-  retrieves all ancestors of a taxon. The program does not provide a wide
-  variety in call arguments, so the only thing we need to pass is the taxon's id.
+  The endpoint \ty{ancestors} runs \ty{ants} as if it were a system call. 
+  Given the id of a taxon, \ty{ants} retrieves all ancestors of a taxon. 
+  The program does not provide a wide variety in call arguments, so 
+  the only thing we need to pass is the taxon's id.
 
   This is \ty{ancestors}' io:
   Params:
@@ -1667,9 +1668,8 @@ type Node struct {
   func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get taxon id, Pa. \ref{pa:api}>>
-    //<<Validate user input \ty{ancestors}, Pa. \ref{pa:api}>>
     //<<Get db path, Pa. \ref{pa:api}>>
-    //<<Call \ty{ants}, Pa. \ref{pa:api}>>
+    //<<Run \ty{ants}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -1681,21 +1681,22 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
-  taxId := r.PathValue("taxon_id")
+  taxIdStr := r.PathValue("taxon_id")
 #+end_src
 
 #+begin_export latex
-  As we are executing external programs, we should check the user input 
-  which we pass. The \ty{taxId} should be an integer. This should not be 
-  a problem, when adding to a program call. I think it would be nice if
-  the validation data for a single variable of a certain data type was 
-  contained in a function. So we are going to write the function
-  \ty{checkParamInt} first and then call it in \ty{ancestors}.
+  The programs, or rather packages, we are calling use a custom 
+  cli centric error handling. While this is good for the programs,
+  it is not great for web interfaces. We should check datastructures
+  of inputs and such, to use our own error handling instead of 
+  the packages. For this we create functions that check whether
+  a parameter is of a certain datatype. First up are integers.
+  We need them to check taxon ids with the \ty{ants} call.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func checkParamInt(w http.ResponseWriter, param string) bool {
-    _, err = strconv.Atoi(param)
+    _, err := strconv.Atoi(param)
     if err != nil {
       writeBadRequestResp(w, "Malformed integer.")
     }
@@ -1725,27 +1726,203 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Calling a local program entails making a sysCall.
-  This may be done with the \ty{Command} function provided
-  by the \ty{exec} package.
-  Then we use \ty{Output} as a blocking execution, that returns
-  whatever was written to \ty{stdout} and \ty{stderr}.
+  The programs, rather packages, are called via their \ty{Run} function.
+  Running a program this way is a bit obscure, but it is much safer, than
+  calling it via the shell. To bundle everything a call like this needs
+  to do, which is quite a lot, we wrap it in a function that we are going
+  to implement in a moment.
 #+end_export
 
-#+begin_src go <<Call \ty{ants}, Pa. \ref{pa:api}>>=
-	out, err := exec.Command("./ants", taxId, dbPath).Output()
-  if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+#+begin_src go <<Run \ty{ants}, Pa. \ref{pa:api}>>=
+  callArgs := []string{"./ants", taxIdStr, dbPath}
+  out, errMsg := callPackage(callArgs, ants.Run)
+  if len(errMsg) > 0 {
+    writeServerError(w)
+    return
   }
 #+end_src
 
 #+begin_export latex
-  We need to import \ty{exec}.
+  We need to import \ty{ants}
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "os/exec"
+  "github.com/evolbioinf/neighbors/ants"
 #+end_src
+
+#+begin_export latex
+  Calling a \ty{neighbors} program/ package via \ty{Run} needs some
+  prerequisites. The packages depent on call arguments, as does the
+  \ty{flag} package they are using. So we need to provide those.
+  Then we also need to redefine \ty{stdout} and \ty{stderr}, to get
+  the package's output. Lastly we need to wrap all of it in a mutex.
+  This is necessary as we read, set and reset server wide variables
+  during these calls.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
+    //<<Lock program mutex, Pa. \ref{pa:api}>>
+    //<<Set call args, Pa. \ref{pa:api}>>
+    //<<Set flag commandline, Pa. \ref{pa:api}>>
+    //<<Set stdout and stderr, Pa. \ref{pa:api}>>
+    //<<Call program, Pa. \ref{pa:api}>>
+    //<<Reset stdout and stderr, Pa. \ref{pa:api}>>
+    //<<Reset flag commandline, Pa. \ref{pa:api}>>
+    //<<Reset call args, Pa. \ref{pa:api}>>
+    //<<Unlock program mutex, Pa. \ref{pa:api}>>
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  First we need to import the \ty{sync} package
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "sync"
+#+end_src
+
+#+begin_export latex
+  Then we declare a mutex for program calls.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  var progMu sync.Mutex
+#+end_src
+
+#+begin_export latex
+  Now we may lock it on entering the function.
+#+end_export
+
+#+begin_src go <<Lock program mutex, Pa. \ref{pa:api}>>=
+  progMu.Lock()
+#+end_src
+
+#+begin_export latex
+  We should save the current call arguments
+  before setting the new ones.
+#+end_export
+
+#+begin_src go <<Set call args, Pa. \ref{pa:api}>>=
+  serverArgs := os.Args
+  os.Args = callArgs
+#+end_src
+
+#+begin_export latex
+  The same goes for the current \ty{flag.CommandLine}
+#+end_export
+
+#+begin_src go <<Set flag commandline, Pa. \ref{pa:api}>>=
+  oldFlags := flag.CommandLine
+  flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+#+end_src
+
+#+begin_export latex
+  Using \ty{flag} requires importing it.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "flag"
+#+end_src
+
+#+begin_export latex
+  We create pipes for redirecting \ty{stdout} and \ty{stderr}.
+  This again allows us to read whatever the packages write
+  as if we were doing system calls. We first save the old
+  pointers for \ty{stdout} and \ty{stderr}. Creating a new pipe
+  lets us set new ones. We report an error if it occurs.
+#+end_export
+
+#+begin_src go <<Set stdout and stderr, Pa. \ref{pa:api}>>=
+	prevOut := os.Stdout
+	rOut, wOut, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stdout pipe: " + err.Error())...)
+	} else {
+	  os.Stdout = wOut
+  }
+
+  prevErr := os.Stderr
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		errMsg = append(errMsg, []byte("Error while creating stderr pipe: " + err.Error())...)
+	}
+	os.Stderr = wErr
+#+end_src
+
+#+begin_export latex
+  Now we may call the program, if there is no error. 
+  The program call is already nicely wrapped for us in the \ty{runFn} function.
+#+end_export
+
+#+begin_src go <<Call program, Pa. \ref{pa:api}>>=
+  if err == nil {
+    runFn()
+  }
+#+end_src
+
+#+begin_export latex
+  We begin resetting everything. First up the \ty{stdout} and \ty{stderr}.
+  After resetting them, we may read their outputs.
+#+end_export
+
+#+begin_src go <<Reset stdout and stderr, Pa. \ref{pa:api}>>=
+  os.Stdout = prevOut
+  os.Stderr = prevErr
+  if wOut != nil {
+    err = wOut.Close()
+    if err != nil {
+      errMsg = append(errMsg, []byte("Error while closing stdout pipe: " + err.Error())...)
+    }
+  }
+  if wErr != nil {
+    wErr.Close()
+    if err != nil {
+      errMsg = append(errMsg, []byte("Error while closing stderr pipe: " + err.Error())...)
+    }
+  }
+
+  var outBuf, errBuf bytes.Buffer
+	_, err = io.Copy(&outBuf, rOut)
+	_, err = io.Copy(&errBuf, rErr)
+	out = outBuf.Bytes()
+	errMsg = append(errMsg, errBuf.Bytes()...)
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{io} for copying
+  the data to a buffer.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "io"
+#+end_src
+
+#+begin_export latex
+  Resetting the \ty{flag.CommandLine} is less effort.
+#+end_export
+
+#+begin_src go <<Reset flag commandline, Pa. \ref{pa:api}>>=
+	flag.CommandLine = oldFlags
+#+end_src
+
+#+begin_export latex
+  Then we reset the call arguments.
+#+end_export
+
+#+begin_src go <<Reset call args, Pa. \ref{pa:api}>>=
+  os.Args = serverArgs
+#+end_src
+
+#+begin_export latex
+  Lastly we unlock the mutex.
+#+end_export
+
+#+begin_src go <<Unlock program mutex, Pa. \ref{pa:api}>>=
+  progMu.Unlock()
+#+end_src
+
 
 #+begin_export latex
   We need to implement a new function for writing plain data.
@@ -2286,7 +2463,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>=
-	ranksArgs = append(ranksArgs, taxId, dbPath)
+	ranksArgs = append(ranksArgs, taxIdStr, dbPath)
 	out, err := exec.Command("./ranks", ranksArgs...).Output()
   if err != nil {
     //<<Write server error, Pa. \ref{pa:api}>>
@@ -2434,13 +2611,13 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Validate user input \ty{dree}, Pa. \ref{pa:api}>>=
-  valid = checkParamLevels(w, levels)
-  if !valid {
-    return
-  valid := checkParamInt(w, depthStr)
+  valid := checkParamLevels(w, levels)
   if !valid {
     return
   }
+  valid = checkParamInt(w, depthStr)
+  if !valid {
+    return
   }
 #+end_src
 
