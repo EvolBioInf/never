@@ -1371,12 +1371,18 @@ type Node struct {
   }
 #+end_src
 
+#+begin_export latex
+  We look up the raw genome counts across the assembly
+  levels. We return instantly with an error if there is one present.
+  The calling function then handles the error logging.
+#+end_export
+
 #+begin_src go <<Get raw genome counts, Pa. \ref{pa:api}>>=
   var raw []GenomeCount
   for _, level := range tdb.AssemblyLevels() {
-    count, err := neidb.NumGenomes(id, level)
+    var count int
+    count, err = neidb.NumGenomes(id, level)
     if err != nil {
-      writeServerError(w, "Error while executing neidb.NumGenomes", err)
       return
     }
     gc := GenomeCount{Count: count, Level: level}
@@ -1393,9 +1399,9 @@ type Node struct {
 #+begin_src go <<Get rec genome counts, Pa. \ref{pa:api}>>=
   var rec []GenomeCount
   for _, level := range tdb.AssemblyLevels() {
-    count, err := neidb.NumGenomesRec(id, level)
+    var count int
+    count, err = neidb.NumGenomesRec(id, level)
     if err != nil {
-      writeServerError(w, "Error while executing neidb.NumGenomesRec", err)
       return
     }
     gc := GenomeCount{Count: count, Level: level}
@@ -1409,9 +1415,9 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Retrieve rank fields, Pa. \ref{pa:api}>>=
-  rank, err := neidb.Rank(id)
+  var rank string
+  rank, err = neidb.Rank(id)
   if err != nil {
-    writeServerError(w, "Error while executing neidb.Rank", err)
     return
   }
   tax.Rank = rank
@@ -1432,15 +1438,15 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get names, Pa. \ref{pa:api}>>=
-  sciName, err := neidb.Name(id)
+  var sciName string
+  sciName, err = neidb.Name(id)
   if err != nil {
-    writeServerError(w, "Error while executing neidb.Name", err)
     return
   }
   tax.Name = sciName
-  comName, err := neidb.CommonName(id)
+  var comName string
+  comName, err = neidb.CommonName(id)
   if err != nil {
-    writeServerError(w, "Error while executing neidb.CommonName", err)
     return
   }
   tax.CommonName = comName
@@ -1451,9 +1457,9 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
-  parent, err := neidb.Parent(id)
+  var parent int
+  parent, err = neidb.Parent(id)
   if err != nil {
-    writeServerError(w, "Error while executing neidb.Parent", err)
     return
   }
   tax.Parent = parent
@@ -1473,9 +1479,9 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
-  isLeaf, err := neidb.IsLeaf(id)
+  var isLeaf bool
+  isLeaf, err = neidb.IsLeaf(id)
   if err != nil {
-    writeServerError(w, "Error while executing neidb.isLeaf", err)
     return
   }
   tax.IsLeaf = isLeaf
@@ -1492,9 +1498,9 @@ type Node struct {
 
 #+begin_src go <<Get images, Pa. \ref{pa:api}>>=
   var neiImages []Image
-  images, err := neidb.Images(id)
+  var images []tdb.Image
+  images, err = neidb.Images(id)
   if err != nil {
-    writeServerError(w, "Error while executing neidb.Images", err)
     return
   }
   for _, image := range images {
@@ -1572,7 +1578,7 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
-    available := []string{"id", "rank", "gen_count", "gen_count_rec", "default", "all"}
+    available := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
     queryName := "field_composite"
     u := *r.URL
     for _, v := range available {
