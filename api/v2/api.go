@@ -5,17 +5,18 @@ import (
 
 	"net/http"
 
-	"log"
-
 	"github.com/evolbioinf/neighbors/tdb"
+	"log"
 
 	"strings"
 
 	"strconv"
 
+	"errors"
+	"runtime/debug"
+
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -28,8 +29,6 @@ import (
 
 	"io"
 
-	"errors"
-
 	"sort"
 
 	"mime/multipart"
@@ -39,7 +38,13 @@ import (
 
 	"bytes"
 
-	"os/exec"
+	"github.com/evolbioinf/neighbors/ranks"
+
+	"github.com/evolbioinf/neighbors/dree"
+
+	fintacPack "github.com/evolbioinf/neighbors/fintac"
+
+	neighborsPack "github.com/evolbioinf/neighbors/neighbors"
 )
 
 type Accession struct {
@@ -410,9 +415,8 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 		accession := accessions[i]
 		level, err := neidb.Level(accession)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn accessions - Error while accessing neidb.Level", err)
 			return
-
 		}
 		acc := Accession{Accession: accession, Level: level}
 		if !plain {
@@ -490,7 +494,14 @@ func extractPaging(r *http.Request) (offset, size int) {
 	return
 }
 
-func writeServerError(w http.ResponseWriter) {
+func writeServerError(w http.ResponseWriter, internalMsg string, err error) {
+	if err == nil {
+		err = errors.New("No error passed")
+	}
+	util.LogWarningDef(
+		util.WarningEntry{
+			Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
+		})
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte("Internal server error."))
 }
@@ -531,14 +542,12 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 
 	accession := r.PathValue("accession_id")
 	level, err := neidb.Level(accession)
+	if err != nil {
+		writeServerError(w, "fn accession - Error while accessing neidb.Level", err)
+		return
+	}
 	var data Accession
 	var links []Link
-	if err != nil {
-		writeServerError(w)
-		return
-
-	}
-
 	data = Accession{Accession: accession, Level: level}
 	if !plain {
 		links = append(links, selfNode.makeLink("self", r.URL.String()))
@@ -607,21 +616,23 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	var ids []int
 	if scientific {
 		ids, err = neidb.Taxids(name, size, offset)
+		if err != nil {
+			writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
+			return
+		}
 	} else {
 		ids, err = neidb.CommonTaxids(name, size, offset)
-	}
-	if err != nil {
-		writeServerError(w)
-		return
-
+		if err != nil {
+			writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
+			return
+		}
 	}
 	data := []Taxon{}
 	for _, id := range ids {
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "Error from getTaxonData", err)
 			return
-
 		}
 		data = append(data, tax)
 
@@ -785,9 +796,8 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 
 	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
 	if err != nil {
-		writeServerError(w)
+		writeServerError(w, "fn taxon - Error from getTaxonData", err)
 		return
-
 	}
 	var out ResponseBody[Taxon]
 	out.Data = tax
@@ -827,7 +837,7 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	callArgs := []string{"./ants", taxIdStr, dbPath}
 	out, errMsg := callPackage(callArgs, ants.Run)
 	if len(errMsg) > 0 {
-		writeServerError(w)
+		writeServerError(w, "fn ancestors - Error while calling package ants: "+string(errMsg), nil)
 		return
 	}
 
@@ -897,6 +907,7 @@ func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
 	os.Args = serverArgs
 
 	progMu.Unlock()
+
 	return
 }
 
@@ -937,9 +948,8 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 
 	children, err := neidb.Children(taxId)
 	if err != nil {
-		writeServerError(w)
+		writeServerError(w, "fn children - Error while executing neidbChildren", err)
 		return
-
 	}
 	if size == -1 {
 		size = len(children)
@@ -949,9 +959,8 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 		id := children[i]
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "Error from getTaxonData", err)
 			return
-
 		}
 		data = append(data, tax)
 
@@ -1015,9 +1024,8 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	parent, err := neidb.Parent(taxId)
 	tax, err := getTaxonData(parent, true, fieldComposite, neidb)
 	if err != nil {
-		writeServerError(w)
+		writeServerError(w, "fn parent - Error from getTaxonData", err)
 		return
-
 	}
 	var out ResponseBody[Taxon]
 	out.Data = tax
@@ -1054,7 +1062,7 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 
 	dbPath := args[0].(string)
 
-	ranksArgs := []string{}
+	ranksArgs := []string{"./ranks"}
 	levels := r.URL.Query().Get("assembly_levels")
 	if levels != "" {
 		ranksArgs = append(ranksArgs, "-L", levels)
@@ -1102,11 +1110,10 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 	}
 
 	ranksArgs = append(ranksArgs, taxIdStr, dbPath)
-	out, err := exec.Command("./ranks", ranksArgs...).Output()
-	if err != nil {
-		writeServerError(w)
+	out, errMsg := callPackage(ranksArgs, ranks.Run)
+	if len(errMsg) > 0 {
+		writeServerError(w, "Error while calling package ranks: "+string(errMsg), nil)
 		return
-
 	}
 
 	writePlainOutput(w, out)
@@ -1132,9 +1139,8 @@ func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFile
 			var rf multipart.File
 			rf, err = h.Open()
 			if err != nil {
-				writeServerError(w)
+				writeServerError(w, "Error while opening multipart file", err)
 				return
-
 			}
 			b := make([]byte, h.Size)
 			rf.Read(b)
@@ -1145,9 +1151,8 @@ func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFile
 			var tf *os.File
 			tf, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				writeServerError(w)
+				writeServerError(w, "Error while opening temporary file", err)
 				return
-
 			}
 
 			buffer := bytes.NewBuffer(b)
@@ -1228,9 +1233,8 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 
 		taxa, err := neidb.Subtree(taxId)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn subtree - Error while executing neidb.Subtree", err)
 			return
-
 		}
 
 		if size == -1 {
@@ -1242,9 +1246,8 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 			id := taxa[i]
 			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 			if err != nil {
-				writeServerError(w)
+				writeServerError(w, "Error from getTaxonData", err)
 				return
-
 			}
 			data = append(data, tax)
 
@@ -1274,7 +1277,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		}
 
 	} else if ct.EqualsMIME(plainCt) || ct.EqualsMIME(graphvizCt) {
-		dreeArgs := []string{}
+		dreeArgs := []string{"./dree"}
 		levels := r.URL.Query().Get("assembly_levels")
 		if levels != "" {
 			dreeArgs = append(dreeArgs, "-L", levels)
@@ -1318,9 +1321,10 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 
 		dbPath := args[1].(string)
 		dreeArgs = append(dreeArgs, taxIdStr, dbPath)
-		out, err := exec.Command("./dree", dreeArgs...).Output()
-		if err != nil {
-			log.Fatal("apiv2: Error executing dree: ", err)
+		out, errMsg := callPackage(dreeArgs, dree.Run)
+		if len(errMsg) > 0 {
+			writeServerError(w, "Error while calling package dree: "+string(errMsg), nil)
+			return
 		}
 
 		if ct.EqualsMIME(plainCt) {
@@ -1406,9 +1410,8 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		taxIds = taxIds[1:]
 		accs, err := neidb.Accessions(taxId)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", err)
 			return
-
 		}
 		if len(accs) > 0 {
 			if offset > 0 {
@@ -1426,9 +1429,8 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 				for _, acc := range accs {
 					level, err := neidb.Level(acc)
 					if err != nil {
-						writeServerError(w)
+						writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", err)
 						return
-
 					}
 					accession := Accession{Accession: acc, Level: level}
 					if !plain {
@@ -1447,9 +1449,8 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		}
 		children, err := neidb.Children(taxId)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", err)
 			return
-
 		}
 		for _, child := range children {
 			taxIds = append(taxIds, child)
@@ -1494,19 +1495,21 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 		return
 	}
 
-	fintacArgs := []string{}
+	fintacArgs := []string{"./fintac"}
 	aStr := r.URL.Query().Get("all_splits")
-	a, err := strconv.ParseBool(aStr)
-	if err != nil {
-		writeBadRequestResp(w, "all_splits argument is not a bool.")
-		return
+	if aStr != "" {
+		a, err := strconv.ParseBool(aStr)
+		if err != nil {
+			writeBadRequestResp(w, "all_splits argument is not a bool.")
+			return
+		}
+		if a {
+			fintacArgs = append(fintacArgs, "-a")
+		}
 	}
 	n := r.URL.Query().Get("neighbor")
 	t := r.URL.Query().Get("target")
 	u := r.URL.Query().Get("unknown")
-	if a {
-		fintacArgs = append(fintacArgs, "-a")
-	}
 	if n != "" {
 		fintacArgs = append(fintacArgs, "-n", n)
 	}
@@ -1518,7 +1521,7 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	}
 
 	dbPath := args[0].(string)
-	fintacArgs = append(fintacArgs, "-N", dbPath)
+	fintacArgs = append(fintacArgs, "-H", dbPath)
 
 	paths, err := filesFromFormData(w, r, 1, -1)
 	if err != nil {
@@ -1529,11 +1532,10 @@ func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 		fintacArgs = append(fintacArgs, p)
 	}
 
-	out, err := exec.Command("./fintac", fintacArgs...).Output()
-	if err != nil {
-		writeServerError(w)
+	out, errMsg := callPackage(fintacArgs, fintacPack.Run)
+	if len(errMsg) > 0 {
+		writeServerError(w, "Error while calling package fintac: "+string(errMsg), nil)
 		return
-
 	}
 
 	writePlainOutput(w, out)
@@ -1581,16 +1583,14 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	if len(taxIds) > 0 {
 		id, err := neidb.MRCA(taxIds)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn mrca - Error while executing neidb.MRCA", err)
 			return
-
 		}
 
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn mrca - Error from getTaxonData", err)
 			return
-
 		}
 		out.Data = tax
 
@@ -1624,7 +1624,7 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		return
 	}
 
-	neighborsArgs := []string{}
+	neighborsArgs := []string{"./neighbors"}
 	levels := r.URL.Query().Get("assembly_levels")
 
 	if levels != "" {
@@ -1702,11 +1702,10 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		}
 	}
 
-	out, err := exec.Command("./neighbors", neighborsArgs...).Output()
-	if err != nil {
-		writeServerError(w)
+	out, errMsg := callPackage(neighborsArgs, neighborsPack.Run)
+	if len(errMsg) > 0 {
+		writeServerError(w, "fn neighbors - Error while calling package neighbors: "+string(errMsg), nil)
 		return
-
 	}
 
 	writePlainOutput(w, out)
@@ -1754,9 +1753,8 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		parent, err := neidb.Parent(start)
 
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn path - Error while calling neidb.Parent", err)
 			return
-
 		}
 		if start == parent {
 			data = data[:0]
@@ -1766,9 +1764,8 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		start = parent
 		tax, err := getTaxonData(start, plain, fieldComposite, neidb)
 		if err != nil {
-			writeServerError(w)
+			writeServerError(w, "fn path - Error from getTaxonData", err)
 			return
-
 		}
 		data = append(data, tax)
 	}

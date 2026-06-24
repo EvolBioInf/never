@@ -16,7 +16,6 @@
   package apiv2
   import (
     //<<Imports, Pa. \ref{pa:api}>>
-    "os/exec"
   )
   //<<Types, Pa. \ref{pa:api}>>
   //<<Methods, Pa. \ref{pa:api}>>
@@ -976,7 +975,8 @@ type Node struct {
     accession := accessions[i]
     level, err := neidb.Level(accession)
     if err != nil {
-      //<<Write server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "fn accessions - Error while accessing neidb.Level", err)
+      return
     }
     acc := Accession{Accession: accession, Level: level}
     if !plain {
@@ -989,23 +989,32 @@ type Node struct {
 #+begin_export latex
   A server error is a response with a 5XX response code.
   We send it whenever there is an unexpected error on the
-  server side.
+  server side. The user does not gain much info out of this,
+  but we might, if we log it. So we should send an entry
+  to the warning log.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func writeServerError(w http.ResponseWriter) {
+  func writeServerError(w http.ResponseWriter, internalMsg string, err error) {
+    if err == nil {
+      err = errors.New("No error passed")
+    }
+   	util.LogWarningDef(
+		  util.WarningEntry{
+			  Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
+		})
   	w.WriteHeader(http.StatusInternalServerError)
   	w.Write([]byte("Internal server error."))
   }
 #+end_src
 
 #+begin_export latex
-  We call this function if there is an error and return right away.
+  We need to import the \ty{errors} and \ty{runtime/debug} packages.
 #+end_export
 
-#+begin_src go <<Write server error, Pa. \ref{pa:api}>>=
-  writeServerError(w)
-  return
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "errors"
+	"runtime/debug"
 #+end_src
 
 #+begin_export latex
@@ -1178,12 +1187,12 @@ type Node struct {
 #+begin_src go <<Look up level, Pa. \ref{pa:api}>>=
   accession := r.PathValue("accession_id")
   level, err := neidb.Level(accession)
+  if err != nil {
+    writeServerError(w, "fn accession - Error while accessing neidb.Level", err)
+    return
+  }
   var data Accession
   var links []Link
-  if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
-  }
-
   data = Accession{Accession: accession, Level: level}
   if !plain {
     //<<Add links \ty{accession}, Pa. \ref{pa:api}>>
@@ -1295,11 +1304,16 @@ type Node struct {
   var ids []int
   if scientific {
     ids, err = neidb.Taxids(name, size, offset)
+    if err != nil {
+      writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
+      return
+    }
   } else {
     ids, err = neidb.CommonTaxids(name, size, offset)
-  }
-  if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    if err != nil {
+      writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
+      return
+    }
   }
   data := []Taxon{}
   for _, id := range ids {
@@ -1488,7 +1502,8 @@ type Node struct {
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(id, plain, fieldComposite, neidb)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error from getTaxonData", err)
+    return
   }
   data = append(data, tax)
 #+end_src
@@ -1610,7 +1625,8 @@ type Node struct {
   //<<Parse taxon id, Pa. \ref{pa:api}>>
   tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "fn taxon - Error from getTaxonData", err)
+    return
   }
   var out ResponseBody[Taxon]
   out.Data = tax
@@ -1737,7 +1753,7 @@ type Node struct {
   callArgs := []string{"./ants", taxIdStr, dbPath}
   out, errMsg := callPackage(callArgs, ants.Run)
   if len(errMsg) > 0 {
-    writeServerError(w)
+    writeServerError(w, "fn ancestors - Error while calling package ants: " + string(errMsg), nil)
     return
   }
 #+end_src
@@ -1988,7 +2004,8 @@ type Node struct {
 #+begin_src go <<Execute children query, Pa. \ref{pa:api}>>=
     children, err := neidb.Children(taxId)
 	  if err != nil {
-      //<<Write server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "fn children - Error while executing neidbChildren", err)
+      return
     }
     if size == -1 {
       size = len(children)
@@ -2070,7 +2087,8 @@ type Node struct {
   parent, err := neidb.Parent(taxId)
   tax, err := getTaxonData(parent, true, fieldComposite, neidb)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "fn parent - Error from getTaxonData", err)
+    return
   }
   var out ResponseBody[Taxon]
   out.Data = tax
@@ -2131,7 +2149,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Retrieve query parameters \ty{rankDistribution}, Pa. \ref{pa:api}>>=
-	ranksArgs := []string{}
+	ranksArgs := []string{"./ranks"}
 	levels := r.URL.Query().Get("assembly_levels")
   if levels != "" {
 		ranksArgs = append(ranksArgs, "-L", levels)
@@ -2230,14 +2248,6 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We need to import the \ty{errors} package.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"errors"
-#+end_src
-
-#+begin_export latex
   Now we may just call the validation function to check
   the incoming form. The validation function already
   writes an error response, so in case of an error
@@ -2307,7 +2317,8 @@ type Node struct {
   var rf multipart.File
 	rf, err = h.Open()
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while opening multipart file", err)
+    return
   }
 	b := make([]byte, h.Size)
 	rf.Read(b)
@@ -2344,7 +2355,8 @@ type Node struct {
 	var tf * os.File
   tf, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "Error while opening temporary file", err)
+    return
   }
 #+end_src
 
@@ -2457,17 +2469,26 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We already know how to call a program. But the
+  We already know how to call one of the neigbors programs. But the
   call arguments are still missing the taxon id
   and the database path.
 #+end_export
 
 #+begin_src go <<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>=
 	ranksArgs = append(ranksArgs, taxIdStr, dbPath)
-	out, err := exec.Command("./ranks", ranksArgs...).Output()
-  if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+  out, errMsg := callPackage(ranksArgs, ranks.Run)
+  if len(errMsg) > 0 {
+    writeServerError(w, "Error while calling package ranks: " + string(errMsg), nil)
+    return
   }
+#+end_src
+
+#+begin_export latex
+  Now we need to import \ty{ranks}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"github.com/evolbioinf/neighbors/ranks"
 #+end_src
 
 
@@ -2548,7 +2569,8 @@ type Node struct {
 #+begin_src go <<Execute subtree query, Pa. \ref{pa:api}>>=
   taxa, err := neidb.Subtree(taxId)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "fn subtree - Error while executing neidb.Subtree", err)
+    return
   }
 
   if size == -1 {
@@ -2571,7 +2593,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Handle arguments \ty{dree}, Pa. \ref{pa:api}>>=
-  dreeArgs := []string{}
+  dreeArgs := []string{"./dree"}
 	levels := r.URL.Query().Get("assembly_levels")
   if levels != "" {
 		dreeArgs = append(dreeArgs, "-L", levels)
@@ -2621,8 +2643,6 @@ type Node struct {
   }
 #+end_src
 
-
-
 #+begin_export latex
   We run \ty{dree} with the call arguments.
   The call arguments are still missing the taxon id and the path
@@ -2633,10 +2653,19 @@ type Node struct {
 #+begin_src go <<Call \ty{dree}, Pa. \ref{pa:api}>>=
   dbPath := args[1].(string)
   dreeArgs = append(dreeArgs, taxIdStr, dbPath)
-	out, err := exec.Command("./dree", dreeArgs...).Output()
-	if err != nil {
-		log.Fatal("apiv2: Error executing dree: ", err)
-	}
+  out, errMsg := callPackage(dreeArgs, dree.Run)
+  if len(errMsg) > 0 {
+    writeServerError(w, "Error while calling package dree: " + string(errMsg), nil)
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{dree}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"github.com/evolbioinf/neighbors/dree"
 #+end_src
 
 #+begin_export latex
@@ -2757,7 +2786,8 @@ type Node struct {
     taxIds = taxIds[1:]
     accs, err := neidb.Accessions(taxId)
     if err != nil {
-      //<<Write server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", err)
+      return
     }
     if len(accs) > 0 {
       //<<Store accessions, Pa. \ref{pa:api}>>
@@ -2797,7 +2827,8 @@ type Node struct {
     for _, acc := range accs {
       level, err := neidb.Level(acc)
       if err != nil {
-        //<<Write server error, Pa. \ref{pa:api}>>
+        writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", err)
+        return
       }
       accession := Accession{Accession: acc, Level: level}
       //<<Add accession link, Pa. \ref{pa:api}>>
@@ -2846,7 +2877,8 @@ type Node struct {
 #+begin_src go <<Get children, Pa. \ref{pa:api}>>=
   children, err := neidb.Children(taxId)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", err)
+    return
   }
   for _, child := range children {
     taxIds = append(taxIds, child)
@@ -2860,7 +2892,7 @@ type Node struct {
   The endpoint \ty{fintac} executes a system call. We use this endpoint
   to call the \ty{fintac} program via this api. In order to do so we
   need to recreate the io of the program excluding the obvious \ty{-h},
-  \ty{-v} and \ty{-N}, where \ty{-h} is the path to a database. \ty{fintac}
+  \ty{-v} and \ty{-H}, where \ty{-h} is the path to a database. \ty{fintac}
   allows to pass files as arguments, this creates the need for some new handling.
 
   This is \ty{fintac}'s io:
@@ -2925,19 +2957,21 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Retrieve query parameters \ty{fintac}, Pa. \ref{pa:api}>>=
-	fintacArgs := []string{}
+	fintacArgs := []string{"./fintac"}
 	aStr := r.URL.Query().Get("all_splits")
-	a, err := strconv.ParseBool(aStr)
-  if err != nil {
-	  writeBadRequestResp(w, "all_splits argument is not a bool.")
-    return
+  if aStr != "" {
+  	a, err := strconv.ParseBool(aStr)
+    if err != nil {
+	    writeBadRequestResp(w, "all_splits argument is not a bool.")
+      return
+    }
+    if a {
+	  	fintacArgs = append(fintacArgs, "-a")
+	  }
   }
 	n := r.URL.Query().Get("neighbor")
 	t := r.URL.Query().Get("target")
 	u := r.URL.Query().Get("unknown")
-	if a {
-		fintacArgs = append(fintacArgs, "-a")
-	}
 	if n != "" {
 		fintacArgs = append(fintacArgs, "-n", n)
 	}
@@ -2958,7 +2992,7 @@ type Node struct {
 
 #+begin_src go <<Add db parameter \ty{fintac}, Pa. \ref{pa:api}>>=
   dbPath := args[0].(string)
-	fintacArgs = append(fintacArgs, "-N", dbPath)
+	fintacArgs = append(fintacArgs, "-H", dbPath)
 #+end_src
 
 #+begin_export latex
@@ -2980,23 +3014,32 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-
+  TODO
 #+end_export
 
 #+begin_src go <<Validate user input \ty{fintac}, Pa. \ref{pa:api}>>=
-
 #+end_src
 
 #+begin_export latex
-  We already know how to call a program.
+  We already know how to call a \ty{neigbors} program.
 #+end_export
 
 #+begin_src go <<Call \ty{fintac}, Pa. \ref{pa:api}>>=
-	out, err := exec.Command("./fintac", fintacArgs...).Output()
-  if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+  out, errMsg := callPackage(fintacArgs, fintacPack.Run)
+  if len(errMsg) > 0 {
+    writeServerError(w, "Error while calling package fintac: " + string(errMsg), nil)
+    return
   }
 #+end_src
+
+#+begin_export latex
+  We need to import \ty{fintac}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	fintacPack "github.com/evolbioinf/neighbors/fintac"
+#+end_src
+
 
 
 #+begin_export latex
@@ -3065,7 +3108,8 @@ type Node struct {
   if len(taxIds) > 0 {
 	  id, err := neidb.MRCA(taxIds)
     if err != nil {
-      //<<Write server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "fn mrca - Error while executing neidb.MRCA", err)
+      return
     }
 
   //<<Get data of taxon, Pa. \ref{pa:api}>>
@@ -3081,7 +3125,8 @@ type Node struct {
 #+begin_src go <<Get data of taxon, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(id, plain, fieldComposite, neidb)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "fn mrca - Error from getTaxonData", err)
+    return
   }
   out.Data = tax
 #+end_src
@@ -3140,7 +3185,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Retrieve query parameters \ty{neighbors}, Pa. \ref{pa:api}>>=
-  neighborsArgs := []string{}
+  neighborsArgs := []string{"./neighbors"}
   //<<Get filter parameters, Pa. \ref{pa:api}>>
   //<<Get output parameters, Pa. \ref{pa:api}>>
   //<<Get target ids, Pa. \ref{pa:api}>>
@@ -3261,16 +3306,24 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  By now we know how to call a program.
+  By now we know how to call a \ty{neigbors} program.
 #+end_export
 
 #+begin_src go <<Call \ty{neighbors}, Pa. \ref{pa:api}>>=
-	out, err := exec.Command("./neighbors", neighborsArgs...).Output()
-  if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+  out, errMsg := callPackage(neighborsArgs, neighborsPack.Run)
+  if len(errMsg) > 0 {
+    writeServerError(w, "fn neighbors - Error while calling package neighbors: " + string(errMsg), nil)
+    return
   }
 #+end_src
 
+#+begin_export latex
+  We need to import \ty{neighbors}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	neighborsPack "github.com/evolbioinf/neighbors/neighbors"
+#+end_src
 
 
 
@@ -3343,7 +3396,8 @@ type Node struct {
 	  parent, err := neidb.Parent(start)
 
     if err != nil {
-      //<<Write server error, Pa. \ref{pa:api}>>
+      writeServerError(w, "fn path - Error while calling neidb.Parent", err)
+      return
     }
 	  //<<Has the path reached the root?, Pa. \ref{pa:api}>>
 	  start = parent
@@ -3371,7 +3425,8 @@ type Node struct {
 #+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(start, plain, fieldComposite, neidb)
   if err != nil {
-    //<<Write server error, Pa. \ref{pa:api}>>
+    writeServerError(w, "fn path - Error from getTaxonData", err)
+    return
   }
   data = append(data, tax)
 #+end_src
