@@ -665,17 +665,69 @@ type Node struct {
 
 #+begin_export latex
   Having set all the links, we may use the graph for it's first time.
-  Every \ty{GET} endpoint should provide a response to the \ty{OPTION}
-  method. We can easily do this, because all the data making up an \ty{OPTION}
+  Every endpoint should provide a response to the \ty{OPTIONS}
+  method. We can easily do this, because all the data making up an \ty{OPTIONS}
   response is included in the link nodes. So we take the root as an entry, get
-  all services, check whether they are \ty{GET} and then add some meta data.
+  all services and then add some meta data.
 #+end_export
 
 #+begin_src go <<Add \ty{OPTIONS} routes \ty{path}, Pa. \ref{pa:api}>>=
   services := root.Links["service"]
-  for _, service := range services {
-    if service.Action == "GET" {
+  grouped := make(map[string][]Node)
+  //<<Combine same endpoints, Pa. \ref{pa:api}>>
+  for path := range grouped {
+    makeOptionsRoute(grouped[path])
+  }
+#+end_src
 
+#+begin_export latex
+  When responding to an \ty{OPTIONS} request, we declare all the allowed 
+  methods for an endpoint. Some endpoints may provide access via multiple http methods.
+  This means we need to group all the nodes on their base path, to find all the provided
+  methods.
+#+end_export
+
+#+begin_src go <<Combine same endpoints, Pa. \ref{pa:api}>>=
+  for _, service := range services {
+    grouped[service.BasePath] = append(grouped[service.BasePath], service)
+  }
+#+end_src
+
+#+begin_export latex
+  \ty{makeOptionsRoute} takes a slice of nodes with a common basePath. It gets all
+  the union of the nodes http methods. Responding with a 204 (No Content) and setting
+  an \ty{Allow} header, where it stores the methods it just retrieved.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func makeOptionsRoute(nodes []Node) {
+    http.HandleFunc("OPTIONS "+nodes[0].BasePath, func(w http.ResponseWriter, r *http.Request) {
+      methods := []string{"OPTIONS"}
+      //<<Get methods, Pa. \ref{pa:api}>>
+		  w.Header().Set("Allow", strings.Join(methods, ", "))
+		  w.WriteHeader(http.StatusNoContent)
+    })
+  }
+#+end_src
+
+#+begin_export latex
+  We also need to import \ty{strings} to use \ty{Join}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "strings"
+#+end_src
+
+#+begin_export latex
+  Iterating over the provided nodes lets us retrieve their methods.
+  If a node has a \ty{GET} method we also add an extra \ty{HEAD}.
+#+end_export
+
+#+begin_src go <<Get methods, Pa. \ref{pa:api}>>=
+  for _, node := range nodes {
+    methods = append(methods, node.Action)
+    if node.Action == "GET" {
+      methods = append(methods, "HEAD")
     }
   }
 #+end_src
@@ -786,6 +838,7 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func writeJsonOutput(w http.ResponseWriter, out any) {
 	  w.Header().Set("Content-Type", jsonCt.String())
+    w.WriteHeader(http.StatusOK)
 	  buf := &bytes.Buffer{}
 	  encoder := json.NewEncoder(buf)
 	  encoder.SetEscapeHTML(false)
@@ -917,14 +970,6 @@ type Node struct {
 #+begin_src go <<Extract accessions, Pa. \ref{pa:api}>>=
   str := r.URL.Query().Get("accession_ids")
   accessions := strings.Split(str, ",")
-#+end_src
-
-#+begin_export latex
-  We also need to import \ty{strings} to use \ty{Split}
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-  "strings"
 #+end_src
 
 #+begin_export latex
@@ -1902,7 +1947,8 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func writePlainOutput(w http.ResponseWriter, out []byte) {
     w.Header().Set("Content-Type", plainCt.String())
-    fmt.Fprintf(w, "%s", out)
+	  w.WriteHeader(http.StatusOK)
+	  w.Write(out)
   }
 #+end_src
 
@@ -2040,11 +2086,14 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func checkParamInt(w http.ResponseWriter, param string) bool {
-    _, err := strconv.Atoi(param)
-    if err != nil {
-      writeBadRequestResp(w, "Malformed integer.")
+    if param != "" {
+      _, err := strconv.Atoi(param)
+      if err != nil {
+        writeBadRequestResp(w, "Malformed integer.")
+      }
+      return err == nil
     }
-    return err != nil
+    return true
   }
 #+end_src
 
@@ -2815,8 +2864,9 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
-    w.Header().Set("Content-Type", graphvizCt.String())
-    fmt.Fprintf(w, "%s", out)
+	  w.Header().Set("Content-Type", graphvizCt.String())
+	  w.WriteHeader(http.StatusOK)
+	  w.Write(out)
   }
 #+end_src
 

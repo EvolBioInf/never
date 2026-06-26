@@ -346,10 +346,35 @@ func RegisterRoutes(pref, dbPath string) {
 	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
 	root = rootDocL
 
+	services := root.Links["service"]
+	grouped := make(map[string][]Node)
+	for _, service := range services {
+		grouped[service.BasePath] = append(grouped[service.BasePath], service)
+	}
+
+	for path := range grouped {
+		makeOptionsRoute(grouped[path])
+	}
+
 }
 func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), args ...any) {
 	http.HandleFunc(node.Action+" "+node.BasePath, func(w http.ResponseWriter, r *http.Request) {
 		fn(w, r, node, args...)
+	})
+}
+
+func makeOptionsRoute(nodes []Node) {
+	http.HandleFunc("OPTIONS "+nodes[0].BasePath, func(w http.ResponseWriter, r *http.Request) {
+		methods := []string{"OPTIONS"}
+		for _, node := range nodes {
+			methods = append(methods, node.Action)
+			if node.Action == "GET" {
+				methods = append(methods, "HEAD")
+			}
+		}
+
+		w.Header().Set("Allow", strings.Join(methods, ", "))
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
@@ -373,6 +398,7 @@ func rootDocument(w http.ResponseWriter, r *http.Request, selfNode *Node, args .
 
 func writeJsonOutput(w http.ResponseWriter, out any) {
 	w.Header().Set("Content-Type", jsonCt.String())
+	w.WriteHeader(http.StatusOK)
 	buf := &bytes.Buffer{}
 	encoder := json.NewEncoder(buf)
 	encoder.SetEscapeHTML(false)
@@ -876,7 +902,8 @@ func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
 
 func writePlainOutput(w http.ResponseWriter, out []byte) {
 	w.Header().Set("Content-Type", plainCt.String())
-	fmt.Fprintf(w, "%s", out)
+	w.WriteHeader(http.StatusOK)
+	w.Write(out)
 }
 
 func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
@@ -958,11 +985,14 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 }
 
 func checkParamInt(w http.ResponseWriter, param string) bool {
-	_, err := strconv.Atoi(param)
-	if err != nil {
-		writeBadRequestResp(w, "Malformed integer.")
+	if param != "" {
+		_, err := strconv.Atoi(param)
+		if err != nil {
+			writeBadRequestResp(w, "Malformed integer.")
+		}
+		return err == nil
 	}
-	return err != nil
+	return true
 }
 
 func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
@@ -1387,7 +1417,8 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 
 func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
 	w.Header().Set("Content-Type", graphvizCt.String())
-	fmt.Fprintf(w, "%s", out)
+	w.WriteHeader(http.StatusOK)
+	w.Write(out)
 }
 
 func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
