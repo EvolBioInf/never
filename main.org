@@ -116,7 +116,7 @@ import (
   dbFlag := flag.String("db", "neidb", "path to database from execution position")
   dFlag := flag.String("d", "updated.txt", "path to dateFile from execution position")
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
-  oFlag := flag.String("o", "", "host address")
+  oFlag := flag.String("o", "http://localhost", "host address")
   pFlag := flag.Int("p", 8080, "port")
 
   vFlag := flag.Bool("v", false, "print progam info")
@@ -141,11 +141,12 @@ import (
 
 #+begin_export latex
   The packages we want to register each provide their own register function called \ty{registerRoutes}.
-  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each others existance.
-  So this task falls to the managing part of the software, which is this server.
-  Additionally to the prefix \ty{apiv2} needs to know where the database is located. \ty{neverv1} receives these arguments as well, but it gets
-  two prefixes as the package is not divided into api and docs. It also needs to get an extra filepath for the \ty{dateFile}.
-  \ty{docsv2} needs to know whether it is being hosted locally and on what port, so we need to provide data for that.
+  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each 
+  others existance. So this task falls to the managing part of the software, which is this server.
+  Additionally to the prefix \ty{apiv2} needs to know the host and where the database is located. \ty{neverv1} receives 
+  these arguments as well, but it gets two prefixes as the package is not divided into api and docs. It also needs to get
+  an extra filepath for the \ty{dateFile}. \ty{docsv2} needs to know whether it is being hosted locally and on what 
+  port, so we need to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -155,20 +156,20 @@ import (
   docsV2Pref := docsPref + apiPref + "/v2"
 
 	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbPath, dateFilePath)
-	apiv2.RegisterRoutes(apiPref + "/v2", dbPath)
-	docsv2.RegisterRoutes(docsV2Pref, host == "", port)
+	apiv2.RegisterRoutes(apiPref + "/v2", dbPath, host+":"+strconv.Itoa(port))
+	docsv2.RegisterRoutes(docsV2Pref, host == "localhost", port)
 #+end_src
 
 #+begin_export latex
-  We also need to import the registerd packages, as well as \ty{net/http}
+  We also need to import the registerd packages, as well as \ty{net/http} and \ty{strconv}
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
   neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
-
 	"net/http"
+  "strconv"
 #+end_src
 
 #+begin_export latex
@@ -481,11 +482,10 @@ import (
   handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
 
 	var err error
-	if host == "" {
-		fmt.Printf("Starting server at http://localhost:%d ...\n", port)
+	fmt.Printf("Starting server at %s:%d ...\n", host, port)
+	if host == "http://localhost" {
 		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
 	} else {
-		fmt.Printf("Starting server at %s:%d ...\n", host, port)
 		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
 	}
 

@@ -11,8 +11,8 @@ import (
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
-
 	"net/http"
+	"strconv"
 
 	"time"
 
@@ -58,8 +58,8 @@ func main() {
 	docsV2Pref := docsPref + apiPref + "/v2"
 
 	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbPath, dateFilePath)
-	apiv2.RegisterRoutes(apiPref+"/v2", dbPath)
-	docsv2.RegisterRoutes(docsV2Pref, host == "", port)
+	apiv2.RegisterRoutes(apiPref+"/v2", dbPath, host+":"+strconv.Itoa(port))
+	docsv2.RegisterRoutes(docsV2Pref, host == "localhost", port)
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
@@ -139,11 +139,10 @@ func main() {
 	handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
 
 	var err error
-	if host == "" {
-		fmt.Printf("Starting server at http://localhost:%d ...\n", port)
+	fmt.Printf("Starting server at %s:%d ...\n", host, port)
+	if host == "http://localhost" {
 		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
 	} else {
-		fmt.Printf("Starting server at %s:%d ...\n", host, port)
 		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
 	}
 
@@ -169,7 +168,7 @@ func ioHandling() (string, string, string, string, string, int) {
 	dbFlag := flag.String("db", "neidb", "path to database from execution position")
 	dFlag := flag.String("d", "updated.txt", "path to dateFile from execution position")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
-	oFlag := flag.String("o", "", "host address")
+	oFlag := flag.String("o", "http://localhost", "host address")
 	pFlag := flag.Int("p", 8080, "port")
 
 	vFlag := flag.Bool("v", false, "print progam info")

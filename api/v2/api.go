@@ -117,7 +117,7 @@ func (node *Node) makeLink(rel, href string) Link {
 	}
 	return Link{
 		Rel:    rel,
-		Href:   node.BasePath,
+		Href:   serverAddress + node.BasePath,
 		Action: node.Action,
 		Types:  types,
 	}
@@ -137,6 +137,7 @@ func (node *Node) getService(name string) *Node {
 var root Node
 
 var prefix string
+var serverAddress string
 
 var progMu sync.Mutex
 
@@ -146,7 +147,7 @@ var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: 
 
 var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 
-func RegisterRoutes(pref, dbPath string) {
+func RegisterRoutes(pref, dbPath, serverAdr string) {
 	var neidb *tdb.TaxonomyDB
 	neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
 	if err != nil {
@@ -154,6 +155,7 @@ func RegisterRoutes(pref, dbPath string) {
 	}
 
 	prefix = pref
+	serverAddress = serverAdr
 
 	get := "GET"
 	post := "POST"
@@ -235,7 +237,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Name:     "rankDistribution",
 		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
 		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
+		Types:    []contenttype.MediaType{graphvizCt},
 	}
 	makeRoute(&rankDistL, rankDistribution, dbPath) // new - calls ranks program
 
@@ -288,7 +290,7 @@ func RegisterRoutes(pref, dbPath string) {
 		Links:    make(map[string][]Node),
 		Name:     "neighbors",
 		BasePath: prefix + "/taxonomy/neighbors",
-		Action:   get,
+		Action:   post,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&neighborsL, neighbors, dbPath) // new - calls neighbors program
@@ -426,7 +428,7 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -566,7 +568,7 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -642,7 +644,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		strPlain := r.URL.Query().Get("plain_data")
 		plain, err := strconv.ParseBool(strPlain)
 		if strPlain != "" && err != nil {
-			writeBadRequestResp(w, "plain is not a bool.")
+			writeBadRequestResp(w, "plain_data is not a bool.")
 			return
 		}
 
@@ -919,7 +921,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -973,6 +975,11 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 
 	dbPath := args[0].(string)
 
+	valid := checkParamInt(w, taxIdStr)
+	if !valid {
+		return
+	}
+
 	callArgs := []string{"./ants", taxIdStr, dbPath}
 	out, errMsg := callPackage(callArgs, ants.Run)
 	if len(errMsg) > 0 {
@@ -1008,7 +1015,7 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -1084,7 +1091,7 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -1154,10 +1161,10 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 		ranksArgs = append(ranksArgs, "-l")
 	}
 
-	tabStr := r.URL.Query().Get("tabular_output")
+	tabStr := r.URL.Query().Get("tab_output")
 	t, err := strconv.ParseBool(tabStr)
 	if tabStr != "" && err != nil {
-		writeBadRequestResp(w, "tabular_output argument is not a bool.")
+		writeBadRequestResp(w, "tab_output argument is not a bool.")
 		return
 	} else if t {
 		ranksArgs = append(ranksArgs, "-t")
@@ -1193,7 +1200,7 @@ func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, ar
 		return
 	}
 
-	writePlainOutput(w, out)
+	writeGraphvizOutput(w, out)
 
 }
 
@@ -1277,6 +1284,12 @@ func checkParamLevels(w http.ResponseWriter, levels string) bool {
 	return true
 }
 
+func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
+	w.Header().Set("Content-Type", graphvizCt.String())
+	w.WriteHeader(http.StatusOK)
+	w.Write(out)
+}
+
 func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
@@ -1298,7 +1311,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		strPlain := r.URL.Query().Get("plain_data")
 		plain, err := strconv.ParseBool(strPlain)
 		if strPlain != "" && err != nil {
-			writeBadRequestResp(w, "plain is not a bool.")
+			writeBadRequestResp(w, "plain_data is not a bool.")
 			return
 		}
 
@@ -1415,12 +1428,6 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 
 }
 
-func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
-	w.Header().Set("Content-Type", graphvizCt.String())
-	w.WriteHeader(http.StatusOK)
-	w.Write(out)
-}
-
 func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[*any]{}
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
@@ -1457,7 +1464,7 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -1633,7 +1640,7 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 
@@ -1701,6 +1708,11 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		return
 	}
 
+	valid := checkParams(w, r, "target_ids")
+	if !valid {
+		return
+	}
+
 	neighborsArgs := []string{"./neighbors"}
 	levels := r.URL.Query().Get("assembly_levels")
 	if levels != "" {
@@ -1716,10 +1728,10 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		neighborsArgs = append(neighborsArgs, "-o")
 	}
 
-	gsStr := r.URL.Query().Get("with_genomes_seq_only")
+	gsStr := r.URL.Query().Get("require_genomes")
 	gs, err := strconv.ParseBool(gsStr)
 	if gsStr != "" && err != nil {
-		writeBadRequestResp(w, "with_genomes_seq_only argument is not a bool.")
+		writeBadRequestResp(w, "require_genomes argument is not a bool.")
 		return
 	} else if gs {
 		neighborsArgs = append(neighborsArgs, "-g")
@@ -1734,10 +1746,10 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		neighborsArgs = append(neighborsArgs, "-T")
 	}
 
-	gtStr := r.URL.Query().Get("genomes_and_taxa")
+	gtStr := r.URL.Query().Get("individual_genomes")
 	gt, err := strconv.ParseBool(gtStr)
 	if gtStr != "" && err != nil {
-		writeBadRequestResp(w, "genomes_and_taxa argument is not a bool.")
+		writeBadRequestResp(w, "individual_genomes argument is not a bool.")
 		return
 	} else if gt {
 		neighborsArgs = append(neighborsArgs, "-l")
@@ -1767,7 +1779,7 @@ func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		}
 	}
 
-	valid := checkParamLevels(w, levels)
+	valid = checkParamLevels(w, levels)
 	if !valid {
 		return
 	}
@@ -1813,7 +1825,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
 		return
 	}
 

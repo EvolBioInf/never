@@ -63,6 +63,7 @@ func handleFileOpen(path string, entry Writable) (*os.File, *csv.Writer) {
 
 	if fi.Size() == 0 {
 		buffer.Write(entry.Keys())
+		buffer.Write([]string{"\n"})
 	}
 
 	return f, buffer

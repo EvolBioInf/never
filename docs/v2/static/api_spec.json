@@ -30,6 +30,146 @@
     }
   ],
   "paths": {
+    "/": {
+      "get": {
+        "summary": "Get services",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": {
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/{accession_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/ancestors",
+                          "action": "GET",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/children",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/parent",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/rank_distribution",
+                          "action": "POST",
+                          "types": ["text/vnd.graphviz;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/subtree",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/accessions",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/fintac",
+                          "action": "POST",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/neighbors",
+                          "action": "POST",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get_services",
+        "parameters": [],
+        "description": "Get a list of the api's services",
+        "tags": ["Accession", "Taxon"]
+      }
+    },
     "/accessions": {
       "get": {
         "summary": "Get accession levels",
@@ -40,13 +180,24 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Accession"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Accession"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
                   }
                 },
                 "examples": {
-                  "Example": {
+                  "Plain": {
                     "value": [
                       {
                         "accession": "GCF_000001405.40",
@@ -57,16 +208,84 @@
                         "level": "chromosome"
                       }
                     ]
+                  },
+                  "Links": {
+                    "value": {
+                      "data": [
+                        {
+                          "accession": "GCF_000001405.40",
+                          "level": "chromosome",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/{accession_id}",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "accession": "GCA_000002115.2",
+                          "level": "chromosome",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/{accession_id}",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        }
+                      ],
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions?accession_ids=GCF_000001405.40,GCA_000002115.2",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/{accession_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "entities",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/{accession_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Missing required parameter."
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Missing required parameter."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-accessions",
+        "operationId": "get_accessions",
         "parameters": [
           {
             "schema": {
@@ -88,102 +307,121 @@
           },
           {
             "$ref": "#/components/parameters/page_size"
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
           }
         ],
         "description": "Get accessions and their levels filtered by accession IDs"
       }
     },
-    "/assembly-levels": {
+    "/accessions/{accession_id}": {
       "get": {
-        "summary": "Get all assembly levels",
+        "summary": "Get accession's levels",
+        "tags": ["Accession"],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": ["complete", "chromosome", "scaffold", "contig"]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-general-assembly-levels",
-        "description": "Get all possible assembly levels",
-        "tags": ["Accession"]
-      },
-      "parameters": []
-    },
-    "/ranks": {
-      "get": {
-        "summary": "Get ranks of taxa",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Rank"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "tax_id": 9606,
-                        "rank": "species"
-                      },
-                      {
-                        "tax_id": 9605,
-                        "rank": "genus"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Accession"
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
                       }
-                    ]
+                    }
+                  }
+                },
+                "examples": {
+                  "Plain": {
+                    "value": {
+                      "accession": "GCF_000001405.40",
+                      "level": "chromosome"
+                    }
+                  },
+                  "Links": {
+                    "value": {
+                      "data": {
+                        "accession": "GCF_000001405.40",
+                        "level": "chromosome"
+                      },
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/GCF_000001405.40",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "part-of",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Missing required parameter."
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Missing required parameter."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-ranks",
+        "operationId": "get_accession",
         "parameters": [
           {
             "schema": {
-              "type": "array",
-              "example": [9606, 9605],
-              "items": {
-                "type": "integer"
-              }
+              "type": "string",
+              "example": "GCF_000001405.40"
             },
             "in": "query",
-            "name": "taxon_ids",
-            "description": "IDs of taxa to filter for",
-            "explode": false,
-            "style": "form",
-            "required": true
+            "name": "accession_id",
+            "required": true,
+            "description": "Id of accession to look up"
           },
           {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/plain_data"
           }
         ],
-        "description": "Get ranks of taxa filtered by taxon IDs"
-      }
+        "description": "Get accession and it's level"
+      },
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "accession_id",
+          "in": "path",
+          "required": true,
+          "description": "Accession to look up"
+        }
+      ]
     },
     "/taxa": {
       "get": {
@@ -195,90 +433,213 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Taxon"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Taxon"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
                   }
                 },
                 "examples": {
-                  "Example": {
+                  "Plain": {
                     "value": [
                       {
-                        "taxid": 103600,
-                        "parent": 103599,
-                        "name": "Sousa chinensis",
-                        "common_name": "Indo-pacific humpbacked dolphin"
+                        "tax_id": 1383439,
+                        "parent": 1002697,
+                        "name": "Homo sapiens/Mus musculus xenograft"
                       },
                       {
-                        "taxid": 9737,
-                        "parent": 9734,
-                        "name": "Stenella coeruleoalba",
-                        "common_name": "striped dolphin"
-                      },
-                      {
-                        "taxid": 79784,
-                        "parent": 9738,
-                        "name": "Tursiops aduncus",
-                        "common_name": "Indo-pacific bottlenose dolphin"
-                      },
-                      {
-                        "taxid": 34814,
-                        "parent": 13453,
-                        "name": "Coryphaena hippurus",
-                        "common_name": "common dolphinfish"
-                      },
-                      {
-                        "taxid": 27766,
-                        "parent": 1489907,
-                        "name": "Coryphaenidae",
-                        "common_name": "dolphinfishes"
-                      },
-                      {
-                        "taxid": 118797,
-                        "parent": 118796,
-                        "name": "Lipotes vexillifer",
-                        "common_name": "Yangtze River dolphin"
-                      },
-                      {
-                        "taxid": 48752,
-                        "parent": 48750,
-                        "name": "Platanista minor",
-                        "common_name": "Indus River dolphin"
-                      },
-                      {
-                        "taxid": 3371155,
-                        "parent": 3371042,
-                        "name": "Sagmatias obliquidens",
-                        "common_name": "Pacific white-sided dolphin"
-                      },
-                      {
-                        "taxid": 46167,
-                        "parent": 46166,
-                        "name": "Steno bredanensis",
-                        "common_name": "rough-toothed dolphin"
-                      },
-                      {
-                        "taxid": 103582,
-                        "parent": 27607,
-                        "name": "Cephalorhynchus commersonii",
-                        "common_name": "Commerson's dolphin"
+                        "tax_id": 1573476,
+                        "parent": 1002697,
+                        "name": "Homo sapiens/Rattus norvegicus xenograft"
                       }
                     ]
+                  },
+                  "Links": {
+                    "value": {
+                      "data": [
+                        {
+                          "tax_id": 1383439,
+                          "parent": 1002697,
+                          "name": "Homo sapiens/Mus musculus xenograft",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/1383439?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 1573476,
+                          "parent": 1002697,
+                          "name": "Homo sapiens/Rattus norvegicus xenograft",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/1573476?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        }
+                      ],
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa?name=homo%20sapiens/&plain_data=false",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/ancestors",
+                          "action": "GET",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/children",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/parent",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/rank_distribution",
+                          "action": "POST",
+                          "types": ["text/vnd.graphviz;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/subtree",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "entities",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa?field_composite=all&name=homo+sapiens%2F&plain_data=false",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa?field_composite=gen_count&name=homo+sapiens%2F&plain_data=false",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa?field_composite=gen_count_rec&name=homo+sapiens%2F&plain_data=false",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa?field_composite=id&name=homo+sapiens%2F&plain_data=false",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa?field_composite=rank&name=homo+sapiens%2F&plain_data=false",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# ID       Parent   Name\n  1383439  1002697  Homo sapiens/Mus musculus xenograft\n  1573476  1002697  Homo sapiens/Rattus norvegicus xenograft\n"
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Missing required parameter."
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Missing required parameter."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-taxa",
+        "operationId": "get_taxa",
         "parameters": [
           {
             "schema": {
               "type": "string",
-              "example": "dolph"
+              "example": "homo sapiens/"
             },
             "in": "query",
             "name": "name",
@@ -302,394 +663,36 @@
             "description": "Whether to search for exactly that name or use the name as a pattern"
           },
           {
-            "schema": {
-              "type": "integer",
-              "example": 2,
-              "default": 0,
-              "minimum": 0
-            },
-            "in": "query",
-            "name": "page",
-            "description": "Current page"
+            "$ref": "#/components/parameters/page"
           },
           {
-            "schema": {
-              "type": "integer",
-              "example": 10,
-              "default": -1,
-              "minimum": -1
-            },
-            "in": "query",
-            "name": "page_size",
-            "description": "Amount of entries per page"
+            "$ref": "#/components/parameters/page_size"
+          },
+          {
+            "$ref": "#/components/parameters/field_composite"
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
           }
         ],
         "description": "Get basic taxon data for taxa with the given name"
       }
     },
-    "/taxa-accessions": {
-      "get": {
-        "summary": "Get taxons accessions",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaxonAccessions"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "taxid": 278148,
-                        "accessions": [
-                          {
-                            "accession": "GCF_001618845.1",
-                            "level": "complete"
-                          }
-                        ]
-                      },
-                      {
-                        "taxid": 602633,
-                        "accessions": [
-                          {
-                            "accession": "GCA_003063835.1",
-                            "level": "scaffold"
-                          }
-                        ]
-                      },
-                      {
-                        "taxid": 765698,
-                        "accessions": [
-                          {
-                            "accession": "GCF_000185905.1",
-                            "level": "complete"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing required parameter."
-          }
-        },
-        "operationId": "get-taxa-accessions",
-        "description": "Get the accessions associated with taxa filtered by taxon IDs",
-        "parameters": [
-          {
-            "schema": {
-              "type": "array",
-              "example": [278148, 602633],
-              "items": {
-                "type": "integer"
-              }
-            },
-            "in": "query",
-            "name": "taxon_ids",
-            "description": "IDs of taxa to filter for",
-            "explode": false,
-            "style": "form",
-            "required": true
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/page_size"
-          }
-        ]
-      }
-    },
-    "/taxa-count": {
-      "parameters": [],
-      "get": {
-        "summary": "Get taxa count",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "headers": {},
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "num_taxa": {
-                      "type": "integer"
-                    }
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": {
-                      "num_taxa": 2739523
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "taxa-count",
-        "description": "Get the number of taxa in the db",
-        "tags": ["Taxon"]
-      }
-    },
-    "/taxa-info": {
-      "get": {
-        "summary": "Get taxa info",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaxonInfo"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "tax_id": 562,
-                        "parent": 561,
-                        "is_leaf": false,
-                        "name": "Escherichia coli",
-                        "common_name": "",
-                        "rank": "species",
-                        "raw_genome_counts": [
-                          {
-                            "level": "complete",
-                            "count": 7233
-                          },
-                          {
-                            "level": "chromosome",
-                            "count": 734
-                          },
-                          {
-                            "level": "scaffold",
-                            "count": 26118
-                          },
-                          {
-                            "level": "contig",
-                            "count": 356055
-                          }
-                        ],
-                        "rec_genome_counts": [
-                          {
-                            "level": "complete",
-                            "count": 7793
-                          },
-                          {
-                            "level": "chromosome",
-                            "count": 759
-                          },
-                          {
-                            "level": "scaffold",
-                            "count": 27888
-                          },
-                          {
-                            "level": "contig",
-                            "count": 362877
-                          }
-                        ],
-                        "images": [
-                          {
-                            "id": 70910,
-                            "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/4591",
-                            "attribution": ""
-                          }
-                        ]
-                      },
-                      {
-                        "tax_id": 9606,
-                        "parent": 9605,
-                        "is_leaf": false,
-                        "name": "Homo sapiens",
-                        "common_name": "human",
-                        "rank": "species",
-                        "raw_genome_counts": [
-                          {
-                            "level": "complete",
-                            "count": 3
-                          },
-                          {
-                            "level": "chromosome",
-                            "count": 1173
-                          },
-                          {
-                            "level": "scaffold",
-                            "count": 978
-                          },
-                          {
-                            "level": "contig",
-                            "count": 410
-                          }
-                        ],
-                        "rec_genome_counts": [
-                          {
-                            "level": "complete",
-                            "count": 3
-                          },
-                          {
-                            "level": "chromosome",
-                            "count": 1173
-                          },
-                          {
-                            "level": "scaffold",
-                            "count": 978
-                          },
-                          {
-                            "level": "contig",
-                            "count": 410
-                          }
-                        ],
-                        "images": [
-                          {
-                            "id": 64784,
-                            "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/422",
-                            "attribution": "All of Us Initiative"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing required parameter."
-          }
-        },
-        "operationId": "get-taxa-info",
-        "description": "Get broad information of taxa filtered by their IDs",
-        "parameters": [
-          {
-            "schema": {
-              "type": "array",
-              "example": [562, 9606],
-              "items": {
-                "type": "integer"
-              }
-            },
-            "in": "query",
-            "name": "taxon_ids",
-            "description": "IDs of taxa to filter for",
-            "explode": false,
-            "style": "form",
-            "required": true
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/page_size"
-          }
-        ]
-      }
-    },
-    "/taxa-names": {
-      "get": {
-        "summary": "Get taxa and their names",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaxonName"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "tax_id": 9606,
-                        "name": "Homo sapiens",
-                        "common_name": "human"
-                      },
-                      {
-                        "tax_id": 9605,
-                        "name": "Homo",
-                        "common_name": ""
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing required parameter."
-          }
-        },
-        "operationId": "get-taxa-names",
-        "description": "Get taxa and their scientific and common names filtered by taxon IDs",
-        "parameters": [
-          {
-            "schema": {
-              "type": "array",
-              "example": [9606, 9605],
-              "items": {
-                "type": "integer"
-              }
-            },
-            "in": "query",
-            "name": "taxon_ids",
-            "description": "IDs of taxa to filter for",
-            "explode": false,
-            "style": "form",
-            "required": true
-          },
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/page_size"
-          }
-        ]
-      }
-    },
-    "/taxa/{start_id}/path/{end_id}": {
+    "/taxa/{taxon_id}": {
       "parameters": [
         {
           "schema": {
             "type": "integer",
             "example": 9606
           },
-          "name": "start_id",
+          "name": "taxon_id",
           "in": "path",
           "required": true,
-          "description": "id of start taxon, further from root"
-        },
-        {
-          "schema": {
-            "type": "integer",
-            "example": 40674
-          },
-          "name": "end_id",
-          "in": "path",
-          "required": true,
-          "description": "id of end taxon, closer to root"
+          "description": "id of taxon"
         }
       ],
       "get": {
-        "summary": "Get path between two taxa",
+        "summary": "Get taxon's attributes",
         "tags": ["Taxon"],
         "responses": {
           "200": {
@@ -697,118 +700,180 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Taxon"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Taxon"
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
                   }
                 },
                 "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "taxid": 9606,
+                  "Plain": {
+                    "value": {
+                      "tax_id": 9606,
+                      "parent": 9605,
+                      "name": "Homo sapiens",
+                      "common_name": "human"
+                    }
+                  },
+                  "Links": {
+                    "value": {
+                      "data": {
+                        "tax_id": 9606,
                         "parent": 9605,
                         "name": "Homo sapiens",
                         "common_name": "human"
                       },
-                      {
-                        "taxid": 9605,
-                        "parent": 207598,
-                        "name": "Homo",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 207598,
-                        "parent": 9604,
-                        "name": "Homininae",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 9604,
-                        "parent": 314295,
-                        "name": "Hominidae",
-                        "common_name": "great apes"
-                      },
-                      {
-                        "taxid": 314295,
-                        "parent": 9526,
-                        "name": "Hominoidea",
-                        "common_name": "apes"
-                      },
-                      {
-                        "taxid": 9526,
-                        "parent": 314293,
-                        "name": "Catarrhini",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 314293,
-                        "parent": 376913,
-                        "name": "Simiiformes",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 376913,
-                        "parent": 9443,
-                        "name": "Haplorrhini",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 9443,
-                        "parent": 314146,
-                        "name": "Primates",
-                        "common_name": "primates"
-                      },
-                      {
-                        "taxid": 314146,
-                        "parent": 1437010,
-                        "name": "Euarchontoglires",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 1437010,
-                        "parent": 9347,
-                        "name": "Boreoeutheria",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 9347,
-                        "parent": 32525,
-                        "name": "Eutheria",
-                        "common_name": "placentals"
-                      },
-                      {
-                        "taxid": 32525,
-                        "parent": 40674,
-                        "name": "Theria",
-                        "common_name": ""
-                      },
-                      {
-                        "taxid": 40674,
-                        "parent": 32524,
-                        "name": "Mammalia",
-                        "common_name": "mammals"
-                      }
-                    ]
+                      "links": [
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=all",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=gen_count",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=gen_count_rec",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=id",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=rank",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "part-of",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        }
+                      ]
+                    }
                   }
                 }
               }
             }
           },
-          "404": {
-            "description": "Can't find parameter's taxa."
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "plain_data is not a bool."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-taxa-start-id-path-end-id",
-        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root.\nReturns an empty list if no path connects start and end",
+        "operationId": "get_taxa_taxon_id",
+        "description": "Get the children of a taxon given its id",
         "parameters": [
           {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/field_composite"
           },
           {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/plain_data"
           }
         ]
+      }
+    },
+    "/taxa/{taxon_id}/ancestors": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "taxon_id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon"
+        }
+      ],
+      "get": {
+        "summary": "Get ancestors of taxon",
+        "tags": ["Taxon"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# Back  ID       Name                  Rank\n  31    1        root                  no rank\n  30    131567   cellular organisms    cellular root\n  29    2759     Eukaryota             domain\n  28    33154    Opisthokonta          clade\n  27    33208    Metazoa               kingdom\n  26    6072     Eumetazoa             clade\n  25    33213    Bilateria             clade\n  24    33511    Deuterostomia         clade\n  23    7711     Chordata              phylum\n  22    89593    Craniata              subphylum\n  21    7742     Vertebrata            clade\n  20    7776     Gnathostomata         clade\n  19    117570   Teleostomi            clade\n  18    117571   Euteleostomi          clade\n  17    8287     Sarcopterygii         superclass\n  16    1338369  Dipnotetrapodomorpha  clade\n  15    32523    Tetrapoda             clade\n  14    32524    Amniota               clade\n  13    40674    Mammalia              class\n  12    32525    Theria                clade\n  11    9347     Eutheria              clade\n  10    1437010  Boreoeutheria         clade\n  9     314146   Euarchontoglires      superorder\n  8     9443     Primates              order\n  7     376913   Haplorrhini           suborder\n  6     314293   Simiiformes           infraorder\n  5     9526     Catarrhini            parvorder\n  4     314295   Hominoidea            superfamily\n  3     9604     Hominidae             family\n  2     207598   Homininae             subfamily\n  1     9605     Homo                  genus\n  0     9606     Homo sapiens          species\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Malformed integer."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_taxa_taxon_id_ancestors",
+        "description": "Get the ancestors of a taxon including itself",
+        "parameters": []
       }
     },
     "/taxa/{taxon_id}/children": {
@@ -825,7 +890,7 @@
         }
       ],
       "get": {
-        "summary": "Get taxons children",
+        "summary": "Get taxon's children",
         "tags": ["Taxon"],
         "responses": {
           "200": {
@@ -833,32 +898,94 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaxonName"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Taxon"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
                   }
                 },
                 "examples": {
-                  "Example": {
+                  "Plain": {
                     "value": [
                       {
-                        "taxid": 741158,
+                        "tax_id": 741158,
+                        "parent": 9606,
                         "name": "Homo sapiens subsp. 'Denisova'",
                         "common_name": "Denisova hominin"
                       },
                       {
-                        "taxid": 63221,
+                        "tax_id": 63221,
+                        "parent": 9606,
                         "name": "Homo sapiens neanderthalensis",
                         "common_name": "Neandertal"
                       }
                     ]
+                  },
+                  "Links": {
+                    "value": {
+                      "data": [
+                        {
+                          "tax-id": 0,
+                          "parent": 0,
+                          "name": "string",
+                          "common_name": "string",
+                          "links": [
+                            {
+                              "rel": "string",
+                              "href": "http://example.com",
+                              "action": "string",
+                              "types": ["string"]
+                            }
+                          ]
+                        }
+                      ],
+                      "links": [
+                        {
+                          "rel": "string",
+                          "href": "http://example.com",
+                          "action": "string",
+                          "types": ["string"]
+                        }
+                      ]
+                    }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "plain_data is not a bool."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-taxa-taxon-id",
+        "operationId": "get_taxa_taxon_id_children",
         "description": "Get the children of a taxon given its id",
         "parameters": [
           {
@@ -866,190 +993,12 @@
           },
           {
             "$ref": "#/components/parameters/page_size"
-          }
-        ]
-      }
-    },
-    "/taxa/{taxon_id}/images": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon_id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons images",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Image"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "id": 64784,
-                        "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/422",
-                        "attribution": "All of Us Initiative"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-images",
-        "description": "Get images associated with a taxon given its id",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/page"
           },
           {
-            "$ref": "#/components/parameters/page_size"
-          }
-        ]
-      }
-    },
-    "/taxa/{taxon_id}/genome-count": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 562
-          },
-          "name": "taxon_id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons genome count",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GenomeCount"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "level": "complete",
-                        "count": 7233
-                      },
-                      {
-                        "level": "chromosome",
-                        "count": 734
-                      },
-                      {
-                        "level": "scaffold",
-                        "count": 26118
-                      },
-                      {
-                        "level": "contig",
-                        "count": 356055
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-genome-count",
-        "description": "Get the number of genomes across all assembly levels for a specific taxon given its id",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/field_composite"
           },
           {
-            "$ref": "#/components/parameters/page_size"
-          }
-        ]
-      }
-    },
-    "/taxa/{taxon_id}/genome-count-recursive": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 562
-          },
-          "name": "taxon_id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get taxons genome count recursive",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GenomeCount"
-                  }
-                },
-                "examples": {
-                  "Example": {
-                    "value": [
-                      {
-                        "level": "complete",
-                        "count": 7793
-                      },
-                      {
-                        "level": "chromosome",
-                        "count": 759
-                      },
-                      {
-                        "level": "scaffold",
-                        "count": 27888
-                      },
-                      {
-                        "level": "contig",
-                        "count": 362877
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "operationId": "get-taxa-taxon-id-genome-count-recursive",
-        "description": "Get the number of genomes across all assembly levels for the subtree of a taxon given its id",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/page"
-          },
-          {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/plain_data"
           }
         ]
       }
@@ -1068,7 +1017,7 @@
         }
       ],
       "get": {
-        "summary": "Get taxons parent",
+        "summary": "Get taxon's parent",
         "tags": ["Taxon"],
         "responses": {
           "200": {
@@ -1076,21 +1025,198 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TaxId"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Taxon"
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
                 },
                 "examples": {
-                  "Example": {
+                  "Plain": {
                     "value": {
-                      "tax_id": 9605
+                      "tax_id": 9605,
+                      "parent": 207598,
+                      "name": "Homo"
+                    }
+                  },
+                  "Links": {
+                    "value": {
+                      "data": {
+                        "tax_id": 9605,
+                        "parent": 207598,
+                        "name": "Homo"
+                      },
+                      "links": [
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/parent?field_composite=all",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/parent?field_composite=gen_count",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/parent?field_composite=gen_count_rec",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/parent?field_composite=id",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/parent?field_composite=rank",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/parent",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "all ancestors",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}/ancestors",
+                          "action": "GET",
+                          "types": ["text/plain;charset=utf-8"]
+                        }
+                      ]
                     }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "plain is not a bool."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-taxa-taxon-id-parent",
-        "description": "Get the parents taxon id of a given taxon"
+        "operationId": "get_taxa_taxon_id_parent",
+        "description": "Get the parent's taxon id of a given taxon",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/field_composite"
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
+          }
+        ]
+      }
+    },
+    "/taxa/{taxon_id}/rank_distribution": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "integer",
+            "example": 9606
+          },
+          "name": "taxon_id",
+          "in": "path",
+          "required": true,
+          "description": "id of taxon",
+          "example": 9606
+        }
+      ],
+      "post": {
+        "summary": "Determine rank distribution",
+        "tags": ["Taxon"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "#Path    Count  %\nspecies  3      100.0000\n"
+                  }
+                }
+              },
+              "text/vnd.graphviz": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "digraph g {\n rankdir=LR  \n  7 [label=\"species\n3 (100.0%)\"]\n}\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Taxon id is not an integer."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "post_taxa_taxon_id_ranks",
+        "description": "Determines the distribution of genomes among taxonomic ranks for a taxonomy rooted on a taxon specified by it's ID",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/assembly_levels"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "list_genomes",
+            "description": "List genomes in plain output"
+          }
+        ]
       }
     },
     "/taxa/{taxon_id}/subtree": {
@@ -1115,40 +1241,208 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Taxon"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Taxon"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
                   }
                 },
                 "examples": {
-                  "Example": {
+                  "Plain": {
                     "value": [
                       {
-                        "taxid": 9606,
+                        "tax_id": 9606,
+                        "parent": 9605,
                         "name": "Homo sapiens",
-                        "common_name": "human",
-                        "parent": 9605
+                        "common_name": "human"
                       },
                       {
-                        "taxid": 741158,
+                        "tax_id": 741158,
+                        "parent": 9606,
                         "name": "Homo sapiens subsp. 'Denisova'",
-                        "common_name": "Denisova hominin",
-                        "parent": 9606
+                        "common_name": "Denisova hominin"
                       },
                       {
-                        "taxid": 63221,
+                        "tax_id": 63221,
+                        "parent": 9606,
                         "name": "Homo sapiens neanderthalensis",
-                        "common_name": "Neandertal",
-                        "parent": 9606
+                        "common_name": "Neandertal"
                       }
                     ]
+                  },
+                  "Links": {
+                    "value": {
+                      "data": [
+                        {
+                          "tax_id": 9606,
+                          "parent": 9605,
+                          "name": "Homo sapiens",
+                          "common_name": "human",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 741158,
+                          "parent": 9606,
+                          "name": "Homo sapiens subsp. 'Denisova'",
+                          "common_name": "Denisova hominin",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/741158?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 63221,
+                          "parent": 9606,
+                          "name": "Homo sapiens neanderthalensis",
+                          "common_name": "Neandertal",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/63221?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        }
+                      ],
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/subtree",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "entities",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/subtree?field_composite=all",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/subtree?field_composite=gen_count",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/subtree?field_composite=gen_count_rec",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/subtree?field_composite=id",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606/subtree?field_composite=rank",
+                          "action": "GET",
+                          "types": [
+                            "application/json;charset=utf-8",
+                            "text/vnd.graphviz;charset=utf-8",
+                            "text/plain;charset=utf-8"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# Taxid  Parent  Rank        Genomes\n9606     9605    species     2564\n63221    9606    subspecies  0\n741158   9606    subspecies  0\n"
+                  }
+                }
+              },
+              "text/vnd.graphviz": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "digraph g {\n rankdir=LR\n  9606 [color=\"lightsalmon\",style=filled]\n 63221 [label=\"63221\"]\n 9606 -> 63221\n 741158 [label=\"741158\"]\n 9606 -> 741158\n}\n"
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Taxon id is not an integer."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-taxa-taxon-id-subtree",
+        "operationId": "get_taxa_taxon_id_subtree",
         "description": "Get the subtree of a taxon including itself",
         "parameters": [
           {
@@ -1156,26 +1450,392 @@
           },
           {
             "$ref": "#/components/parameters/page_size"
+          },
+          {
+            "$ref": "#/components/parameters/field_composite"
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
           }
         ]
       }
     },
-    "/taxa/{taxon_ids}/mrca": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "array",
-            "example": [9606, 741158, 63221],
-            "items": {
-              "type": "integer"
+    "/taxonomy": {
+      "get": {
+        "summary": "Get taxonomy subservices",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": {
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/accessions",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/fintac",
+                          "action": "POST",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/neighbors",
+                          "action": "POST",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get_taxonomy_enpoints",
+        "parameters": [],
+        "description": "Get the endpoints provided under the taxonomy route",
+        "tags": ["Taxon"]
+      },
+      "parameters": []
+    },
+    "/taxonomy/accessions": {
+      "parameters": [],
+      "get": {
+        "summary": "Get most recent common ancestor",
+        "tags": ["Taxon", "Accession"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TaxonAccessions"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Plain": {
+                    "value": [
+                      {
+                        "tax_id": 278148,
+                        "accessions": [
+                          {
+                            "accession": "GCF_001618845.1",
+                            "level": "complete"
+                          }
+                        ]
+                      },
+                      {
+                        "tax_id": 602633,
+                        "accessions": [
+                          {
+                            "accession": "GCA_003063835.1",
+                            "level": "scaffold"
+                          }
+                        ]
+                      },
+                      {
+                        "tax_id": 765698,
+                        "accessions": [
+                          {
+                            "accession": "GCF_000185905.1",
+                            "level": "complete"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "Links": {
+                    "value": {
+                      "data": [
+                        {
+                          "tax_id": 278148,
+                          "accessions": [
+                            {
+                              "accession": "GCF_001618845.1",
+                              "level": "complete",
+                              "links": [
+                                {
+                                  "rel": "self",
+                                  "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/GCF_001618845.1",
+                                  "action": "GET",
+                                  "types": ["application/json;charset=utf-8"]
+                                }
+                              ]
+                            }
+                          ],
+                          "links": [
+                            {
+                              "rel": "taxon",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/278148",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 602633,
+                          "accessions": [
+                            {
+                              "accession": "GCA_003063835.1",
+                              "level": "scaffold",
+                              "links": [
+                                {
+                                  "rel": "self",
+                                  "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/GCA_003063835.1",
+                                  "action": "GET",
+                                  "types": ["application/json;charset=utf-8"]
+                                }
+                              ]
+                            }
+                          ],
+                          "links": [
+                            {
+                              "rel": "taxon",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/GCF_001618845.1",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 765698,
+                          "accessions": [
+                            {
+                              "accession": "GCF_000185905.1",
+                              "level": "complete",
+                              "links": [
+                                {
+                                  "rel": "self",
+                                  "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/GCF_000185905.1",
+                                  "action": "GET",
+                                  "types": ["application/json;charset=utf-8"]
+                                }
+                              ]
+                            }
+                          ],
+                          "links": [
+                            {
+                              "rel": "taxon",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/accessions/GCA_003063835.1",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        }
+                      ],
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/accessions?taxon_ids=278148,602633",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
             }
           },
-          "name": "taxon_ids",
-          "in": "path",
-          "required": true,
-          "description": "list of IDs which share a common ancestor"
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Missing required parameter."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_taxonomy_accessions",
+        "description": "Get the recursive accessions for a list of taxa",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/field_composite"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "example": [278148, 602633]
+            },
+            "in": "query",
+            "name": "taxon_ids",
+            "style": "form",
+            "explode": false,
+            "required": true,
+            "description": "Ids of taxa for finding accessions"
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
+          }
+        ]
+      }
+    },
+    "/taxonomy/fintac": {
+      "post": {
+        "summary": "Determine taxonomic clade",
+        "tags": ["Taxon"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "#Clade  Targets  Neighbors  Unknowns  Split (%)  Parent  Dist(Parent)\n5007    22       8          18        98.53      5005    0.000385"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "all_splits argument is not a bool."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "415": {
+            "description": "Unsupported Media Type"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "post_fintac",
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "all_splits",
+            "description": "Returns all splits instead of just the highest"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "regex"
+            },
+            "in": "query",
+            "name": "neighbor",
+            "description": "Regex setting neighbors via ids"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "regex"
+            },
+            "in": "query",
+            "name": "target",
+            "description": "Regex setting targets via ids"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "regex"
+            },
+            "in": "query",
+            "name": "unknown",
+            "description": "Regex setting unknown via ids"
+          }
+        ],
+        "description": "Find target clade for taxa identified by regular expressions in Newick tree.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
-      ],
+      },
+      "parameters": []
+    },
+    "/taxonomy/mrca": {
+      "parameters": [],
       "get": {
         "summary": "Get most recent common ancestor",
         "tags": ["Taxon"],
@@ -1185,21 +1845,641 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TaxId"
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Taxon"
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
                 },
                 "examples": {
-                  "Example 1": {
+                  "Plain": {
                     "value": {
-                      "tax_id": 9606
+                      "tax_id": 9606,
+                      "parent": 9605,
+                      "name": "Homo sapiens",
+                      "common_name": "human"
+                    }
+                  },
+                  "Links": {
+                    "value": {
+                      "data": {
+                        "tax_id": 9606,
+                        "parent": 9605,
+                        "name": "Homo sapiens",
+                        "common_name": "human",
+                        "links": [
+                          {
+                            "rel": "self",
+                            "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9606?field_composite=default",
+                            "action": "GET",
+                            "types": ["application/json;charset=utf-8"]
+                          }
+                        ]
+                      },
+                      "links": [
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca?field_composite=all&taxon_ids=9606%2C741158%2C63221",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca?field_composite=gen_count&taxon_ids=9606%2C741158%2C63221",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca?field_composite=gen_count_rec&taxon_ids=9606%2C741158%2C63221",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca?field_composite=id&taxon_ids=9606%2C741158%2C63221",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca?field_composite=rank&taxon_ids=9606%2C741158%2C63221",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca?taxon_ids=9606,741158,63221",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "path",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
                     }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Missing required parameter."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         },
-        "operationId": "get-taxa-taxon-ids-mrca",
-        "description": "Get the most recent common ancestor of a list of taxa"
+        "operationId": "get_taxonomy_mrca",
+        "description": "Get the most recent common ancestor of a list of taxa",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/field_composite"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "example": [9606, 741158, 63221],
+              "items": {
+                "type": "integer"
+              }
+            },
+            "in": "query",
+            "name": "taxon_ids",
+            "style": "form",
+            "explode": false,
+            "required": true,
+            "description": "Ids of taxa for which to find the mrca"
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
+          }
+        ]
+      }
+    },
+    "/taxonomy/neighbors": {
+      "parameters": [],
+      "post": {
+        "summary": "Determine neighbors of targets",
+        "tags": ["Taxon"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# MRCA(targets): 9606, Homo sapiens\n# MRCA(targets+neighbors): 9605, Homo\n# Type  Taxon-ID  Name                               Genomes\nt       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1\ntt      63221     Homo sapiens neanderthalensis      -\ntt      741158    Homo sapiens subsp. 'Denisova'     -\nn       1425170   Homo heidelbergensis               -\nn       2665952   environmental samples              -\nn       2665953   Homo sapiens environmental sample  -\nn       2813598   unclassified Homo                  -\nn       2813599   Homo sp.                           -\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "Missing required parameter."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_taxonomy_neighbors",
+        "description": "Get the neighbors for a list of target taxa ",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "in": "query",
+            "name": "target_ids",
+            "description": "Ids of taxonomic targets",
+            "required": true,
+            "style": "form",
+            "explode": false
+          },
+          {
+            "$ref": "#/components/parameters/assembly_levels"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "individual_genomes",
+            "description": "List all genomes individually"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "require_genomes",
+            "description": "Restrict output to taxa with genome sequences"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "tab_output",
+            "description": "Return a tab delimited output"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "targets_only",
+            "description": "Restrict output to target taxa only"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/taxonomy/path": {
+      "parameters": [],
+      "get": {
+        "summary": "Get path connecting two taxa",
+        "tags": ["Taxon"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Taxon"
+                      }
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Plain": {
+                    "value": [
+                      {
+                        "tax_id": 9605,
+                        "parent": 207598,
+                        "name": "Homo"
+                      },
+                      {
+                        "tax_id": 207598,
+                        "parent": 9604,
+                        "name": "Homininae"
+                      },
+                      {
+                        "tax_id": 9604,
+                        "parent": 314295,
+                        "name": "Hominidae",
+                        "common_name": "great apes"
+                      },
+                      {
+                        "tax_id": 314295,
+                        "parent": 9526,
+                        "name": "Hominoidea",
+                        "common_name": "apes"
+                      },
+                      {
+                        "tax_id": 9526,
+                        "parent": 314293,
+                        "name": "Catarrhini"
+                      },
+                      {
+                        "tax_id": 314293,
+                        "parent": 376913,
+                        "name": "Simiiformes"
+                      },
+                      {
+                        "tax_id": 376913,
+                        "parent": 9443,
+                        "name": "Haplorrhini"
+                      },
+                      {
+                        "tax_id": 9443,
+                        "parent": 314146,
+                        "name": "Primates",
+                        "common_name": "primates"
+                      },
+                      {
+                        "tax_id": 314146,
+                        "parent": 1437010,
+                        "name": "Euarchontoglires"
+                      },
+                      {
+                        "tax_id": 1437010,
+                        "parent": 9347,
+                        "name": "Boreoeutheria"
+                      },
+                      {
+                        "tax_id": 9347,
+                        "parent": 32525,
+                        "name": "Eutheria",
+                        "common_name": "placentals"
+                      },
+                      {
+                        "tax_id": 32525,
+                        "parent": 40674,
+                        "name": "Theria"
+                      },
+                      {
+                        "tax_id": 40674,
+                        "parent": 32524,
+                        "name": "Mammalia",
+                        "common_name": "mammals"
+                      }
+                    ]
+                  },
+                  "Links": {
+                    "value": {
+                      "data": [
+                        {
+                          "tax_id": 9605,
+                          "parent": 207598,
+                          "name": "Homo",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9605?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 207598,
+                          "parent": 9604,
+                          "name": "Homininae",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/207598?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 9604,
+                          "parent": 314295,
+                          "name": "Hominidae",
+                          "common_name": "great apes",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9604?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 314295,
+                          "parent": 9526,
+                          "name": "Hominoidea",
+                          "common_name": "apes",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/314295?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 9526,
+                          "parent": 314293,
+                          "name": "Catarrhini",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9526?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 314293,
+                          "parent": 376913,
+                          "name": "Simiiformes",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/314293?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 376913,
+                          "parent": 9443,
+                          "name": "Haplorrhini",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/376913?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 9443,
+                          "parent": 314146,
+                          "name": "Primates",
+                          "common_name": "primates",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9443?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 314146,
+                          "parent": 1437010,
+                          "name": "Euarchontoglires",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/314146?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 1437010,
+                          "parent": 9347,
+                          "name": "Boreoeutheria",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/1437010?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 9347,
+                          "parent": 32525,
+                          "name": "Eutheria",
+                          "common_name": "placentals",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/9347?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 32525,
+                          "parent": 40674,
+                          "name": "Theria",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/32525?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        },
+                        {
+                          "tax_id": 40674,
+                          "parent": 32524,
+                          "name": "Mammalia",
+                          "common_name": "mammals",
+                          "links": [
+                            {
+                              "rel": "self",
+                              "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/40674?field_composite=default",
+                              "action": "GET",
+                              "types": ["application/json;charset=utf-8"]
+                            }
+                          ]
+                        }
+                      ],
+                      "links": [
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path?end_id=40674&field_composite=all&start_id=9606",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path?end_id=40674&field_composite=gen_count&start_id=9606",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path?end_id=40674&field_composite=gen_count_rec&start_id=9606",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path?end_id=40674&field_composite=id&start_id=9606",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "more fields",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path?end_id=40674&field_composite=rank&start_id=9606",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path?start_id=9606&end_id=40674",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "entities",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxa/{taxon_id}",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "start id is not an integer."
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_taxonomy_path",
+        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root.\nReturns an empty list if no path connects start and end",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/page_size"
+          },
+          {
+            "$ref": "#/components/parameters/field_composite"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "example": 9606
+            },
+            "in": "query",
+            "name": "start_id",
+            "description": "Id of start taxon, further from root",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "example": 40674
+            },
+            "in": "query",
+            "name": "end_id",
+            "description": "Id of end taxon, closer to root",
+            "required": true
+          },
+          {
+            "$ref": "#/components/parameters/plain_data"
+          }
+        ]
       }
     }
   },
@@ -1214,8 +2494,18 @@
           },
           "level": {
             "type": "string"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
           }
         }
+      },
+      "AssemblyLevel": {
+        "title": "AssemblyLevel",
+        "enum": ["complete", "chromosome", "scaffold", "contig"]
       },
       "GenomeCount": {
         "title": "GenomeCount",
@@ -1244,6 +2534,28 @@
           }
         }
       },
+      "Link": {
+        "title": "Link",
+        "type": "object",
+        "properties": {
+          "rel": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string",
+            "format": "uri"
+          },
+          "action": {
+            "type": "string"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "Rank": {
         "title": "Rank",
         "type": "object",
@@ -1253,6 +2565,45 @@
           },
           "rank": {
             "type": "string"
+          }
+        }
+      },
+      "TaxId": {
+        "title": "TaxId",
+        "type": "object",
+        "properties": {
+          "tax_id": {
+            "type": "integer"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
+          }
+        }
+      },
+      "Taxon": {
+        "title": "Taxon",
+        "type": "object",
+        "properties": {
+          "tax-id": {
+            "type": "integer"
+          },
+          "parent": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "common_name": {
+            "type": "string"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
           }
         }
       },
@@ -1268,15 +2619,12 @@
             "items": {
               "$ref": "#/components/schemas/Accession"
             }
-          }
-        }
-      },
-      "TaxId": {
-        "title": "TaxId",
-        "type": "object",
-        "properties": {
-          "tax_id": {
-            "type": "integer"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
           }
         }
       },
@@ -1319,39 +2667,39 @@
             "items": {
               "$ref": "#/components/schemas/Image"
             }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
           }
         }
       },
-      "Taxon": {
-        "title": "Taxon",
+      "TaxonNT": {
+        "title": "TaxonNT",
         "type": "object",
         "properties": {
-          "tax_id": {
+          "tax-id": {
             "type": "integer"
           },
-          "parent": {
-            "type": "integer"
+          "type": {
+            "type": "string"
           },
           "name": {
             "type": "string"
           },
-          "common_name": {
-            "type": "string"
-          }
-        }
-      },
-      "TaxonName": {
-        "title": "TaxonName",
-        "type": "object",
-        "properties": {
-          "tax_id": {
-            "type": "integer"
+          "accessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Accession"
+            }
           },
-          "name": {
-            "type": "string"
-          },
-          "common_name": {
-            "type": "string"
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
           }
         }
       }
@@ -1383,7 +2731,41 @@
         },
         "description": "Amount of entries per page",
         "style": "form"
+      },
+      "field_composite": {
+        "name": "field_composite",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "default",
+          "enum": ["id", "rank", "all", "default", "gen_count", "gen_count_rec"]
+        },
+        "description": "Determines fields for the return type"
+      },
+      "plain_data": {
+        "name": "plain_data",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean"
+        },
+        "description": "Reduce response to the data property and remove all hyper refereces"
+      },
+      "assembly_levels": {
+        "name": "assembly_levels",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssemblyLevel"
+          }
+        },
+        "style": "form",
+        "explode": false,
+        "description": "Quality levels of genome assembly"
       }
     }
-  }
+  },
+  "x-internal": false
 }

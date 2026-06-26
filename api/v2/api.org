@@ -21,7 +21,7 @@
   //<<Methods, Pa. \ref{pa:api}>>
   //<<Variables, Pa. \ref{pa:api}>>
   //<<Content types, Pa. \ref{pa:api}>>
-  func RegisterRoutes(pref, dbPath string) {
+  func RegisterRoutes(pref, dbPath, serverAdr string) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
   //<<Functions, Pa. \ref{pa:api}>>
@@ -155,11 +155,13 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Let's also declare a global variable for the route prefix.
+  Let's also declare a global variable for the route prefix, as well 
+  as the servers actual address.
 #+end_export
 
 #+begin_src go <<Variables, Pa. \ref{pa:api}>>=
   var prefix string
+  var serverAddress string
 #+end_src
 
 #+begin_export latex
@@ -219,11 +221,12 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  This is a good time to write the prefix to our global function.
+  This is a good time to write the prefix and server address to our global variable.
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
   prefix = pref
+  serverAddress = serverAdr
 #+end_src
 
 #+begin_export latex
@@ -401,7 +404,7 @@ type Node struct {
     Name:     "rankDistribution",
 		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
 		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
+		Types:    []contenttype.MediaType{graphvizCt},
 	}
 	makeRoute(&rankDistL, rankDistribution, dbPath) // new - calls ranks program
 #+end_src
@@ -491,7 +494,7 @@ type Node struct {
 		Links:    make(map[string][]Node),
     Name:     "neighbors",
 		BasePath: prefix + "/taxonomy/neighbors",
-		Action:   get,
+		Action:   post,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&neighborsL, neighbors, dbPath) // new - calls neighbors program
@@ -812,7 +815,7 @@ type Node struct {
     }
     return Link{
       Rel: rel,
-      Href: node.BasePath,
+      Href: serverAddress + node.BasePath,
       Action: node.Action,
       Types: types,
     }
@@ -958,7 +961,7 @@ type Node struct {
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
 	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain is not a bool.")
+		writeBadRequestResp(w, "plain_data is not a bool.")
     return
 	}
 #+end_src
@@ -1225,7 +1228,7 @@ type Node struct {
   This is \ty{accession}'s io:
   Params:
     Path:
-      none
+      accession_id string
     Query:
       plain_data bool
     Writes:
@@ -2059,6 +2062,7 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get taxon id, Pa. \ref{pa:api}>>
     //<<Get db path, Pa. \ref{pa:api}>>
+    //<<Validate user input \ty{ancestors}, Pa. \ref{pa:api}>>
     //<<Run \ty{ants}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
@@ -2298,7 +2302,7 @@ type Node struct {
     Query:
       assembly_levels []string
       list_genomes    bool
-      tabular_output  bool
+      tab_output  bool
   Body:
     File
   Writes:
@@ -2312,7 +2316,7 @@ type Node struct {
     //<<Handle arguments \ty{rankDistribution}, Pa. \ref{pa:api}>>
     //<<Validate user input \ty{rankDistribution}, Pa. \ref{pa:api}>>
     //<<Call \ty{rankDistribution}, Pa. \ref{pa:api}>>
-    //<<Write plain output, Pa. \ref{pa:api}>>
+    //<<Write graphviz output, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -2351,10 +2355,10 @@ type Node struct {
 		ranksArgs = append(ranksArgs, "-l")
   }
 
-  tabStr := r.URL.Query().Get("tabular_output")
+  tabStr := r.URL.Query().Get("tab_output")
 	t, err := strconv.ParseBool(tabStr)
   if tabStr != "" && err != nil {
-    writeBadRequestResp(w, "tabular_output argument is not a bool.")
+    writeBadRequestResp(w, "tab_output argument is not a bool.")
     return
   } else if t {
 		ranksArgs = append(ranksArgs, "-t")
@@ -2678,6 +2682,18 @@ type Node struct {
 	"github.com/evolbioinf/neighbors/ranks"
 #+end_src
 
+#+begin_export latex
+  This is similar to writing a plain response.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
+	  w.Header().Set("Content-Type", graphvizCt.String())
+	  w.WriteHeader(http.StatusOK)
+	  w.Write(out)
+  }
+#+end_src
+
 
 
 #+begin_export latex
@@ -2859,18 +2875,6 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  This is similar to writing a plain response.
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
-	  w.Header().Set("Content-Type", graphvizCt.String())
-	  w.WriteHeader(http.StatusOK)
-	  w.Write(out)
-  }
-#+end_src
-
-#+begin_export latex
   Now we just call the function to write our output.
 #+end_export
 
@@ -2929,9 +2933,9 @@ type Node struct {
     Path:
       none
     Query:
+      taxon_ids []int *required
       page      int
       page_size int
-      taxon_ids []int *required
     Writes:
       ResponseBody[ []TaxonAccession ]
 #+end_export
@@ -3227,9 +3231,9 @@ type Node struct {
     Path:
       none
     Query:
+      taxon_ids       []int *required
       field_composite string
       plain_data      bool
-      taxon_ids       []int *required
   Writes:
     ResponseBody[ []Partial<Taxon> ]
 #+end_export
@@ -3315,12 +3319,12 @@ type Node struct {
     Path:
       none
     Query:
-      assembly_levels       []string
-      genomes_and_taxa      bool
-      tab_output            bool
-      target_ids            []int *required
-      targets_only          bool
-      with_genomes_seq_only bool
+      target_ids         []int *required
+      assembly_levels    []string
+      individual_genomes bool
+      require_genomes    bool
+      tab_output         bool
+      targets_only       bool
     Body:
       Files
     Writes:
@@ -3330,6 +3334,7 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Check parameters \ty{neighbors}, Pa. \ref{pa:api}>>
     //<<Handle arguments \ty{neighbors}, Pa. \ref{pa:api}>>
     //<<Validate user input \ty{neighbors}, Pa. \ref{pa:api}>>
     //<<Call \ty{neighbors}, Pa. \ref{pa:api}>>
@@ -3337,6 +3342,17 @@ type Node struct {
   }
 #+end_src
 
+#+begin_export latex
+  \ty{neigbors} does not run without target ids.
+  This means we need to check whether they exist.
+#+end_export
+
+#+begin_src go <<Check parameters \ty{neighbors}, Pa. \ref{pa:api}>>=
+  valid := checkParams(w, r, "target_ids")
+  if !valid {
+    return
+  }
+#+end_src
 
 #+begin_export latex
   Handling the arguments is about checking the data submitted via the form
@@ -3353,8 +3369,8 @@ type Node struct {
 #+begin_export latex
   We look for parameters defining three different kinds of 
   behaviour. The target ids are used as an input, the \ty{targets_only},
-  \ty{with_genomes_seq_only} and \ty{assembly_levels} are used for filtering;
-  \ty{tab_output} and \ty{genomes_and_taxa} change the output format. 
+  \ty{require_genomes} and \ty{assembly_levels} are used for filtering;
+  \ty{tab_output} and \ty{individual_genomes} change the output format. 
 #+end_export
 
 #+begin_src go <<Retrieve query parameters \ty{neighbors}, Pa. \ref{pa:api}>>=
@@ -3366,7 +3382,7 @@ type Node struct {
 
 #+begin_export latex
   Now we get and check the \ty{assembly_levels}, as well as the bools,
-  i.e. \ty{targets_only} and \ty{with_genomes_seq_only}, filtering our output.
+  i.e. \ty{targets_only} and \ty{require_genomes}, filtering our output.
 #+end_export
 
 #+begin_src go <<Get filter parameters, Pa. \ref{pa:api}>>=
@@ -3384,10 +3400,10 @@ type Node struct {
 		neighborsArgs = append(neighborsArgs, "-o")
   }
 
-  gsStr := r.URL.Query().Get("with_genomes_seq_only")
+  gsStr := r.URL.Query().Get("require_genomes")
 	gs, err := strconv.ParseBool(gsStr)
   if gsStr != "" && err != nil {
-    writeBadRequestResp(w, "with_genomes_seq_only argument is not a bool.")
+    writeBadRequestResp(w, "require_genomes argument is not a bool.")
     return
   } else if gs {
 		neighborsArgs = append(neighborsArgs, "-g")
@@ -3395,7 +3411,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Then there are the parameters: \ty{tab_output} and \ty{genomes_and_taxa}, 
+  Then there are the parameters: \ty{tab_output} and \ty{individual_genomes}, 
   changing the output format.
 #+end_export
 
@@ -3409,10 +3425,10 @@ type Node struct {
 		neighborsArgs = append(neighborsArgs, "-T")
   }
 
-  gtStr := r.URL.Query().Get("genomes_and_taxa")
+  gtStr := r.URL.Query().Get("individual_genomes")
 	gt, err := strconv.ParseBool(gtStr)
   if gtStr != "" && err != nil {
-    writeBadRequestResp(w, "genomes_and_taxa argument is not a bool.")
+    writeBadRequestResp(w, "individual_genomes argument is not a bool.")
     return
   } else if gt {
 		neighborsArgs = append(neighborsArgs, "-l")
@@ -3473,7 +3489,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Validate user input \ty{neighbors}, Pa. \ref{pa:api}>>=
-  valid := checkParamLevels(w, levels)
+  valid = checkParamLevels(w, levels)
   if !valid {
     return
   }
