@@ -435,14 +435,14 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 	str := r.URL.Query().Get("accession_ids")
 	accessions := strings.Split(str, ",")
 
-	offset, size := extractPaging(r)
+	offset, limit := extractPaging(r)
 
 	var data = []Accession{}
 
-	if size == -1 {
-		size = len(accessions)
+	if limit == -1 {
+		limit = len(accessions)
 	}
-	for i := offset; i < min(offset+size, len(accessions)); i++ {
+	for i := offset; i < min(offset+limit, len(accessions)); i++ {
 		accession := accessions[i]
 		level, err := neidb.Level(accession)
 		if err != nil {
@@ -499,28 +499,30 @@ func writeBadRequestResp(w http.ResponseWriter, text string) {
 	w.Write([]byte(text))
 }
 
-func extractPaging(r *http.Request) (offset, size int) {
-	strPage := r.URL.Query().Get("page")
-	strPageSize := r.URL.Query().Get("page_size")
+func extractPaging(r *http.Request) (offset, limit int) {
+	strOffset := r.URL.Query().Get("offset")
+	strLimit := r.URL.Query().Get("limit")
 
-	if strPageSize != "" {
-		cSize, err := strconv.Atoi(strPageSize)
-		size = cSize
-		if err != nil {
-			size = -1
-		}
-	} else {
-		size = -1
-	}
-	if size != -1 && strPage != "" {
-		page, err := strconv.Atoi(strPage)
+	if strOffset != "" {
+		cOff, err := strconv.Atoi(strOffset)
 		if err != nil {
 			offset = 0
 		} else {
-			offset = page * size
+			offset = cOff
 		}
 	} else {
 		offset = 0
+	}
+
+	if strLimit != "" {
+		cLim, err := strconv.Atoi(strLimit)
+		if err != nil {
+			limit = -1
+		} else {
+			limit = cLim
+		}
+	} else {
+		limit = -1
 	}
 	return
 }
@@ -614,7 +616,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	if !valid {
 		return
 	}
-	offset, size := extractPaging(r)
+	offset, limit := extractPaging(r)
 
 	name := r.URL.Query().Get("name")
 	strExact := r.URL.Query().Get("exact")
@@ -650,13 +652,13 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 
 		var ids []int
 		if scientific {
-			ids, err = neidb.Taxids(name, size, offset)
+			ids, err = neidb.Taxids(name, limit, offset)
 			if err != nil {
 				writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
 				return
 			}
 		} else {
-			ids, err = neidb.CommonTaxids(name, size, offset)
+			ids, err = neidb.CommonTaxids(name, limit, offset)
 			if err != nil {
 				writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
 				return
@@ -705,7 +707,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		taxiArgs = append(
 			taxiArgs,
 			"-l",
-			strconv.Itoa(size),
+			strconv.Itoa(limit),
 			"-o",
 			strconv.Itoa(offset),
 			name,
@@ -1026,7 +1028,7 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 		return
 	}
 
-	offset, size := extractPaging(r)
+	offset, limit := extractPaging(r)
 
 	fieldComposite := r.URL.Query().Get("field_composite")
 	fieldComposite = parseFieldComposite(fieldComposite)
@@ -1036,11 +1038,11 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 		writeServerError(w, "fn children - Error while executing neidbChildren", err)
 		return
 	}
-	if size == -1 {
-		size = len(children)
+	if limit == -1 {
+		limit = len(children)
 	}
 	data := []Taxon{}
-	for i := offset; i < min(offset+size, len(children)); i++ {
+	for i := offset; i < min(offset+limit, len(children)); i++ {
 		id := children[i]
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 		if err != nil {
@@ -1315,7 +1317,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 			return
 		}
 
-		offset, size := extractPaging(r)
+		offset, limit := extractPaging(r)
 
 		fieldComposite := r.URL.Query().Get("field_composite")
 		fieldComposite = parseFieldComposite(fieldComposite)
@@ -1326,12 +1328,12 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 			return
 		}
 
-		if size == -1 {
-			size = len(taxa)
+		if limit == -1 {
+			limit = len(taxa)
 		}
 
 		data := []Taxon{}
-		for i := offset; i < min(offset+size, len(taxa)); i++ {
+		for i := offset; i < min(offset+limit, len(taxa)); i++ {
 			id := taxa[i]
 			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 			if err != nil {
@@ -1468,7 +1470,7 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		return
 	}
 
-	offset, size := extractPaging(r)
+	offset, limit := extractPaging(r)
 
 	valid := checkParams(w, r, "taxon_ids")
 	if !valid {
@@ -1490,7 +1492,7 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	taxNode := *root.getService("taxon")
 	accNode := *root.getService("accession")
 
-	for len(taxIds) > 0 && (size == -1 || len(data) < size) {
+	for len(taxIds) > 0 && (limit == -1 || len(data) < limit) {
 		taxId := taxIds[0]
 		taxIds = taxIds[1:]
 		accs, err := neidb.Accessions(taxId)
@@ -1829,7 +1831,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		return
 	}
 
-	offset, size := extractPaging(r)
+	offset, limit := extractPaging(r)
 
 	fieldComposite := r.URL.Query().Get("field_composite")
 	fieldComposite = parseFieldComposite(fieldComposite)
@@ -1848,7 +1850,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	}
 
 	var data []Taxon
-	for i := 0; (i < offset+size || size == -1) && start != end; i++ {
+	for i := 0; (i < offset+limit || limit == -1) && start != end; i++ {
 		parent, err := neidb.Parent(start)
 
 		if err != nil {

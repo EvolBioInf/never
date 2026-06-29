@@ -11,8 +11,25 @@
   transition: background-color 0.25s ease;
 }
 
+.endpoint-card-header-post {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40% auto 4%;
+  border: 2px solid #aaaa22;
+  border-radius: 12px;
+  align-items: center;
+  cursor: pointer;
+  background-color: color-mix(in srgb, #aaaa22, white 90%);
+  z-index: 2;
+  transition: background-color 0.25s ease;
+}
+
 .endpoint-card-header-get:hover {
   background-color: color-mix(in srgb, var(--accent-color), white 70%);
+}
+
+.endpoint-card-header-post:hover {
+  background-color: color-mix(in srgb, #aaaa22, white 70%);
 }
 
 .selected-header {

@@ -873,8 +873,8 @@ type Node struct {
   Params:
     Query:
       accession_ids []string *required
-      page          int
-      page_size     int
+      offset          int
+      limit     int
       plain_data    bool
   Writes:
     ResponseBody[ []Accession ]
@@ -887,7 +887,7 @@ type Node struct {
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Extract accessions, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
     //<<Look up levels, Pa. \ref{pa:api}>>
     //<<Store output \ty{accessions}, Pa. \ref{pa:api}>>
     //<<Add collection links, Pa. \ref{pa:api}>>
@@ -976,19 +976,18 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Extractig the offset and size about extracting the parameters page
-  and page size from the url and calculating the resulting offset.
+  The offset and limit are parameters defined in the query.
   As there are a lot of endpoints that provide these parameters, we
   should make a function that does exactly that.
 #+end_export
 
-#+begin_src go <<Extract offset and size, Pa. \ref{pa:api}>>=
-  offset, size := extractPaging(r)
+#+begin_src go <<Extract offset and limit, Pa. \ref{pa:api}>>=
+  offset, limit := extractPaging(r)
 #+end_src
 
 #+begin_export latex
   Extracting the parameters is done just like any other query parameter.
-  We set default values if page or page size are not defined or invalid.
+  We set default values if offset or limit are not defined or invalid.
   For conversion we need to import \ty{strconv}.
 #+end_export
 
@@ -997,28 +996,30 @@ type Node struct {
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func extractPaging(r *http.Request) (offset, size int) {
-    strPage := r.URL.Query().Get("page")
-    strPageSize := r.URL.Query().Get("page_size")
+  func extractPaging(r *http.Request) (offset, limit int) {
+    strOffset := r.URL.Query().Get("offset")
+    strLimit := r.URL.Query().Get("limit")
 
-    if strPageSize != "" {
-      cSize, err := strconv.Atoi(strPageSize)
-      size = cSize
-      if err != nil {
-        size = -1
-      }
-    } else {
-        size = -1
-    }
-    if size != -1 && strPage != "" {
-      page, err := strconv.Atoi(strPage)
+    if strOffset != "" {
+      cOff, err := strconv.Atoi(strOffset)
       if err != nil {
         offset = 0
       } else {
-        offset = page * size
+        offset = cOff 
       }
     } else {
       offset = 0
+    }
+
+    if strLimit != "" {
+      cLim, err := strconv.Atoi(strLimit)
+      if err != nil {
+        limit = -1
+      } else {
+        limit = cLim
+      }
+    } else {
+        limit = -1
     }
   return
   }
@@ -1026,7 +1027,7 @@ type Node struct {
 
 #+begin_export latex
   We look up the level of each accession and store it.
-  Ensuring size and offset of the output would be easiest by
+  Ensuring limit and offset of the output would be easiest by
   slicing the accessions at the end. I'm explicitly deciding against
   doing that as using them in compution is more perfomant. Sadly the code
   aesthetic suffers from that decision :(
@@ -1035,10 +1036,10 @@ type Node struct {
 #+begin_src go <<Look up levels, Pa. \ref{pa:api}>>=
   var data = []Accession{}
 
-  if size == -1 {
-    size = len(accessions)
+  if limit == -1 {
+    limit = len(accessions)
   }
-  for i := offset; i < min(offset + size, len(accessions)); i++ {
+  for i := offset; i < min(offset + limit, len(accessions)); i++ {
     accession := accessions[i]
     level, err := neidb.Level(accession)
     if err != nil {
@@ -1283,7 +1284,7 @@ type Node struct {
 #+begin_export latex
   \subsection{taxa}
   The enpoint \ty{taxa} takes as input the name of a taxon, whether to use
-  the scientific name only, a matching mode, a page number, a page size
+  the scientific name only, a matching mode, an offset, a limit
   and an identifier for the kind of fields that should be returned. It
   writes as response for each matching taxon the taxon ID, its parent's
   taxon ID, its scientific name and or its common name. If the client
@@ -1294,13 +1295,13 @@ type Node struct {
     Path:
       none
     Query:
-      name string
-      scientific bool
-      exact bool
-      page []int
-      page_size []int
+      name            string
+      scientific      bool
+      exact           bool
+      offset          int
+      limit           int
       field_composite string
-      plain_data bool
+      plain_data      bool
   Writes:
     ResponseBody[ []Partial<Taxon> ]
 #+end_export
@@ -1312,7 +1313,7 @@ type Node struct {
     if !valid {
       return
     }
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
     //<<Extract query params, Pa. \ref{pa:api}>>
     //<<Act on content type \ty{taxa}, Pa. \ref{pa:api}>>
   }
@@ -1423,13 +1424,13 @@ type Node struct {
 #+begin_src go <<Execute taxi query, Pa. \ref{pa:api}>>=
   var ids []int
   if scientific {
-    ids, err = neidb.Taxids(name, size, offset)
+    ids, err = neidb.Taxids(name, limit, offset)
     if err != nil {
       writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
       return
     }
   } else {
-    ids, err = neidb.CommonTaxids(name, size, offset)
+    ids, err = neidb.CommonTaxids(name, limit, offset)
     if err != nil {
       writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
       return
@@ -1736,7 +1737,7 @@ type Node struct {
   taxiArgs = append(
     taxiArgs, 
     "-l",
-    strconv.Itoa(size),
+    strconv.Itoa(limit),
     "-o",
     strconv.Itoa(offset),
     name,
@@ -2163,8 +2164,8 @@ type Node struct {
       taxon_id int
     Query:
       field_composite string
-      page            int
-      page_size       int
+      offset          int
+      limit           int
       plain_data      bool
   Writes:
     ResponseBody[ []Partial<Taxon> ]
@@ -2176,7 +2177,7 @@ type Node struct {
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
     //<<Parse taxon id, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
     //<<Get field composite, Pa. \ref{pa:api}>>
     //<<Execute children query, Pa. \ref{pa:api}>>
     //<<Store taxon output, Pa. \ref{pa:api}>>
@@ -2198,11 +2199,11 @@ type Node struct {
       writeServerError(w, "fn children - Error while executing neidbChildren", err)
       return
     }
-    if size == -1 {
-      size = len(children)
+    if limit == -1 {
+      limit = len(children)
     }
     data := []Taxon{}
-    for i := offset; i < min(offset + size, len(children)); i++ {
+    for i := offset; i < min(offset + limit, len(children)); i++ {
       id := children[i]
 		  //<<Construct taxon output, Pa. \ref{pa:api}>>
 	  }
@@ -2712,8 +2713,8 @@ type Node struct {
       field_composite string
       genomes_only     bool
       max_depth       int
-      page            int
-      page_size       int
+      offset            int
+      limit       int
       plain_data      bool
       print_names     bool
     Writes:
@@ -2739,7 +2740,7 @@ type Node struct {
 #+begin_src go <<Act on content type, Pa. \ref{pa:api}>>=
   if ct.EqualsMIME(jsonCt) {
     //<<Get plain param, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
     //<<Get field composite, Pa. \ref{pa:api}>>
     //<<Execute subtree query, Pa. \ref{pa:api}>>
     //<<Store taxon output, Pa. \ref{pa:api}>>
@@ -2765,12 +2766,12 @@ type Node struct {
     return
   }
 
-  if size == -1 {
-    size = len(taxa)
+  if limit == -1 {
+    limit = len(taxa)
   }
 
   data := []Taxon{}
-  for i := offset; i < min(offset + size, len(taxa)); i++ {
+  for i := offset; i < min(offset + limit, len(taxa)); i++ {
     id := taxa[i]
     //<<Construct taxon output, Pa. \ref{pa:api}>>
   }
@@ -2934,8 +2935,8 @@ type Node struct {
       none
     Query:
       taxon_ids []int *required
-      page      int
-      page_size int
+      offset      int
+      limit int
     Writes:
       ResponseBody[ []TaxonAccession ]
 #+end_export
@@ -2945,7 +2946,7 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
     //<<Parse taxon ids, Pa. \ref{pa:api}>>
     //<<Look up accessions, Pa. \ref{pa:api}>>
     //<<Add collection links, Pa. \ref{pa:api}>>
@@ -2962,7 +2963,7 @@ type Node struct {
 #+begin_src go <<Look up accessions, Pa. \ref{pa:api}>>=
   data := []TaxonAccession{}
   //<<Get link nodes, Pa. \ref{pa:api}>>
-  for len(taxIds) > 0 && (size == -1 || len(data) < size) {
+  for len(taxIds) > 0 && (limit == -1 || len(data) < limit) {
     taxId := taxIds[0]
     taxIds = taxIds[1:]
     accs, err := neidb.Accessions(taxId)
@@ -3557,8 +3558,8 @@ type Node struct {
     Query:
       end_id          int
       field_composite string
-      page            int
-      page_size       int
+      offset            int
+      limit       int
       plain_data      bool
       start_id        int
   Writes:
@@ -3570,7 +3571,7 @@ type Node struct {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
-    //<<Extract offset and size, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
     //<<Get field composite, Pa. \ref{pa:api}>>
     //<<Get start and end, Pa. \ref{pa:api}>>
     //<<Climb taxonomy, Pa. \ref{pa:api}>>
@@ -3608,7 +3609,7 @@ type Node struct {
 
 #+begin_src go <<Climb taxonomy, Pa. \ref{pa:api}>>=
   var data []Taxon
-  for i := 0; (i < offset + size || size == -1) && start != end; i++ {
+  for i := 0; (i < offset + limit || limit == -1) && start != end; i++ {
 	  parent, err := neidb.Parent(start)
 
     if err != nil {
