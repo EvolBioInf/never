@@ -303,10 +303,10 @@
             "required": true
           },
           {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/offset"
           },
           {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/limit"
           },
           {
             "$ref": "#/components/parameters/plain_data"
@@ -663,10 +663,10 @@
             "description": "Whether to search for exactly that name or use the name as a pattern"
           },
           {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/offset"
           },
           {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/limit"
           },
           {
             "$ref": "#/components/parameters/field_composite"
@@ -989,10 +989,10 @@
         "description": "Get the children of a taxon given its id",
         "parameters": [
           {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/offset"
           },
           {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/limit"
           },
           {
             "$ref": "#/components/parameters/field_composite"
@@ -1446,10 +1446,10 @@
         "description": "Get the subtree of a taxon including itself",
         "parameters": [
           {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/offset"
           },
           {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/limit"
           },
           {
             "$ref": "#/components/parameters/field_composite"
@@ -2448,10 +2448,10 @@
         "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root.\nReturns an empty list if no path connects start and end",
         "parameters": [
           {
-            "$ref": "#/components/parameters/page"
+            "$ref": "#/components/parameters/offset"
           },
           {
-            "$ref": "#/components/parameters/page_size"
+            "$ref": "#/components/parameters/limit"
           },
           {
             "$ref": "#/components/parameters/field_composite"
@@ -2706,8 +2706,8 @@
     },
     "securitySchemes": {},
     "parameters": {
-      "page": {
-        "name": "page",
+      "offset": {
+        "name": "offset",
         "in": "query",
         "required": false,
         "schema": {
@@ -2719,8 +2719,8 @@
         "description": "Current page",
         "style": "form"
       },
-      "page_size": {
-        "name": "page_size",
+      "limit": {
+        "name": "limit",
         "in": "query",
         "required": false,
         "schema": {

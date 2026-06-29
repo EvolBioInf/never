@@ -230,6 +230,7 @@ func retrieveData(filepath string, local bool, port int) Content {
 
 				if !response.Content.IsZero() {
 					responseContent := response.Content.First()
+
 					newResponse.Mime = responseContent.Key()
 					contentValue := responseContent.Value()
 					if newResponse.Code == 200 && contentValue != nil {

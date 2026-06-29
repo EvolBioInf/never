@@ -59,7 +59,7 @@ func main() {
 
 	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbPath, dateFilePath)
 	apiv2.RegisterRoutes(apiPref+"/v2", dbPath, host+":"+strconv.Itoa(port))
-	docsv2.RegisterRoutes(docsV2Pref, host == "localhost", port)
+	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)

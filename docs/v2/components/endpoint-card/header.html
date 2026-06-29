@@ -1,10 +1,14 @@
 {{define "components/endpoint-card/header"}}
 <a
-  class='{{ toKebab "endpoint" "card" "header" .Op.Verb }}'
+  class='{{ toKebab "endpoint" "card" "header" }} {{ toKebab "endpoint" "card" "header" .Op.Verb }}'
   id='{{ toKebab "header" .Name .Op.Verb}}'
 >
   <div class="request-main-info">
-    <p class='{{ toKebab "request" "type" "block" .Op.Verb }}'>{{.Op.Verb}}</p>
+    <p
+      class='{{ toKebab "request" "type" "block" }} {{ toKebab "request" "type" "block" .Op.Verb }}'
+    >
+      {{.Op.Verb}}
+    </p>
     <p>{{.Name}}</p>
   </div>
   <p class="header-description">{{.Op.Description}}</p>

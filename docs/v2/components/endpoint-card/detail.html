@@ -1,6 +1,6 @@
 {{define "components/endpoint-card/detail"}}
 <div
-  class='{{ toKebab "endpoint" "card" "body" .Op.Verb }}'
+  class='{{ toKebab "endpoint" "card" "body" }} {{ toKebab "endpoint" "card" "body" .Op.Verb }}'
   id='{{ toKebab "body" .Name .Op.Verb }}'
 >
   <div class="description">
@@ -39,7 +39,7 @@
           value="{{.Op.ExampleRequest}}"
         />
         <button
-          class="run-example"
+          class='run-example {{toKebab "run" "example" .Op.Verb}}'
           id='{{toKebab "run" "example" .Name .Op.Verb}}'
         >
           Try now
@@ -58,7 +58,7 @@
                 '{{toKebab "input" "example" .Name .Op.Verb}}',
               );
 
-              fetch(input.value)
+              fetch(input.value, { method: "{{ .Op.Verb }}" })
                 .then((response) => response.text())
                 .then((data) => (pre.innerHTML = data));
             };

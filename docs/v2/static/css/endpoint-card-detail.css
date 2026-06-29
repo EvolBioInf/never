@@ -1,30 +1,26 @@
-.endpoint-card-body-get {
+.endpoint-card-body {
   position: relative;
-  border: 2px solid var(--accent-color);
   border-top: 0px;
   border-radius: 0px 0px 12px 12px;
   margin-top: -10px;
   padding: 40px 0 10px 25px;
   z-index: 1;
   display: none;
-  background-color: color-mix(in srgb, var(--accent-color), white 90%);
+}
+
+.endpoint-card-body-get {
+  border: 2px solid var(--get-color);
+  background-color: color-mix(in srgb, var(--get-color), white 90%);
 }
 
 .endpoint-card-body-post {
-  position: relative;
-  border: 2px solid #aaaa22;
-  border-top: 0px;
-  border-radius: 0px 0px 12px 12px;
-  margin-top: -10px;
-  padding: 40px 0 10px 25px;
-  z-index: 1;
-  display: none;
-  background-color: color-mix(in srgb, #aaaa22, white 90%);
+  border: 2px solid var(--post-color);
+  background-color: color-mix(in srgb, var(--post-color), white 90%);
 }
 
 .description {
   width: 50%;
-  border-right: 1px solid var(--accent-color);
+  border-right: 1px solid var(--secondary-color);
 }
 
 .description-title {
@@ -71,15 +67,28 @@
   font-size: medium;
   cursor: pointer;
   color: var(--primary-color);
-  border: 1px solid var(--accent-color);
-  background-color: var(--accent-color);
   border-radius: 4px;
   transition: background-color 0.25s ease;
 }
 
-.run-example:hover {
-  border: 1px solid color-mix(in srgb, var(--accent-color), white 30%);
-  background-color: color-mix(in srgb, var(--accent-color), white 30%);
+.run-example-get {
+  border: 1px solid var(--get-color);
+  background-color: var(--get-color);
+}
+
+.run-example-post {
+  border: 1px solid var(--post-color);
+  background-color: var(--post-color);
+}
+
+.run-example-get:hover {
+  border: 1px solid color-mix(in srgb, var(--get-color), white 30%);
+  background-color: color-mix(in srgb, var(--get-color), white 30%);
+}
+
+.run-example-post:hover {
+  border: 1px solid color-mix(in srgb, var(--post-color), white 30%);
+  background-color: color-mix(in srgb, var(--post-color), white 30%);
 }
 
 .input-example {
@@ -98,7 +107,7 @@
 
 .response-code {
   margin-right: 15px;
-  border: 2px solid var(--accent-color);
+  border: 2px solid var(--secondary-color);
   border-radius: 4px;
   font-size: large;
   justify-self: center;

@@ -1,39 +1,34 @@
-.endpoint-card-header-get {
+.endpoint-card-header {
   position: relative;
   display: grid;
   grid-template-columns: 40% auto 4%;
-  border: 2px solid var(--accent-color);
   border-radius: 12px;
   align-items: center;
   cursor: pointer;
-  background-color: color-mix(in srgb, var(--accent-color), white 90%);
   z-index: 2;
   transition: background-color 0.25s ease;
 }
 
-.endpoint-card-header-post {
-  position: relative;
-  display: grid;
-  grid-template-columns: 40% auto 4%;
-  border: 2px solid #aaaa22;
-  border-radius: 12px;
-  align-items: center;
-  cursor: pointer;
-  background-color: color-mix(in srgb, #aaaa22, white 90%);
-  z-index: 2;
-  transition: background-color 0.25s ease;
+.endpoint-card-header-get {
+  border: 2px solid var(--get-color);
+  background-color: color-mix(in srgb, var(--get-color), white 90%);
 }
 
 .endpoint-card-header-get:hover {
-  background-color: color-mix(in srgb, var(--accent-color), white 70%);
+  background-color: color-mix(in srgb, var(--get-color), white 70%);
+}
+
+.endpoint-card-header-post {
+  border: 2px solid var(--post-color);
+  background-color: color-mix(in srgb, var(--post-color), white 90%);
 }
 
 .endpoint-card-header-post:hover {
-  background-color: color-mix(in srgb, #aaaa22, white 70%);
+  background-color: color-mix(in srgb, var(--post-color), white 70%);
 }
 
 .selected-header {
-  background-color: color-mix(in srgb, var(--accent-color), white 50%);
+  background-color: color-mix(in srgb, inherit, white 50%);
 }
 
 .request-main-info {
@@ -41,14 +36,21 @@
   align-items: center;
 }
 
-.request-type-block-get {
+.request-type-block {
   color: var(--primary-color);
-  background-color: var(--accent-color);
   justify-self: center;
   padding: 6px 15px 6px 15px;
   border-radius: 4px;
   margin: 10px 15px 10px 15px;
   user-select: none;
+}
+
+.request-type-block-get {
+  background-color: var(--get-color);
+}
+
+.request-type-block-post {
+  background-color: var(--post-color);
 }
 
 polyline {
