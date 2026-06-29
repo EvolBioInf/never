@@ -51,6 +51,7 @@ type Operation struct {
 	ExampleRequest  string
 	ExampleResponse string
 	Schema          string
+	AcceptHeader    []string
 }
 
 type Parameter struct {
@@ -229,53 +230,53 @@ func retrieveData(filepath string, local bool, port int) Content {
 				}
 
 				if !response.Content.IsZero() {
-					responseContent := response.Content.First()
+					for mime, contentValue := range response.Content.FromOldest() {
+						newResponse.Mime = mime
+						if newResponse.Code == 200 && contentValue != nil {
+							newOperation.AcceptHeader = append(newOperation.AcceptHeader, mime)
+							if contentValue.Examples.Len() > 0 {
+								ex := contentValue.Examples.First().Value()
+								marhshalled, err := ex.MarshalJSON()
 
-					newResponse.Mime = responseContent.Key()
-					contentValue := responseContent.Value()
-					if newResponse.Code == 200 && contentValue != nil {
-						if contentValue.Examples.Len() > 0 {
-							ex := contentValue.Examples.First().Value()
-							marhshalled, err := ex.MarshalJSON()
+								if err != nil {
+									panic(fmt.Sprintf("cannot marshal example: %e", err))
+								}
 
-							if err != nil {
-								panic(fmt.Sprintf("cannot marshal example: %e", err))
+								var wrapped map[string]any
+								json.Unmarshal(marhshalled, &wrapped)
+								unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
+
+								if err != nil {
+									panic(fmt.Sprintf("cannot unwrap example: %e", err))
+								}
+
+								newOperation.ExampleResponse = string(unwrapped)
+
 							}
 
-							var wrapped map[string]any
-							json.Unmarshal(marhshalled, &wrapped)
-							unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
+							if contentValue.Schema != nil {
+								schema, err := contentValue.Schema.BuildSchema()
+								if err != nil {
+									panic(fmt.Sprintf("cannot build schema: %e", err))
+								}
 
-							if err != nil {
-								panic(fmt.Sprintf("cannot unwrap example: %e", err))
+								schemaMarshalled, err := schema.MarshalJSONInline()
+								if err != nil {
+									panic(fmt.Sprintf("cannot marshal schema: %e", err))
+								}
+
+								var rawSchema map[string]any
+								json.Unmarshal(schemaMarshalled, &rawSchema)
+
+								parsed := parseResponseSchema(rawSchema)
+
+								var indented bytes.Buffer
+								json.Indent(&indented, []byte(parsed), "", "  ")
+								newOperation.Schema = indented.String()
+
 							}
-
-							newOperation.ExampleResponse = string(unwrapped)
 
 						}
-
-						if contentValue.Schema != nil {
-							schema, err := contentValue.Schema.BuildSchema()
-							if err != nil {
-								panic(fmt.Sprintf("cannot build schema: %e", err))
-							}
-
-							schemaMarshalled, err := schema.MarshalJSONInline()
-							if err != nil {
-								panic(fmt.Sprintf("cannot marshal schema: %e", err))
-							}
-
-							var rawSchema map[string]any
-							json.Unmarshal(schemaMarshalled, &rawSchema)
-
-							parsed := parseResponseSchema(rawSchema)
-
-							var indented bytes.Buffer
-							json.Indent(&indented, []byte(parsed), "", "  ")
-							newOperation.Schema = indented.String()
-
-						}
-
 					}
 
 				}

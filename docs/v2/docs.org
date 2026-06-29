@@ -229,6 +229,7 @@ type Operation struct {
 	ExampleRequest  string
 	ExampleResponse string
   Schema          string
+  AcceptHeader    []string
 }
 
 type Parameter struct {
@@ -651,17 +652,23 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   To differentiate between response codes we first check whether it is of code
-  200. If it is we need to make sure that is has content.
+  200 (OK). If it is we need to make sure that is has content. A single response
+  code may store multiple response contents, meaning we need to iterate over 
+  the provided map. This is also the only step were the acceptable content types
+  are defined. Mime types/ content types of 200 (OK) responses indicate that this 
+  server accepts requests asking for these content types. We want to document them,
+  which means we add them to the operations list of \ty{AcceptHeaders}.
 #+end_export
 
 #+begin_src go <<Act on response code, Pa. \ref{pa:docs}>>=
-	responseContent := response.Content.First()
-	newResponse.Mime = responseContent.Key()
-	contentValue := responseContent.Value()
-	if newResponse.Code == 200 && contentValue != nil {
-      // <<Parse response example, Pa. \ref{pa:docs}>>
-      // <<Parse response schema, Pa. \ref{pa:docs}>>
-	 }
+	for mime, contentValue := range response.Content.FromOldest() {
+	  newResponse.Mime = mime
+	  if newResponse.Code == 200 && contentValue != nil {
+        newOperation.AcceptHeader = append(newOperation.AcceptHeader, mime)
+        // <<Parse response example, Pa. \ref{pa:docs}>>
+        // <<Parse response schema, Pa. \ref{pa:docs}>>
+	  }
+  }
 #+end_src
 
 #+begin_export latex

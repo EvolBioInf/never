@@ -31,6 +31,15 @@
   </div>
   <div class="responses">
     <div class="response-upper">
+      <label for="accept-header">Data structure:</label>
+      <select
+        name="accept-header"
+        id='{{toKebab "run" "example" "select" .Name .Op.Verb}}'
+      >
+        {{range $index, $item := .Op.AcceptHeader}}
+        <option value="{{$item}}">{{ $item }}</option>
+        {{end}}
+      </select>
       <div class="response-example">
         <input
           type="text"
@@ -58,7 +67,14 @@
                 '{{toKebab "input" "example" .Name .Op.Verb}}',
               );
 
-              fetch(input.value, { method: "{{ .Op.Verb }}" })
+              const select = document.getElementById(
+                '{{toKebab "run" "example" "select" .Name .Op.Verb}}',
+              );
+
+              fetch(input.value, {
+                method: "{{ .Op.Verb }}",
+                headers: { Accept: select.value },
+              })
                 .then((response) => response.text())
                 .then((data) => (pre.innerHTML = data));
             };
