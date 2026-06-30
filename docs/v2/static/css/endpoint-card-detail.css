@@ -95,6 +95,7 @@
   height: 1.6rem;
   width: 80%;
   padding-left: 10px;
+  background-color: var(--primary-color);
   font-size: medium;
 }
 
@@ -123,4 +124,16 @@
 
 .response-code-header {
   margin-bottom: 0;
+}
+
+.example-request-header {
+  width: 100%;
+}
+
+.example-request-header select {
+  width: 30%;
+  background-color: var(--primary-color);
+  height: 1.6rem;
+  padding-left: 6px;
+  margin-bottom: 8px;
 }

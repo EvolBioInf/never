@@ -806,7 +806,7 @@
           }
         },
         "operationId": "get_taxa_taxon_id",
-        "description": "Get the children of a taxon given its id",
+        "description": "Get information about a specific taxon",
         "parameters": [
           {
             "$ref": "#/components/parameters/field_composite"
