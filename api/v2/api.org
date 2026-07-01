@@ -342,9 +342,9 @@ type Node struct {
     Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
+		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(&taxonL, taxon, neidb) // new
+	makeRoute(&taxonL, taxon, neidb, dbPath) // new
 #+end_src
 
 #+begin_export latex
@@ -1742,9 +1742,7 @@ type Node struct {
     strconv.Itoa(offset),
     name,
     dbPath,
-    )
-  
-
+  )
 #+end_src
 
 #+begin_export latex
@@ -1757,7 +1755,7 @@ type Node struct {
 #+begin_src go <<Call \ty{taxi}, Pa. \ref{pa:api}>>=
   out, errMsg := callPackage(taxiArgs, taxi.Run)
   if len(errMsg) > 0 {
-    writeServerError(w, "fn taxa - Error while calling package taxi: " + string(errMsg), nil)
+    writeServerError(w, "Error while calling package taxi: " + string(errMsg), nil)
     return
   }
 #+end_src
@@ -1982,13 +1980,19 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    //<<Check content types, Pa. \ref{pa:api}>>
-    //<<Get db from args, Pa. \ref{pa:api}>>
-    //<<Get plain param, Pa. \ref{pa:api}>>
-    //<<Get field composite, Pa. \ref{pa:api}>>
-    //<<Get taxon data, Pa. \ref{pa:api}>>
-    //<<Add links taxon entity, Pa. \ref{pa:api}>>
-    //<<Write json output, Pa. \ref{pa:api}>>
+    //<<Get content type, Pa. \ref{pa:api}>>
+    if ct.EqualsMIME(jsonCt) {
+      //<<Get db from args, Pa. \ref{pa:api}>>
+      //<<Get plain param, Pa. \ref{pa:api}>>
+      //<<Get field composite, Pa. \ref{pa:api}>>
+      //<<Get taxon data, Pa. \ref{pa:api}>>
+      //<<Add links taxon entity, Pa. \ref{pa:api}>>
+      //<<Write json output, Pa. \ref{pa:api}>>
+    } else {
+      //<<Set taxi id args, Pa. \ref{pa:api}>>
+      //<<Call \ty{taxi}, Pa. \ref{pa:api}>>
+      //<<Write plain output, Pa. \ref{pa:api}>>
+    }
   }
 #+end_src
 
@@ -2038,6 +2042,35 @@ type Node struct {
   out.Links = links
 #+end_src
 
+#+begin_export latex
+  Now that we are done with processing the json request for \ty{taxon}, we
+  need to think about the plain text request. This is really similar to
+  \ty{taxa}'s program call. As with \ty{taxa}, we need to get the
+  databases path from the \ty{args} and then set the id as a label.
+#+end_export
+
+#+begin_src go <<Set taxi id args, Pa. \ref{pa:api}>>=
+  dbPath := args[1].(string)
+  // <<Get taxon id, Pa. \ref{pa:api}>>
+  taxiArgs := []string{"./taxi"}
+
+  taxiArgs = append(
+    taxiArgs, 
+    taxIdStr,
+    dbPath,
+  )
+#+end_src
+
+#+begin_export latex
+  The taxon's id is still stored as a path parameter.
+  These program calls take strings as input only, so we
+  don't need to convert the path parameter.
+#+end_export
+
+#+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
+  taxIdStr := r.PathValue("taxon_id")
+#+end_src
+
 
 
 #+begin_export latex
@@ -2067,16 +2100,6 @@ type Node struct {
     //<<Run \ty{ants}, Pa. \ref{pa:api}>>
     //<<Write plain output, Pa. \ref{pa:api}>>
   }
-#+end_src
-
-#+begin_export latex
-  The taxon's id is stored in as a path parameter.
-  A system call takes only strings as input, so we
-  don't need to convert the path parameter.
-#+end_export
-
-#+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
-  taxIdStr := r.PathValue("taxon_id")
 #+end_src
 
 #+begin_export latex

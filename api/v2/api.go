@@ -5,8 +5,9 @@ import (
 
 	"net/http"
 
-	"github.com/evolbioinf/neighbors/tdb"
 	"log"
+
+	"github.com/evolbioinf/neighbors/tdb"
 
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -201,9 +203,9 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
+		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(&taxonL, taxon, neidb) // new
+	makeRoute(&taxonL, taxon, neidb, dbPath) // new
 
 	ancestorsL := Node{
 		Links:    make(map[string][]Node),
@@ -716,7 +718,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 
 		out, errMsg := callPackage(taxiArgs, taxi.Run)
 		if len(errMsg) > 0 {
-			writeServerError(w, "fn taxa - Error while calling package taxi: "+string(errMsg), nil)
+			writeServerError(w, "Error while calling package taxi: "+string(errMsg), nil)
 			return
 		}
 
@@ -911,58 +913,79 @@ func writePlainOutput(w http.ResponseWriter, out []byte) {
 }
 
 func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
 		w.Write([]byte("Server does not provide any of the accepted content types."))
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	if ct.EqualsMIME(jsonCt) {
+		neidb := args[0].(*tdb.TaxonomyDB)
 
-	strPlain := r.URL.Query().Get("plain_data")
-	plain, err := strconv.ParseBool(strPlain)
-	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain_data is not a bool.")
-		return
-	}
-
-	fieldComposite := r.URL.Query().Get("field_composite")
-	fieldComposite = parseFieldComposite(fieldComposite)
-
-	taxIdStr := r.PathValue("taxon_id")
-	taxId, err := strconv.Atoi(taxIdStr)
-	if err != nil {
-		writeBadRequestResp(w, "Taxon id is not an integer.")
-		return
-	}
-
-	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
-	if err != nil {
-		writeServerError(w, "fn taxon - Error from getTaxonData", err)
-		return
-	}
-	var out ResponseBody[Taxon]
-	out.Data = tax
-
-	var links []Link
-	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
-	links = append(links, selfNode.makeLink("self", r.URL.String()))
-
-	for link := range selfNode.Links {
-		for _, node := range selfNode.Links[link] {
-			links = append(links, node.makeLink(link, ""))
+		strPlain := r.URL.Query().Get("plain_data")
+		plain, err := strconv.ParseBool(strPlain)
+		if strPlain != "" && err != nil {
+			writeBadRequestResp(w, "plain_data is not a bool.")
+			return
 		}
-	}
 
-	out.Links = links
+		fieldComposite := r.URL.Query().Get("field_composite")
+		fieldComposite = parseFieldComposite(fieldComposite)
 
-	if plain {
-		writeJsonOutput(w, out.Data)
+		taxIdStr := r.PathValue("taxon_id")
+		taxId, err := strconv.Atoi(taxIdStr)
+		if err != nil {
+			writeBadRequestResp(w, "Taxon id is not an integer.")
+			return
+		}
+
+		tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
+		if err != nil {
+			writeServerError(w, "fn taxon - Error from getTaxonData", err)
+			return
+		}
+		var out ResponseBody[Taxon]
+		out.Data = tax
+
+		var links []Link
+		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
+			}
+		}
+
+		out.Links = links
+
+		if plain {
+			writeJsonOutput(w, out.Data)
+		} else {
+			writeJsonOutput(w, out)
+		}
+
 	} else {
-		writeJsonOutput(w, out)
-	}
+		dbPath := args[1].(string)
+		taxIdStr := r.PathValue("taxon_id")
 
+		taxiArgs := []string{"./taxi"}
+
+		taxiArgs = append(
+			taxiArgs,
+			taxIdStr,
+			dbPath,
+		)
+		out, errMsg := callPackage(taxiArgs, taxi.Run)
+		if len(errMsg) > 0 {
+			writeServerError(w, "Error while calling package taxi: "+string(errMsg), nil)
+			return
+		}
+
+		writePlainOutput(w, out)
+
+	}
 }
 
 func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
