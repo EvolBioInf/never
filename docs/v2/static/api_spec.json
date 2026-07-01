@@ -396,16 +396,6 @@
         "operationId": "get_accession",
         "parameters": [
           {
-            "schema": {
-              "type": "string",
-              "example": "GCF_000001405.40"
-            },
-            "in": "query",
-            "name": "accession_id",
-            "required": true,
-            "description": "Id of accession to look up"
-          },
-          {
             "$ref": "#/components/parameters/plain_data"
           }
         ],
@@ -414,7 +404,8 @@
       "parameters": [
         {
           "schema": {
-            "type": "string"
+            "type": "string",
+            "example": "GCF_000001405.40"
           },
           "name": "accession_id",
           "in": "path",
@@ -778,6 +769,16 @@
                         }
                       ]
                     }
+                  }
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# ID    Parent  Name\n  9606  9605    Homo sapiens"
                   }
                 }
               }
@@ -2766,6 +2767,5 @@
         "description": "Quality levels of genome assembly"
       }
     }
-  },
-  "x-internal": false
+  }
 }
