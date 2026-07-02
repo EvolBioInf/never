@@ -5,9 +5,8 @@ import (
 
 	"net/http"
 
-	"log"
-
 	"github.com/evolbioinf/neighbors/tdb"
+	"log"
 
 	"strings"
 
@@ -18,7 +17,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -977,6 +975,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 			taxIdStr,
 			dbPath,
 		)
+
 		out, errMsg := callPackage(taxiArgs, taxi.Run)
 		if len(errMsg) > 0 {
 			writeServerError(w, "Error while calling package taxi: "+string(errMsg), nil)

@@ -2734,10 +2734,10 @@ type Node struct {
     Query:
       assembly_levels []string
       field_composite string
-      genomes_only     bool
+      genomes_only    bool
       max_depth       int
-      offset            int
-      limit       int
+      offset          int
+      limit           int
       plain_data      bool
       print_names     bool
     Writes:

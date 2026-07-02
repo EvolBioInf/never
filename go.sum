@@ -10,8 +10,6 @@ github.com/elnormous/contenttype v1.0.4 h1:FjmVNkvQOGqSX70yvocph7keC8DtmJaLzTTq6
 github.com/elnormous/contenttype v1.0.4/go.mod h1:5KTOW8m1kdX1dLMiUJeN9szzR2xkngiv2K+RVZwWBbI=
 github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b h1:26/B3KZkdt/NzB5wuv/tDb1KPSJ5A17zxQbcoURo5WM=
 github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b/go.mod h1:S13GccNRJPbjEsLZ/yCLFRVhdTS4qUJ+mf9GtZja8do=
-github.com/evolbioinf/neighbors v0.0.0-20260701100826-42243ee09c21 h1:y1Nc+necxQuaggkX+iAf7U/pMVXIdaWBNr/O0yY0oUE=
-github.com/evolbioinf/neighbors v0.0.0-20260701100826-42243ee09c21/go.mod h1:HwYWj1WAw5xWKsdx6EP+2jaJjI9ZAMQT79wnjdxiSmU=
 github.com/evolbioinf/nwk v0.0.0-20260620143656-d791d5f0c1ab h1:sLQPEVEJY1FK2ik8T4aAGUVJHYnTemsH8bkt+G7372I=
 github.com/evolbioinf/nwk v0.0.0-20260620143656-d791d5f0c1ab/go.mod h1:AduknVpv3xviFarKiTVjKI73aA5fje7tY3k8ILXwB8I=
 github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
