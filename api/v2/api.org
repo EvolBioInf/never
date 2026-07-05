@@ -261,6 +261,13 @@ type Node struct {
   //<<Initialize \ty{mrca}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{neighbors}, Pa. \ref{pa:api}>>
   //<<Initialize \ty{path}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{programs}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progDree}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progNeighbors}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progTaxi}, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
@@ -516,6 +523,119 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
+  This api also provides a slim interface for calling database related 
+  programs of the \ty{neighbors} package. We register these programs with
+  the url prefix \ty{programs}. For this we first write a link document
+  which is returned when \ty{/programs} is called.
+#+end_export
+
+#+begin_src go <<Initialize \ty{programs}, Pa. \ref{pa:api}>>=
+	programsDocL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "programs",
+		BasePath: prefix + "/programs",
+		Action:   get,
+		Types:    []contenttype.MediaType{jsonCt},
+	}
+	makeRoute(&programsDocL, programsDoc)
+#+end_src
+
+#+begin_export latex
+  One of the programs we want to provide is \ty{ants}.
+  We register under \ty{/programs/ants}. All arguments passed 
+  to the url are directly passed to the program when called.
+  We are going to execute the same function for all
+  program calls and pass different names of programs to call. 
+#+end_export
+
+#+begin_src go <<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>=
+	progAntsL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "progAnts",
+		BasePath: prefix + "/programs/ants",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
+#+end_src
+
+#+begin_export latex
+  All of these program endpoints are going to be the same except for their names.
+  We continue bey defining \ty{dree}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{progDree}, Pa. \ref{pa:api}>>=
+	progDreeL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "progDree",
+		BasePath: prefix + "/programs/dree",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} gets the next endpoint.
+#+end_export
+
+#+begin_src go <<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>=
+	progFintacL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "progFintac",
+		BasePath: prefix + "/programs/fintac",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
+#+end_src
+
+#+begin_export latex
+  Now we define \ty{neighbors}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{progNeighbors}, Pa. \ref{pa:api}>>=
+	progNeighborsL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "progNeighbors",
+		BasePath: prefix + "/programs/neighbors",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progNeighborsL, programEndpoint, dbPath, "neighbors")
+#+end_src
+
+#+begin_export latex
+  Next up is \ty{ranks}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>=
+	progRanksL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "progRanks",
+		BasePath: prefix + "/programs/ranks",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progRanksL, programEndpoint, dbPath, "ranks")
+#+end_src
+
+#+begin_export latex
+  The last one is \ty{taxi}.
+#+end_export
+
+#+begin_src go <<Initialize \ty{progTaxi}, Pa. \ref{pa:api}>>=
+	progTaxiL := Node{
+		Links:    make(map[string][]Node),
+    Name:     "progTaxi",
+		BasePath: prefix + "/programs/taxi",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
+#+end_src
+
+#+begin_export latex
   Now that we are done creating nodes and registering function we may set the links that
   turn the nodes into a graph. The following rules define which links should be part of responses.
   \begin{enumerate}
@@ -553,6 +673,8 @@ type Node struct {
   Then there \ty{accession} which is a subservice of \ty{accessions}; \ty{taxon}, \ty{ancestors}, \ty{children},
   \ty{parent}, \ty{rankDistribution} and \ty{subtree} which are subservices
   of \ty{taxa}. Lastly \ty{taxonAccessions}, \ty{fintac}, \ty{mrca}, \ty{neighbors} and \ty{path} are subservices of \ty{taxonomy}.
+  Lastly there are the programs, which are subservices of the \ty{programs} endpoints. These include \ty{progAnts}, \ty{progDree},
+  \ty{progFintac}, \ty{progNeighbors}, \ty{progRanks}, \ty{progTaxi}.
 #+end_export
 
 #+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
@@ -583,6 +705,12 @@ type Node struct {
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
+	programsDoc.Links["service"] = append(programsDoc.Links["service"], progAntsL)
+	programsDoc.Links["service"] = append(programsDoc.Links["service"], progDreeL)
+	programsDoc.Links["service"] = append(programsDoc.Links["service"], progFintacL)
+	programsDoc.Links["service"] = append(programsDoc.Links["service"], progNeighborsL)
+	programsDoc.Links["service"] = append(programsDoc.Links["service"], progRanksL)
+	programsDoc.Links["service"] = append(programsDoc.Links["service"], progTaxiL)
 #+end_src
 
 #+begin_export latex
@@ -3669,4 +3797,245 @@ type Node struct {
     return
   }
   data = append(data, tax)
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{programsDoc} provides links for
+  all the registered endpoints executing program
+  calls.  
+
+  This is \ty{progTaxi}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      none
+  Writes:
+    \ty{ResponseBody[nil]}
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    out := ResponseBody[*any]{}
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
+  }
+#+end_src
+
+#+begin_export latex
+  We already know how to add links of a service grouping other services;
+  \ty{rootDocument} and \ty{taxonomy} do the same.
+#+end_export
+
+#+begin_src go <<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>=
+  var links []Link
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
+  out.Links = links
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{programEndpoint} executes a program call executing 
+  one of the \ty{neighbors} programs. It takes a space delimited
+  string with the query parameter \ty{args}. This is directly passed
+  to the program when using the \ty{os/exec} package.
+  Files are passed via \ty{Stdin}. Outputs from Stdout
+  and Stderr are returned using the response. 
+
+  This is \ty{progTaxi}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      args string (anything taxi provide)
+  Writes:
+    string
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	  //<<Create program call context, Pa. \ref{pa:api}>>
+	  //<<Determine call arguments, Pa. \ref{pa:api}>>
+    //<<Call neighbors program, Pa. \ref{pa:api}>>
+    //<<Write neighbors response, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We can use a context with a timeout limit the maximum amount of 
+  time a program call may take. 
+#+end_export
+
+#+begin_src go <<Create program call context, Pa. \ref{pa:api}>>=
+  ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{context}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "context"
+#+end_src
+
+#+begin_export latex
+  The arguments we are going to use for calling the 
+  program are stored in the query parameter \ty{args}.
+  They formatted as a space delimited string.
+#+end_export
+
+#+begin_src go <<Determine call arguments, Pa. \ref{pa:api}>>=
+	callArgs := r.URL.Query().Get("args")
+	callArgs += " " + args[0].(string)
+#+end_src
+
+#+begin_export latex
+  We are calling the program using the \ty{os/exec} package
+  using the previously defined context.
+#+end_export
+
+#+begin_src go <<Call neighbors program, Pa. \ref{pa:api}>>=
+	cmd := exec.CommandContext(ctx, "./prog/" + args[1].(string), strings.Split(callArgs, " ")...)
+  //<<Handle neighbors files, Pa. \ref{pa:api}>>
+	res, err := cmd.CombinedOutput()
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{os/exec}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "os/exec"
+#+end_src
+
+#+begin_export latex
+  If a request is sent in \ty{multipart/form-data} we can assume that,
+  there are files to check. So the first thing we need to do is check 
+  the file type. We then parse the files, adding all of their data to 
+  the command \ty{Stdin}.
+#+end_export
+
+#+begin_src go <<Handle neighbors files, Pa. \ref{pa:api}>>=
+	ct, err := contenttype.GetMediaType(r)
+ 	if err != nil {
+    writeBadRequestResp(w, "Malformed content type.")
+		return
+	}
+	if ct.EqualsMIME(multipartCt) {
+      //<<Parse neighbors form data, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  Accessing the data of a multipart form request, requires
+  a parsing step. In this the format of provided is checked
+  and loaded into memory. We may define the amount space
+  we are willing to allocate for this data, I've decided
+  on 3MB, the remaining data will be stored on the hard
+  drive. We return a 400 (Bad Request) if the data is
+  malformed.
+#+end_export
+
+#+begin_src go <<Parse neighbors form data, Pa. \ref{pa:api}>>=
+	err = r.ParseMultipartForm(3_000_000)
+	if err != nil {
+    writeBadRequestResp(w, "Malformed multipart form request.")
+		return err
+	}
+  if len(r.MultipartForm.File) > 0 {
+    //<<Sort neighbors files, Pa. \ref{pa:api}>>
+    //<<Iterate over files, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  The files should be sorted by some criterium.
+  We use the keys that indicate the files to do so.
+#+end_export
+
+#+begin_src go <<Sort neighbors files, Pa. \ref{pa:api}>>=
+	keys := []string{}
+	for key := range r.MultipartForm.File {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+#+end_src
+
+#+begin_export latex
+  We need to import the \ty{sort} package for this.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "sort"
+#+end_src
+
+#+begin_export latex
+  The local programs take data via \ty{Stdin} as input.
+  This means we need to read the data during file iteration,
+  writing directly to the commands standard input. 
+#+end_export
+
+#+begin_src go <<Iterate over files, Pa. \ref{pa:api}>>=
+  for i, key := range keys {
+		files := r.MultipartForm.File[key]
+		if len(files) > 0 {
+	  //<<Extract neighbors request's file data, Pa. \ref{pa:api}>>
+	  //<<Open temporary file, Pa. \ref{pa:api}>>
+	  //<<Write to temporary file, Pa. \ref{pa:api}>>
+		}
+	}
+#+end_src
+
+#+begin_export latex
+  We expect that each key contains exactly one file. When
+  accesing the \ty{files} variable, we get pointers to the
+  header of a file. Now working with this is rather similar
+  to working with any other file. We may open the file via
+  the header, read it's data to a byte slice and close it again.
+#+end_export
+
+#+begin_src go <<Extract neighbors request's file data, Pa. \ref{pa:api}>>=
+	h := *files[0]
+  var rf multipart.File
+	rf, err = h.Open()
+	defer rf.Close()
+  if err != nil {
+    writeServerError(w, "Error while opening multipart file", err)
+    return
+  }
+	b := make([]byte, h.Size)
+	rf.Read(b)
+#+end_src
+
+#+begin_export latex
+  We create a new buffer storing the bytes we just read,
+  write them to our temporary file and close the file afterwards.
+  It's necessary to close the file right now, instead of deferring it,
+  so that other processes may read it.
+#+end_export
+
+#+begin_src go <<Write to temporary file, Pa. \ref{pa:api}>>=
+	buffer := bytes.NewBuffer(b)
+	buffer.WriteTo(stdin)
+	tf.Close()
+#+end_src
+
+#+begin_export latex
+  When writing the response we check whether there is an error. If there is one,
+  we log it. Otherwise we'll send a response with the programs text output.
+#+end_export
+
+#+begin_src go <<Write neighbors response, Pa. \ref{pa:api}>>=
+  if err != null {
+    writeServerError(w, "fn programEndpoint - failed while calling one of the programs.", err)
+  } else {
+	  w.Header().Set("Content-Type", plainCt.String())
+	  w.Write(res)
+  }
 #+end_src

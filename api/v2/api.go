@@ -47,6 +47,10 @@ import (
 	fintacPack "github.com/evolbioinf/neighbors/fintac"
 
 	neighborsPack "github.com/evolbioinf/neighbors/neighbors"
+
+	"context"
+
+	"os/exec"
 )
 
 type Accession struct {
@@ -303,6 +307,69 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&pathL, path, neidb) // previously just path
+
+	programsDocL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "programs",
+		BasePath: prefix + "/programs",
+		Action:   get,
+		Types:    []contenttype.MediaType{jsonCt},
+	}
+	makeRoute(&programsDocL, programsDoc)
+
+	progAntsL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progAnts",
+		BasePath: prefix + "/programs/ants",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
+
+	progDreeL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progDree",
+		BasePath: prefix + "/programs/dree",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
+
+	progFintacL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progFintac",
+		BasePath: prefix + "/programs/fintac",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
+
+	progNeighborsL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progNeighbors",
+		BasePath: prefix + "/programs/neighbors",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progNeighborsL, programEndpoint, dbPath, "neighbors")
+
+	progRanksL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progRanks",
+		BasePath: prefix + "/programs/ranks",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progRanksL, programEndpoint, dbPath, "ranks")
+
+	progTaxiL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progTaxi",
+		BasePath: prefix + "/programs/taxi",
+		Action:   get,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
 
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
@@ -1891,6 +1958,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 			return
 		}
 		data = append(data, tax)
+
 	}
 	out := ResponseBody[[]Taxon]{Data: data}
 
@@ -1912,4 +1980,41 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		writeJsonOutput(w, out)
 	}
 
+}
+
+func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	out := ResponseBody[*any]{}
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	var links []Link
+	links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+	for link := range selfNode.Links {
+		for _, node := range selfNode.Links[link] {
+			links = append(links, node.makeLink(link, ""))
+		}
+	}
+
+	out.Links = links
+
+	writeJsonOutput(w, out)
+}
+
+func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	callArgs := r.URL.Query().Get("args")
+	callArgs += " " + args[0].(string)
+
+	cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), strings.Split(callArgs, " ")...)
+	res, err := cmd.CombinedOutput()
+
+	fmt.Println(string(res), err)
+	w.Write(res)
 }
