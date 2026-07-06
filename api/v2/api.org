@@ -52,9 +52,9 @@ type Rank struct {
   Links []Link `json:"links,omitempty"`
 }
 type Image struct {
-	Id          int    `json:"id"`
-	Url         string `json:"url"`
-	Attribution string `json:"attribution"`
+  Id          int    `json:"id"`
+  Url         string `json:"url"`
+  Attribution string `json:"attribution"`
 }
 type Taxon struct {
   TaxId          int           `json:"tax_id"`
@@ -115,11 +115,11 @@ type Link struct {
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Node struct {
-	Links    map[string][]Node
+  Links    map[string][]Node
   Name     string
-	BasePath string
-	Action   string
-	Types    []contenttype.MediaType
+  BasePath string
+  Action   string
+  Types    []contenttype.MediaType
 }
 #+end_src
 
@@ -130,7 +130,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"github.com/elnormous/contenttype"
+  "github.com/elnormous/contenttype"
 #+end_src
 
 #+begin_export latex
@@ -140,9 +140,9 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
-	var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-	var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-	var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+  var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+  var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+  var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 #+end_src
 
 #+begin_export latex
@@ -183,8 +183,8 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), args ...any) {
     http.HandleFunc(node.Action + " " + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-	  		fn(w, r, node, args...)
-	  })
+        fn(w, r, node, args...)
+    })
   }
 #+end_src
 
@@ -277,17 +277,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>=
-	get := "GET"
-	post := "POST"
-
-	rootDocL := Node{
-		Links:    make(map[string][]Node),
+  rootDocL := Node{
+    Links:    make(map[string][]Node),
     Name:     "rootDocument",
-		BasePath: prefix,
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&rootDocL, rootDocument, neidb) // new
+    BasePath: prefix,
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&rootDocL, rootDocument, neidb) // new
 #+end_src
 
 #+begin_export latex
@@ -295,14 +292,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{accessions}, Pa. \ref{pa:api}>>=
-	accessionsL := Node{
-		Links:    make(map[string][]Node),
+  accessionsL := Node{
+    Links:    make(map[string][]Node),
     Name:     "accessions",
-		BasePath: prefix + "/accessions",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&accessionsL, accessions, neidb) // previously known as levels
+    BasePath: prefix + "/accessions",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&accessionsL, accessions, neidb) // previously known as levels
 #+end_src
 
 #+begin_export latex
@@ -310,14 +307,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{accession}, Pa. \ref{pa:api}>>=
-	accessionL := Node{
-		Links:    make(map[string][]Node),
+  accessionL := Node{
+    Links:    make(map[string][]Node),
     Name:     "accession",
-		BasePath: prefix + "/accessions/{accession_id}",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&accessionL, accession, neidb) // new
+    BasePath: prefix + "/accessions/{accession_id}",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&accessionL, accession, neidb) // new
 #+end_src
 
 #+begin_export latex
@@ -325,14 +322,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxa}, Pa. \ref{pa:api}>>=
-	taxaL := Node{
-		Links:    make(map[string][]Node),
+  taxaL := Node{
+    Links:    make(map[string][]Node),
     Name:     "taxa",
-		BasePath: prefix + "/taxa",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
+    BasePath: prefix + "/taxa",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
 #+end_src
 
 #+begin_export latex
@@ -340,14 +337,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxon}, Pa. \ref{pa:api}>>=
-	taxonL := Node{
-		Links:    make(map[string][]Node),
+  taxonL := Node{
+    Links:    make(map[string][]Node),
     Name:     "taxon",
-		BasePath: prefix + "/taxa/{taxon_id}",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt, plainCt},
-	}
-	makeRoute(&taxonL, taxon, neidb, dbPath) // new
+    BasePath: prefix + "/taxa/{taxon_id}",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt, plainCt},
+  }
+  makeRoute(&taxonL, taxon, neidb, dbPath) // new
 #+end_src
 
 #+begin_export latex
@@ -355,14 +352,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{children}, Pa. \ref{pa:api}>>=
-	childrenL := Node{
-		Links:    make(map[string][]Node),
+  childrenL := Node{
+    Links:    make(map[string][]Node),
     Name:     "children",
-		BasePath: prefix + "/taxa/{taxon_id}/children",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&childrenL, children, neidb) // previously just children
+    BasePath: prefix + "/taxa/{taxon_id}/children",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&childrenL, children, neidb) // previously just children
 #+end_src
 
 #+begin_export latex
@@ -370,14 +367,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{parent}, Pa. \ref{pa:api}>>=
-	parentL := Node{
-		Links:    make(map[string][]Node),
+  parentL := Node{
+    Links:    make(map[string][]Node),
     Name:     "parent",
-		BasePath: prefix + "/taxa/{taxon_id}/parent",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&parentL, parent, neidb) // previously known as parent
+    BasePath: prefix + "/taxa/{taxon_id}/parent",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&parentL, parent, neidb) // previously known as parent
 #+end_src
 
 #+begin_export latex
@@ -385,14 +382,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{subtree}, Pa. \ref{pa:api}>>=
-	subtreeL := Node{
-		Links:    make(map[string][]Node),
+  subtreeL := Node{
+    Links:    make(map[string][]Node),
     Name:     "subtree",
-		BasePath: prefix + "/taxa/{taxon_id}/subtree",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
+    BasePath: prefix + "/taxa/{taxon_id}/subtree",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
 #+end_src
 
 #+begin_export latex
@@ -400,14 +397,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>=
-	taxonomyL := Node{
-		Links:    make(map[string][]Node),
+  taxonomyL := Node{
+    Links:    make(map[string][]Node),
     Name:     "taxonomy",
-		BasePath: prefix + "/taxonomy",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&taxonomyL, taxonomy, neidb) // new
+    BasePath: prefix + "/taxonomy",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&taxonomyL, taxonomy, neidb) // new
 #+end_src
 
 #+begin_export latex
@@ -415,14 +412,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxonAccessions}, Pa. \ref{pa:api}>>=
-	taxonAccessionsL := Node{
-		Links:    make(map[string][]Node),
+  taxonAccessionsL := Node{
+    Links:    make(map[string][]Node),
     Name:     "taxonAccessions",
-		BasePath: prefix + "/taxonomy/accessions",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
+    BasePath: prefix + "/taxonomy/accessions",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
 #+end_src
 
 #+begin_export latex
@@ -430,14 +427,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{mrca}, Pa. \ref{pa:api}>>=
-	mrcaL := Node{
-		Links:    make(map[string][]Node),
+  mrcaL := Node{
+    Links:    make(map[string][]Node),
     Name:     "mrca",
-		BasePath: prefix + "/taxonomy/mrca",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&mrcaL, mrca, neidb) // previously just mrca
+    BasePath: prefix + "/taxonomy/mrca",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&mrcaL, mrca, neidb) // previously just mrca
 #+end_src
 
 #+begin_export latex
@@ -445,14 +442,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{path}, Pa. \ref{pa:api}>>=
-	pathL := Node{
-		Links:    make(map[string][]Node),
+  pathL := Node{
+    Links:    make(map[string][]Node),
     Name:     "path",
-		BasePath: prefix + "/taxonomy/path",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&pathL, path, neidb) // previously just path
+    BasePath: prefix + "/taxonomy/path",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&pathL, path, neidb) // previously just path
 #+end_src
 
 #+begin_export latex
@@ -463,14 +460,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{programs}, Pa. \ref{pa:api}>>=
-	programsDocL := Node{
-		Links:    make(map[string][]Node),
+  programsDocL := Node{
+    Links:    make(map[string][]Node),
     Name:     "programs",
-		BasePath: prefix + "/programs",
-		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&programsDocL, programsDoc)
+    BasePath: prefix + "/programs",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&programsDocL, programsDoc)
 #+end_src
 
 #+begin_export latex
@@ -482,14 +479,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>=
-	progAntsL := Node{
-		Links:    make(map[string][]Node),
+  progAntsL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progAnts",
-		BasePath: prefix + "/programs/ants",
-		Action:   get,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
+    BasePath: prefix + "/programs/ants",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
 #+end_src
 
 #+begin_export latex
@@ -498,29 +495,31 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{progDree}, Pa. \ref{pa:api}>>=
-	progDreeL := Node{
-		Links:    make(map[string][]Node),
+  progDreeL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progDree",
-		BasePath: prefix + "/programs/dree",
-		Action:   get,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
+    BasePath: prefix + "/programs/dree",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
 #+end_src
 
 #+begin_export latex
-  \ty{fintac} gets the next endpoint.
+  \ty{fintac} gets the next endpoint, but it actually gets its
+  own function. It uses a different scheme for defining the database,
+  which is not compatible with the other programs.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>=
-	progFintacL := Node{
-		Links:    make(map[string][]Node),
+  progFintacL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progFintac",
-		BasePath: prefix + "/programs/fintac",
-		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
+    BasePath: prefix + "/programs/fintac",
+    Action:   http.MethodPost,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progFintacL, fintacEndpoint, dbPath)
 #+end_src
 
 #+begin_export latex
@@ -530,22 +529,22 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{progNeighbors}, Pa. \ref{pa:api}>>=
-	progNeighborsGetL := Node{
-		Links:    make(map[string][]Node),
+  progNeighborsGetL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progNeighbors",
-		BasePath: prefix + "/programs/neighbors",
-		Action:   get,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progNeighborsGetL, programEndpoint, dbPath, "neighbors")
-	progNeighborsPostL := Node{
-		Links:    make(map[string][]Node),
+    BasePath: prefix + "/programs/neighbors",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progNeighborsGetL, programEndpoint, dbPath, "neighbors")
+  progNeighborsPostL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progNeighbors",
-		BasePath: prefix + "/programs/neighbors",
-		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progNeighborsPostL, programEndpoint, dbPath, "neighbors")
+    BasePath: prefix + "/programs/neighbors",
+    Action:   http.MethodPost,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progNeighborsPostL, programEndpoint, dbPath, "neighbors")
 #+end_src
 
 #+begin_export latex
@@ -554,22 +553,22 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>=
-	progRanksGetL := Node{
-		Links:    make(map[string][]Node),
+  progRanksGetL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progRanks",
-		BasePath: prefix + "/programs/ranks",
-		Action:   get,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progRanksGetL, programEndpoint, dbPath, "ranks")
-	progRanksPostL := Node{
-		Links:    make(map[string][]Node),
+    BasePath: prefix + "/programs/ranks",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progRanksGetL, programEndpoint, dbPath, "ranks")
+  progRanksPostL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progRanks",
-		BasePath: prefix + "/programs/ranks",
-		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
+    BasePath: prefix + "/programs/ranks",
+    Action:   MethodPost,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
 #+end_src
 
 #+begin_export latex
@@ -577,14 +576,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Initialize \ty{progTaxi}, Pa. \ref{pa:api}>>=
-	progTaxiL := Node{
-		Links:    make(map[string][]Node),
+  progTaxiL := Node{
+    Links:    make(map[string][]Node),
     Name:     "progTaxi",
-		BasePath: prefix + "/programs/taxi",
-		Action:   get,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
+    BasePath: prefix + "/programs/taxi",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
 #+end_src
 
 #+begin_export latex
@@ -630,33 +629,33 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
-	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progAntsL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progDreeL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progFintacL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsGetL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsPostL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksGetL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksPostL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progTaxiL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
+  accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
+  taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
+  taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
+  taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
+  taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
+  taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
+  taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
+  taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progAntsL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progDreeL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progFintacL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsGetL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsPostL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksGetL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksPostL)
+  programsDocL.Links["service"] = append(programsDocL.Links["service"], progTaxiL)
 #+end_src
 
 #+begin_export latex
@@ -666,11 +665,11 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Link collection entities, Pa. \ref{pa:api}>>=
-	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
-	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
-	childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
-	subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
-	pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
+  accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
+  taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
+  childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
+  subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
+  pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
 #+end_src
 
 #+begin_export latex
@@ -681,8 +680,8 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Link entity to collection, Pa. \ref{pa:api}>>=
-	accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
-	taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
+  accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
+  taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
 #+end_src
 
 #+begin_export latex
@@ -690,17 +689,17 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Link pagination, Pa. \ref{pa:api}>>=
-	accessionsL.Links["previous"] = append(accessionsL.Links["previous"], accessionsL)
-	taxaL.Links["previous"] = append(taxaL.Links["previous"], taxaL)
-	childrenL.Links["previous"] = append(childrenL.Links["previous"], childrenL)
-	subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
-	pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
+  accessionsL.Links["previous"] = append(accessionsL.Links["previous"], accessionsL)
+  taxaL.Links["previous"] = append(taxaL.Links["previous"], taxaL)
+  childrenL.Links["previous"] = append(childrenL.Links["previous"], childrenL)
+  subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
+  pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
 
   accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
-	taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
-	childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
-	subtreeL.Links["next"] = append(subtreeL.Links["next"], subtreeL)
-	pathL.Links["next"] = append(pathL.Links["next"], pathL)
+  taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
+  childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
+  subtreeL.Links["next"] = append(subtreeL.Links["next"], subtreeL)
+  pathL.Links["next"] = append(pathL.Links["next"], pathL)
 #+end_src
 
 #+begin_export latex
@@ -711,13 +710,13 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Link entity fields, Pa. \ref{pa:api}>>=
-	taxaL.Links["more fields"] = append(taxaL.Links["more fields"], taxaL)
-	taxonL.Links["more fields"] = append(taxonL.Links["more fields"], taxonL)
-	childrenL.Links["more fields"] = append(childrenL.Links["more fields"], childrenL)
-	parentL.Links["more fields"] = append(parentL.Links["more fields"], parentL)
-	subtreeL.Links["more fields"] = append(subtreeL.Links["more fields"], subtreeL)
-	mrcaL.Links["more fields"] = append(mrcaL.Links["more fields"], mrcaL)
-	pathL.Links["more fields"] = append(pathL.Links["more fields"], pathL)
+  taxaL.Links["more fields"] = append(taxaL.Links["more fields"], taxaL)
+  taxonL.Links["more fields"] = append(taxonL.Links["more fields"], taxonL)
+  childrenL.Links["more fields"] = append(childrenL.Links["more fields"], childrenL)
+  parentL.Links["more fields"] = append(parentL.Links["more fields"], parentL)
+  subtreeL.Links["more fields"] = append(subtreeL.Links["more fields"], subtreeL)
+  mrcaL.Links["more fields"] = append(mrcaL.Links["more fields"], mrcaL)
+  pathL.Links["more fields"] = append(pathL.Links["more fields"], pathL)
 #+end_src
 
 #+begin_export latex
@@ -726,8 +725,8 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Interservice links, Pa. \ref{pa:api}>>=
-	mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
-	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
+  mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
+  childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
   root = rootDocL
 #+end_src
 
@@ -772,8 +771,8 @@ type Node struct {
     http.HandleFunc("OPTIONS "+nodes[0].BasePath, func(w http.ResponseWriter, r *http.Request) {
       methods := []string{"OPTIONS"}
       //<<Get methods, Pa. \ref{pa:api}>>
-		  w.Header().Set("Allow", strings.Join(methods, ", "))
-		  w.WriteHeader(http.StatusNoContent)
+      w.Header().Set("Allow", strings.Join(methods, ", "))
+      w.WriteHeader(http.StatusNoContent)
     })
   }
 #+end_src
@@ -845,7 +844,7 @@ type Node struct {
 #+begin_src go <<React no match, Pa. \ref{pa:api}>>=
   if err != nil {
     w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+    w.Write([]byte("Server does not provide any of the accepted content types."))
     return
   }
 #+end_src
@@ -905,15 +904,15 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func writeJsonOutput(w http.ResponseWriter, out any) {
-	  w.Header().Set("Content-Type", jsonCt.String())
+    w.Header().Set("Content-Type", jsonCt.String())
     w.WriteHeader(http.StatusOK)
-	  buf := &bytes.Buffer{}
-	  encoder := json.NewEncoder(buf)
-	  encoder.SetEscapeHTML(false)
-	  encoder.SetIndent("", "  ")
-	  err := encoder.Encode(out)
-	  util.Check(err)
-	  w.Write(buf.Bytes())
+    buf := &bytes.Buffer{}
+    encoder := json.NewEncoder(buf)
+    encoder.SetEscapeHTML(false)
+    encoder.SetIndent("", "  ")
+    err := encoder.Encode(out)
+    util.Check(err)
+    w.Write(buf.Bytes())
   }
 #+end_src
 
@@ -1031,12 +1030,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get plain param, Pa. \ref{pa:api}>>=
-	strPlain := r.URL.Query().Get("plain_data")
-	plain, err := strconv.ParseBool(strPlain)
-	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain_data is not a bool.")
+  strPlain := r.URL.Query().Get("plain_data")
+  plain, err := strconv.ParseBool(strPlain)
+  if strPlain != "" && err != nil {
+    writeBadRequestResp(w, "plain_data is not a bool.")
     return
-	}
+  }
 #+end_src
 
 #+begin_export latex
@@ -1116,7 +1115,7 @@ type Node struct {
     accession := accessions[i]
     level, err := neidb.Level(accession)
     if err != nil {
-      writeServerError(w, "fn accessions - Error while accessing neidb.Level", err)
+      writeServerError(w, "fn accessions - Error while accessing neidb.Level", "", err)
       return
     }
     acc := Accession{Accession: accession, Level: level}
@@ -1136,16 +1135,20 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func writeServerError(w http.ResponseWriter, internalMsg string, err error) {
+  func writeServerError(w http.ResponseWriter, internalMsg string, responseMsg string, err error) {
     if err == nil {
       err = errors.New("No error passed")
     }
-   	util.LogWarningDef(
-		  util.WarningEntry{
-			  Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
-		})
-  	w.WriteHeader(http.StatusInternalServerError)
-  	w.Write([]byte("Internal server error."))
+     util.LogWarningDef(
+      util.WarningEntry{
+        Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
+    })
+    w.WriteHeader(http.StatusInternalServerError)
+    if responseMsg != "" {
+      w.Write([]byte("An error occurred: " + responseMsg))
+    } else {
+      w.Write([]byte("Internal server error."))
+    }
   }
 #+end_src
 
@@ -1155,7 +1158,7 @@ type Node struct {
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
   "errors"
-	"runtime/debug"
+  "runtime/debug"
 #+end_src
 
 #+begin_export latex
@@ -1235,8 +1238,8 @@ type Node struct {
 
 #+begin_src go <<Add link to accession object, Pa. \ref{pa:api}>>=
   accNode := *root.getService("accession")
-	acc.Links = append(acc.Links, accNode.makeLink("self",
-		fillTemplate(accNode, map[string]string{}, map[string]string{})))
+  acc.Links = append(acc.Links, accNode.makeLink("self",
+    fillTemplate(accNode, map[string]string{}, map[string]string{})))
 #+end_src
 
 #+begin_export latex
@@ -1247,11 +1250,11 @@ type Node struct {
 
 #+begin_src go <<Add collection links, Pa. \ref{pa:api}>>=
   if !plain {
-		var links []Link
+    var links []Link
     //<<Add endpoint's self link, Pa. \ref{pa:api}>>
     //<<Add pagination links, Pa. \ref{pa:api}>>
     //<<Add graph links, Pa. \ref{pa:api}>>
-		out.Links = links
+    out.Links = links
   }
 #+end_src
 
@@ -1272,11 +1275,11 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Add graph links, Pa. \ref{pa:api}>>=
-		for link := range selfNode.Links {
-			for _, node := range selfNode.Links[link] {
-				links = append(links, node.makeLink(link, ""))
-			}
-		}
+    for link := range selfNode.Links {
+      for _, node := range selfNode.Links[link] {
+        links = append(links, node.makeLink(link, ""))
+      }
+    }
 #+end_src
 
 #+begin_export latex
@@ -1329,7 +1332,7 @@ type Node struct {
   accession := r.PathValue("accession_id")
   level, err := neidb.Level(accession)
   if err != nil {
-    writeServerError(w, "fn accession - Error while accessing neidb.Level", err)
+    writeServerError(w, "fn accession - Error while accessing neidb.Level", "", err)
     return
   }
   var data Accession
@@ -1412,15 +1415,15 @@ type Node struct {
   //<<Get field composite, Pa. \ref{pa:api}>>
 
   exact, err := strconv.ParseBool(strExact)
-	if strExact != "" && err != nil {
-		writeBadRequestResp(w, "exact is not a bool.")
+  if strExact != "" && err != nil {
+    writeBadRequestResp(w, "exact is not a bool.")
     return
-	}
+  }
   scientific, err := strconv.ParseBool(strScientific)
   if strScientific != "" && err != nil {
-		writeBadRequestResp(w, "scientific is not a bool.")
+    writeBadRequestResp(w, "scientific is not a bool.")
     return
-	}
+  }
   if !exact {
     name = strings.ReplaceAll(name, " ", "% %")
     name = "%" + name + "%"
@@ -1466,13 +1469,13 @@ type Node struct {
   if scientific {
     ids, err = neidb.Taxids(name, limit, offset)
     if err != nil {
-      writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
+      writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", "", err)
       return
     }
   } else {
     ids, err = neidb.CommonTaxids(name, limit, offset)
     if err != nil {
-      writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
+      writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", "", err)
       return
     }
   }
@@ -1661,12 +1664,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Add entity Link, Pa. \ref{pa:api}>>=
-	taxNode := *root.getService("taxon")
-	tax.Links = append(tax.Links, taxNode.makeLink("self", fillTemplate(
-		taxNode,
-		map[string]string{"taxon_id": strconv.Itoa(id)},
-		map[string]string{"field_composite": fieldComposite},
-	)))
+  taxNode := *root.getService("taxon")
+  tax.Links = append(tax.Links, taxNode.makeLink("self", fillTemplate(
+    taxNode,
+    map[string]string{"taxon_id": strconv.Itoa(id)},
+    map[string]string{"field_composite": fieldComposite},
+  )))
 #+end_src
 
 #+begin_export latex
@@ -1677,7 +1680,7 @@ type Node struct {
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(id, plain, fieldComposite, neidb)
   if err != nil {
-    writeServerError(w, "Error from getTaxonData", err)
+    writeServerError(w, "Error from getTaxonData", "", err)
     return
   }
   data = append(data, tax)
@@ -1698,12 +1701,12 @@ type Node struct {
 
 #+begin_src go <<Add taxa links, Pa. \ref{pa:api}>>=
   if !plain {
-		var links []Link
+    var links []Link
     //<<Add endpoint's self link, Pa. \ref{pa:api}>>
     //<<Add pagination links, Pa. \ref{pa:api}>>
     //<<Add graph links, Pa. \ref{pa:api}>>
     //<<Add field composite links, Pa. \ref{pa:api}>>
-		out.Links = links
+    out.Links = links
   }
 #+end_src
 
@@ -1743,9 +1746,9 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Create composite link, Pa. \ref{pa:api}>>=
-	q := u.Query()
-	q.Set(queryName, v)
-	u.RawQuery = q.Encode()
+  q := u.Query()
+  q.Set(queryName, v)
+  u.RawQuery = q.Encode()
   links = append(links, node.makeLink("more fields", u.String()))
 #+end_src
 
@@ -1800,7 +1803,7 @@ type Node struct {
   //<<Parse taxon id, Pa. \ref{pa:api}>>
   tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
   if err != nil {
-    writeServerError(w, "fn taxon - Error from getTaxonData", err)
+    writeServerError(w, "fn taxon - Error from getTaxonData", "", err)
     return
   }
   var out ResponseBody[Taxon]
@@ -1911,8 +1914,8 @@ type Node struct {
 
 #+begin_src go <<Execute children query, Pa. \ref{pa:api}>>=
     children, err := neidb.Children(taxId)
-	  if err != nil {
-      writeServerError(w, "fn children - Error while executing neidbChildren", err)
+    if err != nil {
+      writeServerError(w, "fn children - Error while executing neidbChildren", "", err)
       return
     }
     if limit == -1 {
@@ -1921,8 +1924,8 @@ type Node struct {
     data := []Taxon{}
     for i := offset; i < min(offset + limit, len(children)); i++ {
       id := children[i]
-		  //<<Construct taxon output, Pa. \ref{pa:api}>>
-	  }
+      //<<Construct taxon output, Pa. \ref{pa:api}>>
+    }
 #+end_src
 
 #+begin_export latex
@@ -1942,16 +1945,16 @@ type Node struct {
 
 #+begin_src go <<Add filled taxa links, Pa. \ref{pa:api}>>=
   if !plain {
-		var links []Link
+    var links []Link
     //<<Add endpoint's self link, Pa. \ref{pa:api}>>
     //<<Add pagination links, Pa. \ref{pa:api}>>
     for link := range selfNode.Links {
-			for _, node := range selfNode.Links[link] {
-				links = append(links, node.makeLink(link, fillTemplate(node, pathParams, queryParams)))
-			}
-		}
+      for _, node := range selfNode.Links[link] {
+        links = append(links, node.makeLink(link, fillTemplate(node, pathParams, queryParams)))
+      }
+    }
     //<<Add field composite links, Pa. \ref{pa:api}>>
-		out.Links = links
+    out.Links = links
   }
 #+end_src
 
@@ -1995,7 +1998,7 @@ type Node struct {
   parent, err := neidb.Parent(taxId)
   tax, err := getTaxonData(parent, true, fieldComposite, neidb)
   if err != nil {
-    writeServerError(w, "fn parent - Error from getTaxonData", err)
+    writeServerError(w, "fn parent - Error from getTaxonData", "", err)
     return
   }
   var out ResponseBody[Taxon]
@@ -2030,7 +2033,7 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    //<<Get content type, Pa. \ref{pa:api}>>
+    //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Parse taxon id, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
@@ -2051,7 +2054,7 @@ type Node struct {
 #+begin_src go <<Execute subtree query, Pa. \ref{pa:api}>>=
   taxa, err := neidb.Subtree(taxId)
   if err != nil {
-    writeServerError(w, "fn subtree - Error while executing neidb.Subtree", err)
+    writeServerError(w, "fn subtree - Error while executing neidb.Subtree", "", err)
     return
   }
 
@@ -2152,7 +2155,7 @@ type Node struct {
     taxIds = taxIds[1:]
     accs, err := neidb.Accessions(taxId)
     if err != nil {
-      writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", err)
+      writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", "", err)
       return
     }
     if len(accs) > 0 {
@@ -2191,7 +2194,7 @@ type Node struct {
     for _, acc := range accs {
       level, err := neidb.Level(acc)
       if err != nil {
-        writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", err)
+        writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", "", err)
         return
       }
       accession := Accession{Accession: acc, Level: level}
@@ -2210,12 +2213,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Add taxon link, Pa. \ref{pa:api}>>=
-	if !plain {
+  if !plain {
     d.Links = append(d.Links, taxNode.makeLink("taxon", fillTemplate(
-	  	taxNode,
-	  	map[string]string{"taxon_id": strconv.Itoa(taxId)},
-	  	map[string]string{},
-	  )))
+      taxNode,
+      map[string]string{"taxon_id": strconv.Itoa(taxId)},
+      map[string]string{},
+    )))
   }
 #+end_src
 
@@ -2224,12 +2227,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Add accession link, Pa. \ref{pa:api}>>=
-	if !plain {
+  if !plain {
     accession.Links = append(accession.Links, taxNode.makeLink("self", fillTemplate(
-	  	accNode,
-	  	map[string]string{"accession_id": acc},
-	  	map[string]string{},
-	  )))
+      accNode,
+      map[string]string{"accession_id": acc},
+      map[string]string{},
+    )))
   }
 #+end_src
 
@@ -2241,7 +2244,7 @@ type Node struct {
 #+begin_src go <<Get children, Pa. \ref{pa:api}>>=
   children, err := neidb.Children(taxId)
   if err != nil {
-    writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", err)
+    writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", "", err)
     return
   }
   for _, child := range children {
@@ -2313,17 +2316,17 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Execute mrca query, Pa. \ref{pa:api}>>=
-	var out ResponseBody[Taxon]
+  var out ResponseBody[Taxon]
   if len(taxIds) > 0 {
-	  id, err := neidb.MRCA(taxIds)
+    id, err := neidb.MRCA(taxIds)
     if err != nil {
-      writeServerError(w, "fn mrca - Error while executing neidb.MRCA", err)
+      writeServerError(w, "fn mrca - Error while executing neidb.MRCA", "", err)
       return
     }
 
   //<<Get data of taxon, Pa. \ref{pa:api}>>
   //<<Add links taxon entity, Pa. \ref{pa:api}>>
-	}
+  }
 #+end_src
 
 #+begin_export latex
@@ -2334,7 +2337,7 @@ type Node struct {
 #+begin_src go <<Get data of taxon, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(id, plain, fieldComposite, neidb)
   if err != nil {
-    writeServerError(w, "fn mrca - Error from getTaxonData", err)
+    writeServerError(w, "fn mrca - Error from getTaxonData", "", err)
     return
   }
   out.Data = tax
@@ -2407,15 +2410,15 @@ type Node struct {
 #+begin_src go <<Climb taxonomy, Pa. \ref{pa:api}>>=
   var data []Taxon
   for i := 0; (i < offset + limit || limit == -1) && start != end; i++ {
-	  parent, err := neidb.Parent(start)
+    parent, err := neidb.Parent(start)
 
     if err != nil {
-      writeServerError(w, "fn path - Error while calling neidb.Parent", err)
+      writeServerError(w, "fn path - Error while calling neidb.Parent", "", err)
       return
     }
-	  //<<Has the path reached the root?, Pa. \ref{pa:api}>>
-	  start = parent
-	  //<<Store new node on path, Pa. \ref{pa:api}>>
+    //<<Has the path reached the root?, Pa. \ref{pa:api}>>
+    start = parent
+    //<<Store new node on path, Pa. \ref{pa:api}>>
   }
   out := ResponseBody[[]Taxon]{Data: data}
 #+end_src
@@ -2427,8 +2430,8 @@ type Node struct {
 
 #+begin_src go <<Has the path reached the root?, Pa. \ref{pa:api}>>=
   if start == parent {
-	  data = data[:0]
-	  break
+    data = data[:0]
+    break
   }
 #+end_src
 
@@ -2439,7 +2442,7 @@ type Node struct {
 #+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
   tax, err := getTaxonData(start, plain, fieldComposite, neidb)
   if err != nil {
-    writeServerError(w, "fn path - Error from getTaxonData", err)
+    writeServerError(w, "fn path - Error from getTaxonData", "", err)
     return
   }
   data = append(data, tax)
@@ -2505,8 +2508,9 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	  //<<Create program call context, Pa. \ref{pa:api}>>
-	  //<<Determine call arguments, Pa. \ref{pa:api}>>
+    //<<Create program call context, Pa. \ref{pa:api}>>
+    //<<Determine call arguments, Pa. \ref{pa:api}>>
+    //<<Add database, Pa. \ref{pa:api}>>
     //<<Call program, Pa. \ref{pa:api}>>
     //<<Write response, Pa. \ref{pa:api}>>
   }
@@ -2519,7 +2523,7 @@ type Node struct {
 
 #+begin_src go <<Create program call context, Pa. \ref{pa:api}>>=
   ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+  defer cancel()
 #+end_src
 
 #+begin_export latex
@@ -2539,28 +2543,47 @@ type Node struct {
   split it whenever we hit a space symbol, unless 
   we are currently in a string literal. We need to
   add the remaining characters when leaving the loop. 
-  Lastly we need to append the database.
+  We should encapsulate this behaviour in a function.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func splitArgs(strArgs string) (args []string) {
+    tArgs := []string{}
+    var sb strings.Builder
+    inLiteral := false
+    for _, v := range strArgs {
+      if v == '"' {
+        inLiteral = !inLiteral
+      } else if v == ' ' && !inLiteral {
+        tArgs = append(tArgs, sb.String())
+        sb.Reset()
+      } else {
+        sb.WriteRune(v)
+      }
+    }
+    if sb.Len() > 0 {
+      tArgs = append(tArgs, sb.String())
+    }
+    args = 	slices.DeleteFunc(tArgs, func(w string) bool {return w == "-r"})
+    return
+  }
+#+end_src
+
+#+begin_export latex
+  Now we call \ty{splitArgs}.
 #+end_export
 
 #+begin_src go <<Determine call arguments, Pa. \ref{pa:api}>>=
-	callArgs := []string{}
-	requestArgs := r.URL.Query().Get("args")
-	var sb strings.Builder
-	inLiteral := false
-	for _, v := range requestArgs {
-		if v == '"' {
-			inLiteral = !inLiteral
-		} else if v == ' ' && !inLiteral {
-			callArgs = append(callArgs, sb.String())
-			sb.Reset()
-		} else {
-			sb.WriteRune(v)
-		}
-	}
-  if sb.Len() > 0 {
-		callArgs = append(callArgs, sb.String())
-	}
-	callArgs = append(callArgs, args[0].(string))
+  callArgs := splitArgs(r.URL.Query().Get("args"))
+#+end_src
+
+#+begin_export latex
+  The database is added as a last argument. It was passed to this
+  function as the first entry in \ty{args}.
+#+end_export
+
+#+begin_src go <<Add database, Pa. \ref{pa:api}>>=
+  callArgs = append(callArgs, args[0].(string))
 #+end_src
 
 #+begin_export latex
@@ -2569,9 +2592,9 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-	cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), callArgs...)
+  cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), callArgs...)
   //<<Handle files, Pa. \ref{pa:api}>>
-	res, err := cmd.CombinedOutput()
+  res, err := cmd.CombinedOutput()
 #+end_src
 
 #+begin_export latex
@@ -2593,18 +2616,29 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Now after checking the file type, we need to parse the files,
-  adding all of their data to the command \ty{stdin}.
+  Now we check the request method and file type, then
+  parse the files, if there are any, and add all of 
+  their data to the command \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
-	ct, err := contenttype.GetMediaType(r)
- 	if err != nil {
-    writeBadRequestResp(w, "Malformed content type.")
-		return
-	}
-	if ct.EqualsMIME(multipartCt) {
-      //<<Parse form data, Pa. \ref{pa:api}>>
+  if r.Method == http.MethodPost {
+    ct, err := contenttype.GetMediaType(r)
+     if err != nil {
+      writeBadRequestResp(w, "Malformed content type.")
+      return
+    }
+    if !ct.EqualsMIME(multipartCt) {
+      w.WriteHeader(http.StatusUnsupportedMediaType)
+      w.Write([]byte("Use multipart/form-data with POST requests."))
+      return
+    } else {
+      str, err := parseFormData(w, r)
+      if err != nil {
+        return
+      }
+      cmd.Stdin = strings.NewReader(str)
+    }
   }
 #+end_src
 
@@ -2618,15 +2652,21 @@ type Node struct {
   malformed.
 #+end_export
 
-#+begin_src go <<Parse form data, Pa. \ref{pa:api}>>=
-	err = r.ParseMultipartForm(3_000_000)
-	if err != nil {
-    writeBadRequestResp(w, "Malformed multipart form request.")
-		return
-	}
-  if len(r.MultipartForm.File) > 0 {
-    //<<Sort files, Pa. \ref{pa:api}>>
-    //<<Iterate over files, Pa. \ref{pa:api}>>
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func parseFormData(w http.ResponseWriter, r *http.Request) (string, error) {
+    err := r.ParseMultipartForm(3_000_000)
+    if err != nil {
+      writeBadRequestResp(w, "Malformed multipart form request.")
+      return "", err
+    }
+    if len(r.MultipartForm.File) == 0 {
+		  err = errors.New("Please provide files, when sending multipart/form-data request.")
+		  writeBadRequestResp(w, err.Error())
+		  return "", err
+    } else {
+      //<<Sort files, Pa. \ref{pa:api}>>
+      //<<Iterate over files, Pa. \ref{pa:api}>>
+    }
   }
 #+end_src
 
@@ -2636,11 +2676,11 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Sort files, Pa. \ref{pa:api}>>=
-	keys := []string{}
-	for key := range r.MultipartForm.File {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+  keys := []string{}
+  for key := range r.MultipartForm.File {
+    keys = append(keys, key)
+  }
+  sort.Strings(keys)
 #+end_src
 
 #+begin_export latex
@@ -2659,14 +2699,14 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Iterate over files, Pa. \ref{pa:api}>>=
-	bb := bytes.NewBuffer([]byte{})
+  buf := bytes.NewBuffer([]byte{})
   for _, key := range keys {
-		files := r.MultipartForm.File[key]
-		if len(files) > 0 {
-	  //<<Extract request's file data, Pa. \ref{pa:api}>>
-	  //<<Write to commands \ty{stdin}, Pa. \ref{pa:api}>>
-		}
-	}
+    files := r.MultipartForm.File[key]
+    if len(files) > 0 {
+    //<<Extract request's file data, Pa. \ref{pa:api}>>
+    }
+  }
+  return buf.String(), nil
 #+end_src
 
 #+begin_export latex
@@ -2678,34 +2718,16 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Extract request's file data, Pa. \ref{pa:api}>>=
-	h := *files[0]
-  var rf multipart.File
-	rf, err = h.Open()
+  h := *files[0]
+  rf, err := h.Open()
   if err != nil {
-		writeServerError(w, "fn programEndpoint - error while opening multipart file", err)
-    return
+    writeServerError(w, "Error while opening multipart file", "", err)
+    return "", err
   }
-	defer rf.Close()
-	b := make([]byte, h.Size)
-	rf.Read(b)
-  bb.Write(b)
-#+end_src
-
-#+begin_export latex
-  We need to import \ty{mime/multipart}.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"mime/multipart"
-#+end_src
-
-#+begin_export latex
-  We create a new reader, using the buffer's content and set it as the
-  command's \ty{stdin}.
-#+end_export
-
-#+begin_src go <<Write to commands \ty{stdin}, Pa. \ref{pa:api}>>=
-	cmd.Stdin = strings.NewReader(bb.String())
+  defer rf.Close()
+  b := make([]byte, h.Size)
+  rf.Read(b)
+  buf.Write(b)
 #+end_src
 
 #+begin_export latex
@@ -2715,9 +2737,81 @@ type Node struct {
 
 #+begin_src go <<Write response, Pa. \ref{pa:api}>>=
   if err != nil {
-    writeServerError(w, "fn programEndpoint - failed while calling one of the programs.", err)
+    writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
   } else {
-	  w.Header().Set("Content-Type", plainCt.String())
-	  w.Write(res)
+    w.Header().Set("Content-Type", plainCt.String())
+    w.Write(res)
+  }
+#+end_src
+
+
+
+#+begin_export latex
+  The service \ty{fintacEndpoint} works the exact
+  same way as \ty{programEndpoint}, except for the provided
+  arguments. \ty{fintac} defines it's database via an option,
+  while the other programs define it a certain position -
+  as a single file path after the options.
+
+  This is \ty{fintacEndpoint}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      args string (anything the fintac provides, except -H)
+  Writes:
+    string
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+  func fintacEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Create program call context, Pa. \ref{pa:api}>>
+    //<<Determine call arguments, Pa. \ref{pa:api}>>
+    //<<Add database \ty{fintac}, Pa. \ref{pa:api}>>
+    //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
+    //<<Write response, Pa. \ref{pa:api}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We add the database path provided as a first entry in \ty{args}
+  to the \ty{callArgs} variable, remembering to prepend the \ty{-H} switch.
+#+end_export
+
+#+begin_src go <<Add database \ty{fintac}, Pa. \ref{pa:api}>>=
+  callArgs = append(callArgs, "-H", args[0].(string))
+#+end_src
+
+#+begin_export latex
+  We add the database path provided as a first entry in \ty{args}
+  to the \ty{callArgs} variable, remembering to prepend the \ty{-H} switch.
+#+end_export
+
+#+begin_src go <<Call \ty{fintac}, Pa. \ref{pa:api}>>=
+  cmd := exec.CommandContext(ctx, "./prog/fintac", callArgs...)
+  //<<Handle files \ty{fintac}, Pa. \ref{pa:api}>>
+  res, err := cmd.CombinedOutput()
+#+end_src
+
+#+begin_export latex
+  First we look 
+#+end_export
+
+#+begin_src go <<Handle files \ty{fintac}, Pa. \ref{pa:api}>>=
+  ct, err := contenttype.GetMediaType(r)
+  if err != nil {
+    writeBadRequestResp(w, "Malformed content type.")
+    return
+  }
+  if !ct.EqualsMIME(multipartCt) {
+    w.WriteHeader(http.StatusUnsupportedMediaType)
+    w.Write([]byte("Use multipart/form-data."))
+    return
+  } else {
+    str, err := parseFormData(w, r)
+    if err != nil {
+      return
+    }
+    cmd.Stdin = strings.NewReader(str)
   }
 #+end_src
