@@ -918,6 +918,14 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
+  We need to import \ty{bytes}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "bytes"
+#+end_src
+
+#+begin_export latex
   Having implemented \ty{writeJsonOutput} we may use it to
   write the links of \tty{rootDocument}.
 #+end_export
@@ -2499,8 +2507,8 @@ type Node struct {
   func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	  //<<Create program call context, Pa. \ref{pa:api}>>
 	  //<<Determine call arguments, Pa. \ref{pa:api}>>
-    //<<Call neighbors program, Pa. \ref{pa:api}>>
-    //<<Write neighbors response, Pa. \ref{pa:api}>>
+    //<<Call program, Pa. \ref{pa:api}>>
+    //<<Write response, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -2515,11 +2523,12 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We need to import \ty{context}
+  We need to import \ty{context} and \ty{time}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
   "context"
+  "time"
 #+end_src
 
 #+begin_export latex
@@ -2559,9 +2568,9 @@ type Node struct {
   using the previously defined context.
 #+end_export
 
-#+begin_src go <<Call neighbors program, Pa. \ref{pa:api}>>=
+#+begin_src go <<Call program, Pa. \ref{pa:api}>>=
 	cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), callArgs...)
-  //<<Handle neighbors files, Pa. \ref{pa:api}>>
+  //<<Handle files, Pa. \ref{pa:api}>>
 	res, err := cmd.CombinedOutput()
 #+end_src
 
@@ -2575,19 +2584,27 @@ type Node struct {
 
 #+begin_export latex
   If a request is sent in \ty{multipart/form-data} we can assume that,
-  there are files to check. So the first thing we need to do is check 
-  the file type. We then parse the files, adding all of their data to 
-  the command \ty{stdin}.
+  there are files to check. \ty{multipart/form-data} is a common content 
+  type. Let's create a variable which defines this content type for use. 
 #+end_export
 
-#+begin_src go <<Handle neighbors files, Pa. \ref{pa:api}>>=
+#+begin_src go <<Content types, Pa. \ref{pa:api}>>=
+  var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
+#+end_src
+
+#+begin_export latex
+  Now after checking the file type, we need to parse the files,
+  adding all of their data to the command \ty{stdin}.
+#+end_export
+
+#+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
 	ct, err := contenttype.GetMediaType(r)
  	if err != nil {
     writeBadRequestResp(w, "Malformed content type.")
 		return
 	}
 	if ct.EqualsMIME(multipartCt) {
-      //<<Parse neighbors form data, Pa. \ref{pa:api}>>
+      //<<Parse form data, Pa. \ref{pa:api}>>
   }
 #+end_src
 
@@ -2601,14 +2618,14 @@ type Node struct {
   malformed.
 #+end_export
 
-#+begin_src go <<Parse neighbors form data, Pa. \ref{pa:api}>>=
+#+begin_src go <<Parse form data, Pa. \ref{pa:api}>>=
 	err = r.ParseMultipartForm(3_000_000)
 	if err != nil {
     writeBadRequestResp(w, "Malformed multipart form request.")
 		return
 	}
   if len(r.MultipartForm.File) > 0 {
-    //<<Sort neighbors files, Pa. \ref{pa:api}>>
+    //<<Sort files, Pa. \ref{pa:api}>>
     //<<Iterate over files, Pa. \ref{pa:api}>>
   }
 #+end_src
@@ -2618,7 +2635,7 @@ type Node struct {
   We use the keys that indicate the files to do so.
 #+end_export
 
-#+begin_src go <<Sort neighbors files, Pa. \ref{pa:api}>>=
+#+begin_src go <<Sort files, Pa. \ref{pa:api}>>=
 	keys := []string{}
 	for key := range r.MultipartForm.File {
 		keys = append(keys, key)
@@ -2646,7 +2663,7 @@ type Node struct {
   for _, key := range keys {
 		files := r.MultipartForm.File[key]
 		if len(files) > 0 {
-	  //<<Extract neighbors request's file data, Pa. \ref{pa:api}>>
+	  //<<Extract request's file data, Pa. \ref{pa:api}>>
 	  //<<Write to commands \ty{stdin}, Pa. \ref{pa:api}>>
 		}
 	}
@@ -2660,7 +2677,7 @@ type Node struct {
   the header, read it's data to a byte slice and close it again.
 #+end_export
 
-#+begin_src go <<Extract neighbors request's file data, Pa. \ref{pa:api}>>=
+#+begin_src go <<Extract request's file data, Pa. \ref{pa:api}>>=
 	h := *files[0]
   var rf multipart.File
 	rf, err = h.Open()
@@ -2672,6 +2689,14 @@ type Node struct {
 	b := make([]byte, h.Size)
 	rf.Read(b)
   bb.Write(b)
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{mime/multipart}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"mime/multipart"
 #+end_src
 
 #+begin_export latex
@@ -2688,7 +2713,7 @@ type Node struct {
   we log it. Otherwise we'll send a response with the programs text output.
 #+end_export
 
-#+begin_src go <<Write neighbors response, Pa. \ref{pa:api}>>=
+#+begin_src go <<Write response, Pa. \ref{pa:api}>>=
   if err != nil {
     writeServerError(w, "fn programEndpoint - failed while calling one of the programs.", err)
   } else {

@@ -10,6 +10,8 @@ import (
 
 	"strings"
 
+	"bytes"
+
 	"strconv"
 
 	"errors"
@@ -21,36 +23,14 @@ import (
 
 	"slices"
 
-	"github.com/evolbioinf/neighbors/taxi"
-
-	"sync"
-
-	"flag"
-
-	"io"
-
-	"github.com/evolbioinf/neighbors/ants"
-
-	"mime/multipart"
-
-	"os"
-	"time"
-
-	"bytes"
-
-	"github.com/evolbioinf/neighbors/ranks"
-
-	"github.com/evolbioinf/neighbors/dree"
-
-	fintacPack "github.com/evolbioinf/neighbors/fintac"
-
-	neighborsPack "github.com/evolbioinf/neighbors/neighbors"
-
 	"context"
+	"time"
 
 	"os/exec"
 
 	"sort"
+
+	"mime/multipart"
 )
 
 type Accession struct {
@@ -143,8 +123,6 @@ var root Node
 var prefix string
 var serverAddress string
 
-var progMu sync.Mutex
-
 var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
@@ -196,7 +174,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Name:     "taxa",
 		BasePath: prefix + "/taxa",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt, plainCt},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
 
@@ -208,15 +186,6 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
 	makeRoute(&taxonL, taxon, neidb, dbPath) // new
-
-	ancestorsL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "ancestors",
-		BasePath: prefix + "/taxa/{taxon_id}/ancestors",
-		Action:   get,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&ancestorsL, ancestors, dbPath) // new - calls ants program
 
 	childrenL := Node{
 		Links:    make(map[string][]Node),
@@ -236,21 +205,12 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	}
 	makeRoute(&parentL, parent, neidb) // previously known as parent
 
-	rankDistL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "rankDistribution",
-		BasePath: prefix + "/taxa/{taxon_id}/rank_distribution",
-		Action:   post,
-		Types:    []contenttype.MediaType{graphvizCt},
-	}
-	makeRoute(&rankDistL, rankDistribution, dbPath) // new - calls ranks program
-
 	subtreeL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
 		Action:   get,
-		Types:    []contenttype.MediaType{jsonCt, graphvizCt, plainCt},
+		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
 
@@ -272,15 +232,6 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	}
 	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
 
-	fintacL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "fintac",
-		BasePath: prefix + "/taxonomy/fintac",
-		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&fintacL, fintac, dbPath) // new - calls fintac program
-
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "mrca",
@@ -289,15 +240,6 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&mrcaL, mrca, neidb) // previously just mrca
-
-	neighborsL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "neighbors",
-		BasePath: prefix + "/taxonomy/neighbors",
-		Action:   post,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&neighborsL, neighbors, dbPath) // new - calls neighbors program
 
 	pathL := Node{
 		Links:    make(map[string][]Node),
@@ -391,28 +333,20 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], ancestorsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], rankDistL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], fintacL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], neighborsL)
 	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
 	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], ancestorsL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], rankDistL)
 	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], fintacL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
 	programsDocL.Links["service"] = append(programsDocL.Links["service"], progAntsL)
 	programsDocL.Links["service"] = append(programsDocL.Links["service"], progDreeL)
@@ -425,17 +359,14 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 
 	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
 	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
-	ancestorsL.Links["entities"] = append(ancestorsL.Links["entities"], taxonL)
 	childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
 	subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
-	neighborsL.Links["entities"] = append(neighborsL.Links["entities"], taxonL)
 	pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
 
 	accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
 	taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
 
 	mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
-	parentL.Links["all ancestors"] = append(parentL.Links["all ancestors"], ancestorsL)
 	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
 	root = rootDocL
 
@@ -696,7 +627,7 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 }
 
 func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
 		w.Write([]byte("Server does not provide any of the accepted content types."))
@@ -725,94 +656,66 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		writeBadRequestResp(w, "scientific is not a bool.")
 		return
 	}
+	if !exact {
+		name = strings.ReplaceAll(name, " ", "% %")
+		name = "%" + name + "%"
+	}
 
-	if ct.EqualsMIME(jsonCt) {
-		neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(*tdb.TaxonomyDB)
 
-		if !exact {
-			name = strings.ReplaceAll(name, " ", "% %")
-			name = "%" + name + "%"
-		}
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain_data is not a bool.")
+		return
+	}
 
-		strPlain := r.URL.Query().Get("plain_data")
-		plain, err := strconv.ParseBool(strPlain)
-		if strPlain != "" && err != nil {
-			writeBadRequestResp(w, "plain_data is not a bool.")
+	var ids []int
+	if scientific {
+		ids, err = neidb.Taxids(name, limit, offset)
+		if err != nil {
+			writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
 			return
 		}
-
-		var ids []int
-		if scientific {
-			ids, err = neidb.Taxids(name, limit, offset)
-			if err != nil {
-				writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", err)
-				return
-			}
-		} else {
-			ids, err = neidb.CommonTaxids(name, limit, offset)
-			if err != nil {
-				writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
-				return
-			}
-		}
-		data := []Taxon{}
-		for _, id := range ids {
-			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-			if err != nil {
-				writeServerError(w, "Error from getTaxonData", err)
-				return
-			}
-			data = append(data, tax)
-
-		}
-
-		out := ResponseBody[[]Taxon]{Data: data}
-
-		if !plain {
-			var links []Link
-			links = append(links, selfNode.makeLink("self", r.URL.String()))
-
-			for link := range selfNode.Links {
-				for _, node := range selfNode.Links[link] {
-					links = append(links, node.makeLink(link, ""))
-				}
-			}
-
-			links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
-
-			out.Links = links
-		}
-
-		if plain {
-			writeJsonOutput(w, out.Data)
-		} else {
-			writeJsonOutput(w, out)
-		}
-
 	} else {
-		dbPath := args[1].(string)
-		taxiArgs := []string{"./taxi"}
-		if exact {
-			taxiArgs = append(taxiArgs, "-e")
-		}
-		taxiArgs = append(
-			taxiArgs,
-			"-l",
-			strconv.Itoa(limit),
-			"-o",
-			strconv.Itoa(offset),
-			name,
-			dbPath,
-		)
-
-		out, errMsg := callPackage(taxiArgs, taxi.Run)
-		if len(errMsg) > 0 {
-			writeServerError(w, "Error while calling package taxi: "+string(errMsg), nil)
+		ids, err = neidb.CommonTaxids(name, limit, offset)
+		if err != nil {
+			writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", err)
 			return
 		}
+	}
+	data := []Taxon{}
+	for _, id := range ids {
+		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+		if err != nil {
+			writeServerError(w, "Error from getTaxonData", err)
+			return
+		}
+		data = append(data, tax)
 
-		writePlainOutput(w, out)
+	}
 
+	out := ResponseBody[[]Taxon]{Data: data}
+
+	if !plain {
+		var links []Link
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
+			}
+		}
+
+		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+
+		out.Links = links
+	}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
 	}
 
 }
@@ -937,148 +840,7 @@ func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) 
 	return
 }
 
-func callPackage(callArgs []string, runFn func()) (out, errMsg []byte) {
-	progMu.Lock()
-
-	serverArgs := os.Args
-	os.Args = callArgs
-
-	oldFlags := flag.CommandLine
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-
-	prevOut := os.Stdout
-	rOut, wOut, err := os.Pipe()
-	if err != nil {
-		errMsg = append(errMsg, []byte("Error while creating stdout pipe: "+err.Error())...)
-	} else {
-		os.Stdout = wOut
-	}
-
-	prevErr := os.Stderr
-	rErr, wErr, err := os.Pipe()
-	if err != nil {
-		errMsg = append(errMsg, []byte("Error while creating stderr pipe: "+err.Error())...)
-	}
-	os.Stderr = wErr
-
-	if err == nil {
-		runFn()
-	}
-
-	os.Stdout = prevOut
-	os.Stderr = prevErr
-	if wOut != nil {
-		err = wOut.Close()
-		if err != nil {
-			errMsg = append(errMsg, []byte("Error while closing stdout pipe: "+err.Error())...)
-		}
-	}
-	if wErr != nil {
-		wErr.Close()
-		if err != nil {
-			errMsg = append(errMsg, []byte("Error while closing stderr pipe: "+err.Error())...)
-		}
-	}
-
-	var outBuf, errBuf bytes.Buffer
-	_, err = io.Copy(&outBuf, rOut)
-	_, err = io.Copy(&errBuf, rErr)
-	out = outBuf.Bytes()
-	errMsg = append(errMsg, errBuf.Bytes()...)
-
-	flag.CommandLine = oldFlags
-
-	os.Args = serverArgs
-
-	progMu.Unlock()
-
-	return
-}
-
-func writePlainOutput(w http.ResponseWriter, out []byte) {
-	w.Header().Set("Content-Type", plainCt.String())
-	w.WriteHeader(http.StatusOK)
-	w.Write(out)
-}
-
 func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
-		return
-	}
-
-	if ct.EqualsMIME(jsonCt) {
-		neidb := args[0].(*tdb.TaxonomyDB)
-
-		strPlain := r.URL.Query().Get("plain_data")
-		plain, err := strconv.ParseBool(strPlain)
-		if strPlain != "" && err != nil {
-			writeBadRequestResp(w, "plain_data is not a bool.")
-			return
-		}
-
-		fieldComposite := r.URL.Query().Get("field_composite")
-		fieldComposite = parseFieldComposite(fieldComposite)
-
-		taxIdStr := r.PathValue("taxon_id")
-		taxId, err := strconv.Atoi(taxIdStr)
-		if err != nil {
-			writeBadRequestResp(w, "Taxon id is not an integer.")
-			return
-		}
-
-		tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
-		if err != nil {
-			writeServerError(w, "fn taxon - Error from getTaxonData", err)
-			return
-		}
-		var out ResponseBody[Taxon]
-		out.Data = tax
-
-		var links []Link
-		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
-		links = append(links, selfNode.makeLink("self", r.URL.String()))
-
-		for link := range selfNode.Links {
-			for _, node := range selfNode.Links[link] {
-				links = append(links, node.makeLink(link, ""))
-			}
-		}
-
-		out.Links = links
-
-		if plain {
-			writeJsonOutput(w, out.Data)
-		} else {
-			writeJsonOutput(w, out)
-		}
-
-	} else {
-		dbPath := args[1].(string)
-		taxIdStr := r.PathValue("taxon_id")
-
-		taxiArgs := []string{"./taxi"}
-
-		taxiArgs = append(
-			taxiArgs,
-			taxIdStr,
-			dbPath,
-		)
-
-		out, errMsg := callPackage(taxiArgs, taxi.Run)
-		if len(errMsg) > 0 {
-			writeServerError(w, "Error while calling package taxi: "+string(errMsg), nil)
-			return
-		}
-
-		writePlainOutput(w, out)
-
-	}
-}
-
-func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -1086,35 +848,51 @@ func ancestors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		return
 	}
 
+	neidb := args[0].(*tdb.TaxonomyDB)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain_data is not a bool.")
+		return
+	}
+
+	fieldComposite := r.URL.Query().Get("field_composite")
+	fieldComposite = parseFieldComposite(fieldComposite)
+
 	taxIdStr := r.PathValue("taxon_id")
-
-	dbPath := args[0].(string)
-
-	valid := checkParamInt(w, taxIdStr)
-	if !valid {
+	taxId, err := strconv.Atoi(taxIdStr)
+	if err != nil {
+		writeBadRequestResp(w, "Taxon id is not an integer.")
 		return
 	}
 
-	callArgs := []string{"./ants", taxIdStr, dbPath}
-	out, errMsg := callPackage(callArgs, ants.Run)
-	if len(errMsg) > 0 {
-		writeServerError(w, "fn ancestors - Error while calling package ants: "+string(errMsg), nil)
+	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
+	if err != nil {
+		writeServerError(w, "fn taxon - Error from getTaxonData", err)
 		return
 	}
+	var out ResponseBody[Taxon]
+	out.Data = tax
 
-	writePlainOutput(w, out)
+	var links []Link
+	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+	links = append(links, selfNode.makeLink("self", r.URL.String()))
 
-}
-
-func checkParamInt(w http.ResponseWriter, param string) bool {
-	if param != "" {
-		_, err := strconv.Atoi(param)
-		if err != nil {
-			writeBadRequestResp(w, "Malformed integer.")
+	for link := range selfNode.Links {
+		for _, node := range selfNode.Links[link] {
+			links = append(links, node.makeLink(link, ""))
 		}
-		return err == nil
 	}
-	return true
+
+	out.Links = links
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
 }
 
 func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
@@ -1249,169 +1027,7 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 
 }
 
-func rankDistribution(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
-		return
-	}
-
-	taxIdStr := r.PathValue("taxon_id")
-
-	dbPath := args[0].(string)
-
-	ranksArgs := []string{"./ranks"}
-	levels := r.URL.Query().Get("assembly_levels")
-	if levels != "" {
-		ranksArgs = append(ranksArgs, "-L", levels)
-	}
-
-	listStr := r.URL.Query().Get("list_genomes")
-	l, err := strconv.ParseBool(listStr)
-	if listStr != "" && err != nil {
-		writeBadRequestResp(w, "list_genomes argument is not a bool.")
-		return
-	} else if l {
-		ranksArgs = append(ranksArgs, "-l")
-	}
-
-	tabStr := r.URL.Query().Get("tab_output")
-	t, err := strconv.ParseBool(tabStr)
-	if tabStr != "" && err != nil {
-		writeBadRequestResp(w, "tab_output argument is not a bool.")
-		return
-	} else if t {
-		ranksArgs = append(ranksArgs, "-t")
-	}
-
-	ct, err := contenttype.GetMediaType(r)
-	if ct.EqualsMIME(multipartCt) {
-		paths, err := filesFromFormData(w, r, 0, 1)
-		if err != nil {
-			return
-		}
-		if len(paths) > 0 {
-			ranksArgs = append(ranksArgs, "-g", paths[0])
-			for _, p := range paths {
-				defer os.Remove(p)
-			}
-		}
-	}
-
-	valid := checkParamInt(w, taxIdStr)
-	if !valid {
-		return
-	}
-	valid = checkParamLevels(w, levels)
-	if !valid {
-		return
-	}
-
-	ranksArgs = append(ranksArgs, taxIdStr, dbPath)
-	out, errMsg := callPackage(ranksArgs, ranks.Run)
-	if len(errMsg) > 0 {
-		writeServerError(w, "Error while calling package ranks: "+string(errMsg), nil)
-		return
-	}
-
-	writeGraphvizOutput(w, out)
-
-}
-
-func filesFromFormData(w http.ResponseWriter, r *http.Request, minFiles, maxFiles int) (paths []string, err error) {
-	err = validateMultipartForm(w, r, minFiles, maxFiles)
-	if err != nil || len(r.MultipartForm.File) == 0 {
-		return
-	}
-
-	keys := []string{}
-	for key := range r.MultipartForm.File {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for i, key := range keys {
-		files := r.MultipartForm.File[key]
-		if len(files) > 0 {
-			h := *files[0]
-			var rf multipart.File
-			rf, err = h.Open()
-			if err != nil {
-				writeServerError(w, "Error while opening multipart file", err)
-				return
-			}
-			b := make([]byte, h.Size)
-			rf.Read(b)
-			rf.Close()
-
-			path := "apiv2_temp_" + strconv.Itoa(i) + strconv.Itoa(time.Now().Nanosecond())
-			paths = append(paths, path)
-			var tf *os.File
-			tf, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				writeServerError(w, "Error while opening temporary file", err)
-				return
-			}
-
-			buffer := bytes.NewBuffer(b)
-			buffer.WriteTo(tf)
-			tf.Close()
-
-		}
-	}
-
-	return
-}
-
-func validateMultipartForm(w http.ResponseWriter, r *http.Request, minFiles, maxFiles int) (err error) {
-	err = r.ParseMultipartForm(3_000_000)
-	if err != nil {
-		writeBadRequestResp(w, "Malformed multipart form request.")
-		return err
-	}
-
-	if len(r.MultipartForm.File) < minFiles {
-		writeBadRequestResp(w, fmt.Sprintf("Provide at least %d file(s).", minFiles))
-		return errors.New("not enough files in body")
-	}
-	if maxFiles != -1 && len(r.MultipartForm.File) > maxFiles {
-		writeBadRequestResp(w, fmt.Sprintf("Too many files. This service takes a maximum of %d file(s) per request.", maxFiles))
-		return errors.New("too many files in body")
-	}
-
-	return nil
-}
-
-func checkParamLevels(w http.ResponseWriter, levels string) bool {
-	if levels != "" {
-		levelsSplit := strings.Split(levels, ",")
-		availableLevels := tdb.AssemblyLevels()
-		sort.Strings(availableLevels)
-		for _, level := range levelsSplit {
-			_, found := slices.BinarySearch(availableLevels, level)
-			if !found {
-				writeBadRequestResp(w, "Malformed assembly level.")
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func writeGraphvizOutput(w http.ResponseWriter, out []byte) {
-	w.Header().Set("Content-Type", graphvizCt.String())
-	w.WriteHeader(http.StatusOK)
-	w.Write(out)
-}
-
 func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	ct, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
-		return
-	}
 
 	neidb := args[0].(*tdb.TaxonomyDB)
 
@@ -1422,123 +1038,61 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		return
 	}
 
-	if ct.EqualsMIME(jsonCt) {
-		strPlain := r.URL.Query().Get("plain_data")
-		plain, err := strconv.ParseBool(strPlain)
-		if strPlain != "" && err != nil {
-			writeBadRequestResp(w, "plain_data is not a bool.")
-			return
-		}
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain_data is not a bool.")
+		return
+	}
 
-		offset, limit := extractPaging(r)
+	offset, limit := extractPaging(r)
 
-		fieldComposite := r.URL.Query().Get("field_composite")
-		fieldComposite = parseFieldComposite(fieldComposite)
+	fieldComposite := r.URL.Query().Get("field_composite")
+	fieldComposite = parseFieldComposite(fieldComposite)
 
-		taxa, err := neidb.Subtree(taxId)
+	taxa, err := neidb.Subtree(taxId)
+	if err != nil {
+		writeServerError(w, "fn subtree - Error while executing neidb.Subtree", err)
+		return
+	}
+
+	if limit == -1 {
+		limit = len(taxa)
+	}
+
+	data := []Taxon{}
+	for i := offset; i < min(offset+limit, len(taxa)); i++ {
+		id := taxa[i]
+		tax, err := getTaxonData(id, plain, fieldComposite, neidb)
 		if err != nil {
-			writeServerError(w, "fn subtree - Error while executing neidb.Subtree", err)
+			writeServerError(w, "Error from getTaxonData", err)
 			return
 		}
+		data = append(data, tax)
 
-		if limit == -1 {
-			limit = len(taxa)
-		}
+	}
 
-		data := []Taxon{}
-		for i := offset; i < min(offset+limit, len(taxa)); i++ {
-			id := taxa[i]
-			tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-			if err != nil {
-				writeServerError(w, "Error from getTaxonData", err)
-				return
+	out := ResponseBody[[]Taxon]{Data: data}
+
+	if !plain {
+		var links []Link
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		for link := range selfNode.Links {
+			for _, node := range selfNode.Links[link] {
+				links = append(links, node.makeLink(link, ""))
 			}
-			data = append(data, tax)
-
 		}
 
-		out := ResponseBody[[]Taxon]{Data: data}
+		links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
 
-		if !plain {
-			var links []Link
-			links = append(links, selfNode.makeLink("self", r.URL.String()))
+		out.Links = links
+	}
 
-			for link := range selfNode.Links {
-				for _, node := range selfNode.Links[link] {
-					links = append(links, node.makeLink(link, ""))
-				}
-			}
-
-			links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
-
-			out.Links = links
-		}
-
-		if plain {
-			writeJsonOutput(w, out.Data)
-		} else {
-			writeJsonOutput(w, out)
-		}
-
-	} else if ct.EqualsMIME(plainCt) || ct.EqualsMIME(graphvizCt) {
-		dreeArgs := []string{"./dree"}
-		levels := r.URL.Query().Get("assembly_levels")
-		if levels != "" {
-			dreeArgs = append(dreeArgs, "-L", levels)
-		}
-
-		genStr := r.URL.Query().Get("genomes_only")
-		g, err := strconv.ParseBool(genStr)
-		if genStr != "" && err != nil {
-			writeBadRequestResp(w, "genomes_only argument is not a bool.")
-			return
-		} else if g {
-			dreeArgs = append(dreeArgs, "-g")
-		}
-
-		namesStr := r.URL.Query().Get("print_names")
-		n, err := strconv.ParseBool(namesStr)
-		if namesStr != "" && err != nil {
-			writeBadRequestResp(w, "print_names argument is not a bool.")
-			return
-		} else if n {
-			dreeArgs = append(dreeArgs, "-n")
-		}
-
-		depthStr := r.URL.Query().Get("max_depth")
-		if depthStr != "" {
-			dreeArgs = append(dreeArgs, "-m", depthStr)
-		}
-
-		if ct.EqualsMIME(plainCt) {
-			dreeArgs = append(dreeArgs, "-l")
-		}
-
-		valid := checkParamLevels(w, levels)
-		if !valid {
-			return
-		}
-		valid = checkParamInt(w, depthStr)
-		if !valid {
-			return
-		}
-
-		dbPath := args[1].(string)
-		dreeArgs = append(dreeArgs, taxIdStr, dbPath)
-		out, errMsg := callPackage(dreeArgs, dree.Run)
-		if len(errMsg) > 0 {
-			writeServerError(w, "Error while calling package dree: "+string(errMsg), nil)
-			return
-		}
-
-		if ct.EqualsMIME(plainCt) {
-			writePlainOutput(w, out)
-
-		} else {
-			writeGraphvizOutput(w, out)
-
-		}
-
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
 	}
 
 }
@@ -1680,68 +1234,6 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 
 }
 
-func fintac(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
-		return
-	}
-
-	ct, err := contenttype.GetMediaType(r)
-	if !ct.EqualsMIME(multipartCt) {
-		w.WriteHeader(http.StatusUnsupportedMediaType)
-		w.Write([]byte("Use multipart/form-data"))
-		return
-	}
-
-	fintacArgs := []string{"./fintac"}
-	aStr := r.URL.Query().Get("all_splits")
-	if aStr != "" {
-		a, err := strconv.ParseBool(aStr)
-		if err != nil {
-			writeBadRequestResp(w, "all_splits argument is not a bool.")
-			return
-		}
-		if a {
-			fintacArgs = append(fintacArgs, "-a")
-		}
-	}
-	n := r.URL.Query().Get("neighbor")
-	t := r.URL.Query().Get("target")
-	u := r.URL.Query().Get("unknown")
-	if n != "" {
-		fintacArgs = append(fintacArgs, "-n", n)
-	}
-	if t != "" {
-		fintacArgs = append(fintacArgs, "-t", t)
-	}
-	if u != "" {
-		fintacArgs = append(fintacArgs, "-u", u)
-	}
-
-	dbPath := args[0].(string)
-	fintacArgs = append(fintacArgs, "-H", dbPath)
-
-	paths, err := filesFromFormData(w, r, 1, -1)
-	if err != nil {
-		return
-	}
-	for _, p := range paths {
-		defer os.Remove(p)
-		fintacArgs = append(fintacArgs, p)
-	}
-
-	out, errMsg := callPackage(fintacArgs, fintacPack.Run)
-	if len(errMsg) > 0 {
-		writeServerError(w, "Error while calling package fintac: "+string(errMsg), nil)
-		return
-	}
-
-	writePlainOutput(w, out)
-
-}
-
 func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
@@ -1813,118 +1305,6 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		writeJsonOutput(w, out)
 	}
 
-}
-
-func neighbors(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
-		return
-	}
-
-	valid := checkParams(w, r, "target_ids")
-	if !valid {
-		return
-	}
-
-	neighborsArgs := []string{"./neighbors"}
-	levels := r.URL.Query().Get("assembly_levels")
-	if levels != "" {
-		neighborsArgs = append(neighborsArgs, "-L", levels)
-	}
-
-	tfStr := r.URL.Query().Get("targets_only")
-	tf, err := strconv.ParseBool(tfStr)
-	if tfStr != "" && err != nil {
-		writeBadRequestResp(w, "targets_only argument is not a bool.")
-		return
-	} else if tf {
-		neighborsArgs = append(neighborsArgs, "-o")
-	}
-
-	gsStr := r.URL.Query().Get("require_genomes")
-	gs, err := strconv.ParseBool(gsStr)
-	if gsStr != "" && err != nil {
-		writeBadRequestResp(w, "require_genomes argument is not a bool.")
-		return
-	} else if gs {
-		neighborsArgs = append(neighborsArgs, "-g")
-	}
-
-	tabStr := r.URL.Query().Get("tab_output")
-	tab, err := strconv.ParseBool(tabStr)
-	if tabStr != "" && err != nil {
-		writeBadRequestResp(w, "tab_output argument is not a bool.")
-		return
-	} else if tab {
-		neighborsArgs = append(neighborsArgs, "-T")
-	}
-
-	gtStr := r.URL.Query().Get("individual_genomes")
-	gt, err := strconv.ParseBool(gtStr)
-	if gtStr != "" && err != nil {
-		writeBadRequestResp(w, "individual_genomes argument is not a bool.")
-		return
-	} else if gt {
-		neighborsArgs = append(neighborsArgs, "-l")
-	}
-
-	targetIds := r.URL.Query().Get("target_ids")
-	neighborsArgs = append(neighborsArgs, "-t", targetIds)
-
-	dbPath := args[0].(string)
-	neighborsArgs = append(neighborsArgs, dbPath)
-
-	ct, err := contenttype.GetMediaType(r)
-	if ct.EqualsMIME(multipartCt) {
-		paths, err := filesFromFormData(w, r, 0, -1)
-		if err != nil {
-			return
-		}
-
-		if len(paths) > 0 && targetIds != "" {
-			writeBadRequestResp(w, "Can't provide files and target_ids via url.")
-			return
-		}
-
-		for _, p := range paths {
-			neighborsArgs = append(neighborsArgs, p)
-			defer os.Remove(p)
-		}
-	}
-
-	valid = checkParamLevels(w, levels)
-	if !valid {
-		return
-	}
-	valid = checkParamInts(w, targetIds)
-	if !valid {
-		return
-	}
-
-	out, errMsg := callPackage(neighborsArgs, neighborsPack.Run)
-	if len(errMsg) > 0 {
-		writeServerError(w, "fn neighbors - Error while calling package neighbors: "+string(errMsg), nil)
-		return
-	}
-
-	writePlainOutput(w, out)
-
-}
-
-func checkParamInts(w http.ResponseWriter, param string) bool {
-	if param != "" {
-		split := strings.Split(param, ",")
-		for _, id := range split {
-			_, err := strconv.Atoi(id)
-			if err != nil {
-				writeBadRequestResp(w, "At least one target id is not an integer.")
-				return false
-			}
-		}
-	}
-	return true
 }
 
 func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
