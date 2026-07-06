@@ -31,8 +31,6 @@ import (
 
 	"github.com/evolbioinf/neighbors/ants"
 
-	"sort"
-
 	"mime/multipart"
 
 	"os"
@@ -51,6 +49,8 @@ import (
 	"context"
 
 	"os/exec"
+
+	"sort"
 )
 
 type Accession struct {
@@ -339,28 +339,44 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progFintac",
 		BasePath: prefix + "/programs/fintac",
-		Action:   get,
+		Action:   post,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
 
-	progNeighborsL := Node{
+	progNeighborsGetL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
 		BasePath: prefix + "/programs/neighbors",
 		Action:   get,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsL, programEndpoint, dbPath, "neighbors")
+	makeRoute(&progNeighborsGetL, programEndpoint, dbPath, "neighbors")
+	progNeighborsPostL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progNeighbors",
+		BasePath: prefix + "/programs/neighbors",
+		Action:   post,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progNeighborsPostL, programEndpoint, dbPath, "neighbors")
 
-	progRanksL := Node{
+	progRanksGetL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
 		BasePath: prefix + "/programs/ranks",
 		Action:   get,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksL, programEndpoint, dbPath, "ranks")
+	makeRoute(&progRanksGetL, programEndpoint, dbPath, "ranks")
+	progRanksPostL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "progRanks",
+		BasePath: prefix + "/programs/ranks",
+		Action:   post,
+		Types:    []contenttype.MediaType{plainCt},
+	}
+	makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
 
 	progTaxiL := Node{
 		Links:    make(map[string][]Node),
@@ -398,6 +414,14 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], neighborsL)
 	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progAntsL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progDreeL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progFintacL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsGetL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsPostL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksGetL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksPostL)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], progTaxiL)
 
 	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
 	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
@@ -2009,12 +2033,75 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	callArgs := r.URL.Query().Get("args")
-	callArgs += " " + args[0].(string)
+	callArgs := []string{}
+	requestArgs := r.URL.Query().Get("args")
+	var sb strings.Builder
+	inLiteral := false
+	for _, v := range requestArgs {
+		if v == '"' {
+			inLiteral = !inLiteral
+		} else if v == ' ' && !inLiteral {
+			callArgs = append(callArgs, sb.String())
+			sb.Reset()
+		} else {
+			sb.WriteRune(v)
+		}
+	}
+	if sb.Len() > 0 {
+		callArgs = append(callArgs, sb.String())
+	}
+	callArgs = append(callArgs, args[0].(string))
 
-	cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), strings.Split(callArgs, " ")...)
+	cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), callArgs...)
+	ct, err := contenttype.GetMediaType(r)
+	if err != nil {
+		writeBadRequestResp(w, "Malformed content type.")
+		return
+	}
+	if ct.EqualsMIME(multipartCt) {
+		err = r.ParseMultipartForm(3_000_000)
+		if err != nil {
+			writeBadRequestResp(w, "Malformed multipart form request.")
+			return
+		}
+		if len(r.MultipartForm.File) > 0 {
+			keys := []string{}
+			for key := range r.MultipartForm.File {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+
+			bb := bytes.NewBuffer([]byte{})
+			for _, key := range keys {
+				files := r.MultipartForm.File[key]
+				if len(files) > 0 {
+					h := *files[0]
+					var rf multipart.File
+					rf, err = h.Open()
+					if err != nil {
+						writeServerError(w, "fn programEndpoint - error while opening multipart file", err)
+						return
+					}
+					defer rf.Close()
+					b := make([]byte, h.Size)
+					rf.Read(b)
+					bb.Write(b)
+
+					cmd.Stdin = strings.NewReader(bb.String())
+
+				}
+			}
+
+		}
+
+	}
+
 	res, err := cmd.CombinedOutput()
 
-	fmt.Println(string(res), err)
-	w.Write(res)
+	if err != nil {
+		writeServerError(w, "fn programEndpoint - failed while calling one of the programs.", err)
+	} else {
+		w.Header().Set("Content-Type", plainCt.String())
+		w.Write(res)
+	}
 }
