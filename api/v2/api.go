@@ -1,6 +1,9 @@
 package apiv2
 
 import (
+	"mime/multipart"
+	"os"
+
 	"github.com/elnormous/contenttype"
 
 	"net/http"
@@ -139,14 +142,11 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	prefix = pref
 	serverAddress = serverAdr
 
-	get := "GET"
-	post := "POST"
-
 	rootDocL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "rootDocument",
 		BasePath: prefix,
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&rootDocL, rootDocument, neidb) // new
@@ -155,7 +155,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "accessions",
 		BasePath: prefix + "/accessions",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&accessionsL, accessions, neidb) // previously known as levels
@@ -164,7 +164,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "accession",
 		BasePath: prefix + "/accessions/{accession_id}",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&accessionL, accession, neidb) // new
@@ -173,7 +173,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "taxa",
 		BasePath: prefix + "/taxa",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
@@ -182,7 +182,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "taxon",
 		BasePath: prefix + "/taxa/{taxon_id}",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
 	makeRoute(&taxonL, taxon, neidb, dbPath) // new
@@ -191,7 +191,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "children",
 		BasePath: prefix + "/taxa/{taxon_id}/children",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&childrenL, children, neidb) // previously just children
@@ -200,7 +200,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "parent",
 		BasePath: prefix + "/taxa/{taxon_id}/parent",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&parentL, parent, neidb) // previously known as parent
@@ -209,7 +209,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "subtree",
 		BasePath: prefix + "/taxa/{taxon_id}/subtree",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
@@ -218,7 +218,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "taxonomy",
 		BasePath: prefix + "/taxonomy",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&taxonomyL, taxonomy, neidb) // new
@@ -227,7 +227,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "taxonAccessions",
 		BasePath: prefix + "/taxonomy/accessions",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
@@ -236,7 +236,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "mrca",
 		BasePath: prefix + "/taxonomy/mrca",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&mrcaL, mrca, neidb) // previously just mrca
@@ -245,7 +245,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "path",
 		BasePath: prefix + "/taxonomy/path",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&pathL, path, neidb) // previously just path
@@ -254,7 +254,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "programs",
 		BasePath: prefix + "/programs",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&programsDocL, programsDoc)
@@ -263,7 +263,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progAnts",
 		BasePath: prefix + "/programs/ants",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
@@ -272,7 +272,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progDree",
 		BasePath: prefix + "/programs/dree",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
@@ -281,7 +281,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progFintac",
 		BasePath: prefix + "/programs/fintac",
-		Action:   post,
+		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progFintacL, fintacEndpoint, dbPath)
@@ -290,7 +290,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
 		BasePath: prefix + "/programs/neighbors",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progNeighborsGetL, programEndpoint, dbPath, "neighbors")
@@ -298,7 +298,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
 		BasePath: prefix + "/programs/neighbors",
-		Action:   post,
+		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progNeighborsPostL, programEndpoint, dbPath, "neighbors")
@@ -307,7 +307,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
 		BasePath: prefix + "/programs/ranks",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progRanksGetL, programEndpoint, dbPath, "ranks")
@@ -315,7 +315,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
 		BasePath: prefix + "/programs/ranks",
-		Action:   post,
+		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
@@ -324,7 +324,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Links:    make(map[string][]Node),
 		Name:     "progTaxi",
 		BasePath: prefix + "/programs/taxi",
-		Action:   get,
+		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
@@ -1423,12 +1423,20 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	callArgs := splitArgs(r.URL.Query().Get("args"))
+	callArgs := splitArgs(r.URL.Query().Get("options"))
+	callArgs = append(callArgs, "../"+args[0].(string))
+	callArgs = append(callArgs, splitArgs(r.URL.Query().Get("extra"))...)
 
-	callArgs = append(callArgs, args[0].(string))
-
-	cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), callArgs...)
-	if r.Method == "POST" {
+	cmd := exec.CommandContext(ctx, "../prog/"+args[1].(string), callArgs...)
+	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		writeServerError(w, "Failed to open directory.", err.Error(), err)
+		return
+	}
+	defer os.RemoveAll(dir)
+	cmd.Dir = dir
+	if r.Method == http.MethodPost {
 		ct, err := contenttype.GetMediaType(r)
 		if err != nil {
 			writeBadRequestResp(w, "Malformed content type.")
@@ -1439,14 +1447,13 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 			w.Write([]byte("Use multipart/form-data with POST requests."))
 			return
 		} else {
-			str, err := parseFormData(w, r)
+			stdin, err := parseFormData(w, r, dir)
 			if err != nil {
 				return
 			}
-			cmd.Stdin = strings.NewReader(str)
+			cmd.Stdin = strings.NewReader(stdin)
 		}
 	}
-
 	res, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -1455,7 +1462,6 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		w.Header().Set("Content-Type", plainCt.String())
 		w.Write(res)
 	}
-
 }
 
 func splitArgs(strArgs string) (args []string) {
@@ -1479,16 +1485,16 @@ func splitArgs(strArgs string) (args []string) {
 	return
 }
 
-func parseFormData(w http.ResponseWriter, r *http.Request) (string, error) {
-	err := r.ParseMultipartForm(3_000_000)
+func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin string, err error) {
+	err = r.ParseMultipartForm(3_000_000)
 	if err != nil {
 		writeBadRequestResp(w, "Malformed multipart form request.")
-		return "", err
+		return
 	}
 	if len(r.MultipartForm.File) == 0 {
 		err = errors.New("Please provide files, when sending multipart/form-data request.")
 		writeBadRequestResp(w, err.Error())
-		return "", err
+		return
 	} else {
 		keys := []string{}
 		for key := range r.MultipartForm.File {
@@ -1496,24 +1502,36 @@ func parseFormData(w http.ResponseWriter, r *http.Request) (string, error) {
 		}
 		sort.Strings(keys)
 
-		buf := bytes.NewBuffer([]byte{})
 		for _, key := range keys {
-			files := r.MultipartForm.File[key]
-			if len(files) > 0 {
-				h := *files[0]
-				rf, err := h.Open()
+			mFiles := r.MultipartForm.File[key]
+			if len(mFiles) > 0 {
+				h := *mFiles[0]
+				var rf multipart.File
+				rf, err = h.Open()
 				if err != nil {
 					writeServerError(w, "Error while opening multipart file", "", err)
-					return "", err
+					return
 				}
 				defer rf.Close()
 				b := make([]byte, h.Size)
 				rf.Read(b)
-				buf.Write(b)
 
+				if h.Filename == "stdin" {
+					stdin = string(b)
+				} else {
+					var tf *os.File
+					tf, err = os.OpenFile(dir+"/"+h.Filename, os.O_CREATE|os.O_WRONLY, 0644)
+					if err != nil {
+						writeServerError(w, "Error while opening temp file", "", err)
+						return
+					}
+					buffer := bytes.NewBuffer(b)
+					buffer.WriteTo(tf)
+					tf.Close()
+				}
 			}
 		}
-		return buf.String(), nil
+		return
 
 	}
 }
@@ -1537,11 +1555,11 @@ func fintacEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args
 		w.Write([]byte("Use multipart/form-data."))
 		return
 	} else {
-		str, err := parseFormData(w, r)
+		stdin, err := parseFormData(w, r, "")
 		if err != nil {
 			return
 		}
-		cmd.Stdin = strings.NewReader(str)
+		cmd.Stdin = strings.NewReader(stdin)
 	}
 	res, err := cmd.CombinedOutput()
 

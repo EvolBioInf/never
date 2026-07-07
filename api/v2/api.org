@@ -155,7 +155,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Let's also declare a global variable for the route prefix, as well 
+  Let's also declare a global variable for the route prefix, as well
   as the servers actual address.
 #+end_export
 
@@ -453,7 +453,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  This api also provides a slim interface for calling database related 
+  This api also provides a slim interface for calling database related
   programs of the \ty{neighbors} package. We register these programs with
   the url prefix \ty{programs}. For this we first write a link document
   which is returned when \ty{/programs} is called.
@@ -472,10 +472,10 @@ type Node struct {
 
 #+begin_export latex
   One of the programs we want to provide is \ty{ants}.
-  We register under \ty{/programs/ants}. All arguments passed 
+  We register under \ty{/programs/ants}. All arguments passed
   to the url are directly passed to the program when called.
   We are going to execute the same function for all
-  program calls and pass different names of programs to call. 
+  program calls and pass different names of programs to call.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>=
@@ -524,7 +524,7 @@ type Node struct {
 
 #+begin_export latex
   Now we define \ty{neighbors}, which has two actions:
-  GET for requests without a body and POST requests 
+  GET for requests without a body and POST requests
   containing files.
 #+end_export
 
@@ -549,7 +549,7 @@ type Node struct {
 
 #+begin_export latex
   Next up is \ty{ranks}, which uses the same http methods
-  as \ty{neighbors}. 
+  as \ty{neighbors}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>=
@@ -565,7 +565,7 @@ type Node struct {
     Links:    make(map[string][]Node),
     Name:     "progRanks",
     BasePath: prefix + "/programs/ranks",
-    Action:   MethodPost,
+    Action:   http.MethodPost,
     Types:    []contenttype.MediaType{plainCt},
   }
   makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
@@ -748,7 +748,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  When responding to an \ty{OPTIONS} request, we declare all the allowed 
+  When responding to an \ty{OPTIONS} request, we declare all the allowed
   methods for an endpoint. Some endpoints may provide access via multiple http methods.
   This means we need to group all the nodes on their base path, to find all the provided
   methods.
@@ -1077,7 +1077,7 @@ type Node struct {
       if err != nil {
         offset = 0
       } else {
-        offset = cOff 
+        offset = cOff
       }
     } else {
       offset = 0
@@ -1432,7 +1432,7 @@ type Node struct {
 
 #+begin_export latex
   The field composite is a query parameter which determines
-  the fields of the response. We call a function 
+  the fields of the response. We call a function
   \ty{parseFieldComposite}, to handle setting defaults etc.
   We are going to implement in the next step.
 #+end_export
@@ -1443,8 +1443,8 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  This function takes a string, which is supposed to be a field composite 
-  descriptor. It checks whether the \ty{arg} matches any of the options 
+  This function takes a string, which is supposed to be a field composite
+  descriptor. It checks whether the \ty{arg} matches any of the options
   and returns \ty{default} if it does not.
 #+end_export
 
@@ -1851,7 +1851,7 @@ type Node struct {
   taxiArgs := []string{"./taxi"}
 
   taxiArgs = append(
-    taxiArgs, 
+    taxiArgs,
     taxIdStr,
     dbPath,
   )
@@ -2142,7 +2142,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We declare a slice of \ty{TaxonAccession} for storing. We get the accessions 
+  We declare a slice of \ty{TaxonAccession} for storing. We get the accessions
   for a taxon, then add it's children. We do this as long as there are unprocessed
   taxa without exceeding the page .
 #+end_export
@@ -2453,7 +2453,7 @@ type Node struct {
 #+begin_export latex
   The service \ty{programsDoc} provides links for
   all the registered endpoints executing program
-  calls.  
+  calls.
 
   This is \ty{progTaxi}'s io:
   Params:
@@ -2489,12 +2489,12 @@ type Node struct {
 
 
 #+begin_export latex
-  The service \ty{programEndpoint} executes a program call executing 
+  The service \ty{programEndpoint} executes a program call executing
   one of the \ty{neighbors} programs. It takes a space delimited
   string with the query parameter \ty{args}. This is directly passed
   to the program when using the \ty{os/exec} package.
   Files are passed via \ty{stdin}. Outputs from \ty{stdout}
-  and \ty{stderr} are returned using the response. 
+  and \ty{stderr} are returned using the response.
 
   This is \ty{programEndpoint}'s io:
   Params:
@@ -2510,15 +2510,14 @@ type Node struct {
   func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     //<<Create program call context, Pa. \ref{pa:api}>>
     //<<Determine call arguments, Pa. \ref{pa:api}>>
-    //<<Add database, Pa. \ref{pa:api}>>
     //<<Call program, Pa. \ref{pa:api}>>
     //<<Write response, Pa. \ref{pa:api}>>
   }
 #+end_src
 
 #+begin_export latex
-  We can use a context with a timeout limit the maximum amount of 
-  time a program call may take. 
+  We can use a context with a timeout limit the maximum amount of
+  time a program call may take.
 #+end_export
 
 #+begin_src go <<Create program call context, Pa. \ref{pa:api}>>=
@@ -2536,14 +2535,20 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The arguments we are going to use for calling the 
-  program are stored in the query parameter \ty{args}.
-  We need to get them into a shell friendly format. 
-  For this we iterate over the pass argument string,
-  split it whenever we hit a space symbol, unless 
-  we are currently in a string literal. We need to
-  add the remaining characters when leaving the loop. 
-  We should encapsulate this behaviour in a function.
+  The arguments we are going to use for calling the
+  program are stored in the query parameters \ty{options} and \ty{extra}.
+  The cli programs follow a certain structure for call parameters.
+  They begin with a set of options specified using \ty{flag}, then the database
+  is passed followed by optional files. For some programs stdin may be used
+  instead of the files. We are going to mock this behaviour by requiring
+  the parameters \ty{options} and \ty{extra}. All files in \ty{extra} and
+  options need to be created later on. This allows us to just add
+  \ty{extra} as if we were doing a normal program call. The parameters
+  themselve also need to be in a shell friendly format. For this we
+  iterate over the pass argument string, split it whenever we hit a
+  space symbol, unless we are currently in a string literal. We need to
+  add the remaining characters when leaving the loop. We should encapsulate
+  this behaviour in a function.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
@@ -2570,20 +2575,15 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Now we call \ty{splitArgs}.
+  Now we call \ty{splitArgs} for the \ty{options} and \ty{extra}, placing
+  the path to the database in between. All programs are going to be
+  executed in a subdirectory. So we need to prefix the path.
 #+end_export
 
 #+begin_src go <<Determine call arguments, Pa. \ref{pa:api}>>=
-  callArgs := splitArgs(r.URL.Query().Get("args"))
-#+end_src
-
-#+begin_export latex
-  The database is added as a last argument. It was passed to this
-  function as the first entry in \ty{args}.
-#+end_export
-
-#+begin_src go <<Add database, Pa. \ref{pa:api}>>=
-  callArgs = append(callArgs, args[0].(string))
+	callArgs := splitArgs(r.URL.Query().Get("options"))
+	callArgs = append(callArgs, "../"+args[0].(string))
+	callArgs = append(callArgs, splitArgs(r.URL.Query().Get("extra"))...)
 #+end_src
 
 #+begin_export latex
@@ -2592,7 +2592,15 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-  cmd := exec.CommandContext(ctx, "./prog/"+args[1].(string), callArgs...)
+  cmd := exec.CommandContext(ctx, "../prog/"+args[1].(string), callArgs...)
+  dir := strconv.FormatInt(time.Now().UnixNano(), 10)
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		writeServerError(w, "Failed to open directory.", err.Error(), err)
+		return
+	}
+	defer os.RemoveAll(dir)
+	cmd.Dir = dir
   //<<Handle files, Pa. \ref{pa:api}>>
   res, err := cmd.CombinedOutput()
 #+end_src
@@ -2607,8 +2615,8 @@ type Node struct {
 
 #+begin_export latex
   If a request is sent in \ty{multipart/form-data} we can assume that,
-  there are files to check. \ty{multipart/form-data} is a common content 
-  type. Let's create a variable which defines this content type for use. 
+  there are files to check. \ty{multipart/form-data} is a common content
+  type. Let's create a variable which defines this content type for use.
 #+end_export
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
@@ -2617,29 +2625,29 @@ type Node struct {
 
 #+begin_export latex
   Now we check the request method and file type, then
-  parse the files, if there are any, and add all of 
+  parse the files, if there are any, and add all of
   their data to the command \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
-  if r.Method == http.MethodPost {
-    ct, err := contenttype.GetMediaType(r)
-     if err != nil {
-      writeBadRequestResp(w, "Malformed content type.")
-      return
-    }
-    if !ct.EqualsMIME(multipartCt) {
-      w.WriteHeader(http.StatusUnsupportedMediaType)
-      w.Write([]byte("Use multipart/form-data with POST requests."))
-      return
-    } else {
-      str, err := parseFormData(w, r)
-      if err != nil {
-        return
-      }
-      cmd.Stdin = strings.NewReader(str)
-    }
-  }
+	if r.Method == http.MethodPost {
+		ct, err := contenttype.GetMediaType(r)
+		if err != nil {
+			writeBadRequestResp(w, "Malformed content type.")
+			return
+		}
+		if !ct.EqualsMIME(multipartCt) {
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			w.Write([]byte("Use multipart/form-data with POST requests."))
+			return
+		} else {
+			stdin, err := parseFormData(w, r, dir)
+			if err != nil {
+				return
+			}
+			cmd.Stdin = strings.NewReader(stdin)
+		}
+	}
 #+end_src
 
 #+begin_export latex
@@ -2680,6 +2688,7 @@ type Node struct {
   for key := range r.MultipartForm.File {
     keys = append(keys, key)
   }
+  fmt.Println(keys)
   sort.Strings(keys)
 #+end_src
 
@@ -2706,6 +2715,7 @@ type Node struct {
     //<<Extract request's file data, Pa. \ref{pa:api}>>
     }
   }
+  fmt.Println(buf.Len())
   return buf.String(), nil
 #+end_src
 
@@ -2794,7 +2804,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  First we look 
+  First we look
 #+end_export
 
 #+begin_src go <<Handle files \ty{fintac}, Pa. \ref{pa:api}>>=
