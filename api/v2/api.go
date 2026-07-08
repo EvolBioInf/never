@@ -1422,7 +1422,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	dbPath := args[0].(string)
 	progName := args[1].(string)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	callArgs := r.URL.Query()["options"]

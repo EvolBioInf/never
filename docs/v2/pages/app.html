@@ -16,9 +16,9 @@
       <nav>
         <h1>Never</h1>
         <div class="nav-links">
-          <a href="/docs/api/v1">APIv1</a>
           <a href="https://github.com/evolbioinf/never">Source Code</a>
           <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
+          <a href="/vitax">Vitax</a>
           <a href="https://doi.org/10.1093/bioadv/vbae113">Publication</a>
           <a href="https://evolbioinf.github.io/">Research Group</a>
         </div>
@@ -71,9 +71,9 @@
 
           On API versioning: 
           Never follows a major/minor release schema. Major releases might change up anything of an endpoint, including 
-	  it's removal. All major releases stay online, with their assigned prefix, in order to stay compatible. 
-          This means you can reach all major api versions with this prefix: "/api/v[MAJOR_RELEASE]". Each API prefix 
-	  i.e.:"/api/v1", "/api/v2" provides access to the latest minor release within that major.
+	        it's removal. All major releases stay online, with their assigned prefix, in order to stay compatible. 
+          This means you can reach all major api versions with this prefix: "/api/v[release]". Each API prefix 
+	        i.e.:"/api/v1", "/api/v2" provides access to the latest minor release within that major.
           Minor releases follow an add only strategy, which means endpoints, schemas and parameters may be added,
           but all previous URIs and schemas will be left unchanged. Although minor releases
           might introduce greater changes if security demands it.

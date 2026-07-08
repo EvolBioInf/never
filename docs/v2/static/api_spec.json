@@ -22,11 +22,15 @@
   "tags": [
     {
       "name": "Accession",
-      "description": "Provides data primarily tied to Accessions e.g. the accessions level."
+      "description": "Endpoints concerning taxon accessions"
+    },
+    {
+      "name": "Program",
+      "description": "Endpoints executing programs"
     },
     {
       "name": "Taxon",
-      "description": "Provides data contextually tied to Taxa e.g. a taxons parent."
+      "description": "Endpoints concerning one or several taxa"
     }
   ],
   "paths": {
@@ -590,16 +594,6 @@
                     }
                   }
                 }
-              },
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "# ID       Parent   Name\n  1383439  1002697  Homo sapiens/Mus musculus xenograft\n  1573476  1002697  Homo sapiens/Rattus norvegicus xenograft\n"
-                  }
-                }
               }
             }
           },
@@ -771,16 +765,6 @@
                     }
                   }
                 }
-              },
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "# ID    Parent  Name\n  9606  9605    Homo sapiens"
-                  }
-                }
               }
             }
           },
@@ -816,65 +800,6 @@
             "$ref": "#/components/parameters/plain_data"
           }
         ]
-      }
-    },
-    "/taxa/{taxon_id}/ancestors": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon_id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon"
-        }
-      ],
-      "get": {
-        "summary": "Get ancestors of taxon",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "# Back  ID       Name                  Rank\n  31    1        root                  no rank\n  30    131567   cellular organisms    cellular root\n  29    2759     Eukaryota             domain\n  28    33154    Opisthokonta          clade\n  27    33208    Metazoa               kingdom\n  26    6072     Eumetazoa             clade\n  25    33213    Bilateria             clade\n  24    33511    Deuterostomia         clade\n  23    7711     Chordata              phylum\n  22    89593    Craniata              subphylum\n  21    7742     Vertebrata            clade\n  20    7776     Gnathostomata         clade\n  19    117570   Teleostomi            clade\n  18    117571   Euteleostomi          clade\n  17    8287     Sarcopterygii         superclass\n  16    1338369  Dipnotetrapodomorpha  clade\n  15    32523    Tetrapoda             clade\n  14    32524    Amniota               clade\n  13    40674    Mammalia              class\n  12    32525    Theria                clade\n  11    9347     Eutheria              clade\n  10    1437010  Boreoeutheria         clade\n  9     314146   Euarchontoglires      superorder\n  8     9443     Primates              order\n  7     376913   Haplorrhini           suborder\n  6     314293   Simiiformes           infraorder\n  5     9526     Catarrhini            parvorder\n  4     314295   Hominoidea            superfamily\n  3     9604     Hominidae             family\n  2     207598   Homininae             subfamily\n  1     9605     Homo                  genus\n  0     9606     Homo sapiens          species\n"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "Malformed integer."
-                  }
-                }
-              }
-            }
-          },
-          "406": {
-            "description": "Not Acceptable"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "operationId": "get_taxa_taxon_id_ancestors",
-        "description": "Get the ancestors of a taxon including itself",
-        "parameters": []
       }
     },
     "/taxa/{taxon_id}/children": {
@@ -1138,88 +1063,6 @@
         ]
       }
     },
-    "/taxa/{taxon_id}/rank_distribution": {
-      "parameters": [
-        {
-          "schema": {
-            "type": "integer",
-            "example": 9606
-          },
-          "name": "taxon_id",
-          "in": "path",
-          "required": true,
-          "description": "id of taxon",
-          "example": 9606
-        }
-      ],
-      "post": {
-        "summary": "Determine rank distribution",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "#Path    Count  %\nspecies  3      100.0000\n"
-                  }
-                }
-              },
-              "text/vnd.graphviz": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "digraph g {\n rankdir=LR  \n  7 [label=\"species\n3 (100.0%)\"]\n}\n"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "Taxon id is not an integer."
-                  }
-                }
-              }
-            }
-          },
-          "406": {
-            "description": "Not Acceptable"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "operationId": "post_taxa_taxon_id_ranks",
-        "description": "Determines the distribution of genomes among taxonomic ranks for a taxonomy rooted on a taxon specified by it's ID",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/assembly_levels"
-          },
-          {
-            "schema": {
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "list_genomes",
-            "description": "List genomes in plain output"
-          }
-        ]
-      }
-    },
     "/taxa/{taxon_id}/subtree": {
       "parameters": [
         {
@@ -1398,26 +1241,6 @@
                     }
                   }
                 }
-              },
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "# Taxid  Parent  Rank        Genomes\n9606     9605    species     2564\n63221    9606    subspecies  0\n741158   9606    subspecies  0\n"
-                  }
-                }
-              },
-              "text/vnd.graphviz": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "digraph g {\n rankdir=LR\n  9606 [color=\"lightsalmon\",style=filled]\n 63221 [label=\"63221\"]\n 9606 -> 63221\n 741158 [label=\"741158\"]\n 9606 -> 741158\n}\n"
-                  }
-                }
               }
             }
           },
@@ -1536,7 +1359,6 @@
       "parameters": []
     },
     "/taxonomy/accessions": {
-      "parameters": [],
       "get": {
         "summary": "Get most recent common ancestor",
         "tags": ["Taxon", "Accession"],
@@ -1734,104 +1556,6 @@
             "$ref": "#/components/parameters/plain_data"
           }
         ]
-      }
-    },
-    "/taxonomy/fintac": {
-      "post": {
-        "summary": "Determine taxonomic clade",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "#Clade  Targets  Neighbors  Unknowns  Split (%)  Parent  Dist(Parent)\n5007    22       8          18        98.53      5005    0.000385"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "all_splits argument is not a bool."
-                  }
-                }
-              }
-            }
-          },
-          "406": {
-            "description": "Not Acceptable"
-          },
-          "415": {
-            "description": "Unsupported Media Type"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "operationId": "post_fintac",
-        "parameters": [
-          {
-            "schema": {
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "all_splits",
-            "description": "Returns all splits instead of just the highest"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "regex"
-            },
-            "in": "query",
-            "name": "neighbor",
-            "description": "Regex setting neighbors via ids"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "regex"
-            },
-            "in": "query",
-            "name": "target",
-            "description": "Regex setting targets via ids"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "regex"
-            },
-            "in": "query",
-            "name": "unknown",
-            "description": "Regex setting unknown via ids"
-          }
-        ],
-        "description": "Find target clade for taxa identified by regular expressions in Newick tree.",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
       },
       "parameters": []
     },
@@ -1981,116 +1705,6 @@
             "$ref": "#/components/parameters/plain_data"
           }
         ]
-      }
-    },
-    "/taxonomy/neighbors": {
-      "parameters": [],
-      "post": {
-        "summary": "Determine neighbors of targets",
-        "tags": ["Taxon"],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "# MRCA(targets): 9606, Homo sapiens\n# MRCA(targets+neighbors): 9605, Homo\n# Type  Taxon-ID  Name                               Genomes\nt       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1\ntt      63221     Homo sapiens neanderthalensis      -\ntt      741158    Homo sapiens subsp. 'Denisova'     -\nn       1425170   Homo heidelbergensis               -\nn       2665952   environmental samples              -\nn       2665953   Homo sapiens environmental sample  -\nn       2813598   unclassified Homo                  -\nn       2813599   Homo sp.                           -\n"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                },
-                "examples": {
-                  "Example": {
-                    "value": "Missing required parameter."
-                  }
-                }
-              }
-            }
-          },
-          "406": {
-            "description": "Not Acceptable"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        },
-        "operationId": "get_taxonomy_neighbors",
-        "description": "Get the neighbors for a list of target taxa ",
-        "parameters": [
-          {
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "in": "query",
-            "name": "target_ids",
-            "description": "Ids of taxonomic targets",
-            "required": true,
-            "style": "form",
-            "explode": false
-          },
-          {
-            "$ref": "#/components/parameters/assembly_levels"
-          },
-          {
-            "schema": {
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "individual_genomes",
-            "description": "List all genomes individually"
-          },
-          {
-            "schema": {
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "require_genomes",
-            "description": "Restrict output to taxa with genome sequences"
-          },
-          {
-            "schema": {
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "tab_output",
-            "description": "Return a tab delimited output"
-          },
-          {
-            "schema": {
-              "type": "boolean"
-            },
-            "in": "query",
-            "name": "targets_only",
-            "description": "Restrict output to target taxa only"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/taxonomy/path": {
@@ -2482,6 +2096,462 @@
           }
         ]
       }
+    },
+    "/programs": {
+      "get": {
+        "summary": "Get programs subservices",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Link"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": {
+                      "links": [
+                        {
+                          "rel": "self",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/accessions",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/fintac",
+                          "action": "POST",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/mrca",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/neighbors",
+                          "action": "POST",
+                          "types": ["text/plain;charset=utf-8"]
+                        },
+                        {
+                          "rel": "service",
+                          "href": "https://neighbors.evolbio.mpg.de/api/v2/taxonomy/path",
+                          "action": "GET",
+                          "types": ["application/json;charset=utf-8"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get_programs_endpoints",
+        "parameters": [],
+        "description": "Get the endpoints provided under the taxonomy route",
+        "tags": ["Program"]
+      },
+      "parameters": []
+    },
+    "/programs/ants": {
+      "get": {
+        "summary": "Execute ants program",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# Back  ID       Name                  Rank\n  31    1        root                  no rank\n  30    131567   cellular organisms    cellular root\n  29    2759     Eukaryota             domain\n  28    33154    Opisthokonta          clade\n  27    33208    Metazoa               kingdom\n  26    6072     Eumetazoa             clade\n  25    33213    Bilateria             clade\n  24    33511    Deuterostomia         clade\n  23    7711     Chordata              phylum\n  22    89593    Craniata              subphylum\n  21    7742     Vertebrata            clade\n  20    7776     Gnathostomata         clade\n  19    117570   Teleostomi            clade\n  18    117571   Euteleostomi          clade\n  17    8287     Sarcopterygii         superclass\n  16    1338369  Dipnotetrapodomorpha  clade\n  15    32523    Tetrapoda             clade\n  14    32524    Amniota               clade\n  13    40674    Mammalia              class\n  12    32525    Theria                clade\n  11    9347     Eutheria              clade\n  10    1437010  Boreoeutheria         clade\n  9     314146   Euarchontoglires      superorder\n  8     9443     Primates              order\n  7     376913   Haplorrhini           suborder\n  6     314293   Simiiformes           infraorder\n  5     9526     Catarrhini            parvorder\n  4     314295   Hominoidea            superfamily\n  3     9604     Hominidae             family\n  2     207598   Homininae             subfamily\n  1     9605     Homo                  genus\n  0     9606     Homo sapiens          species"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_programs_ants",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["9606"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          }
+        ],
+        "description": "Executes the neighbors program ants remotely",
+        "tags": ["Program"]
+      },
+      "parameters": []
+    },
+    "/programs/dree": {
+      "get": {
+        "summary": "Execute dree program",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "digraph g {\n  rankdir=LR\n  9592 [label=\"9592\"]\n  9592 [label=\"Gorilla\"]\n  207598 -> 9592\n  9593 [color=\"lightsalmon\",style=filled]\n  9593 [label=\"Gorilla gorilla\"]\n  9592 -> 9593\n  9595 [color=\"lightsalmon\",style=filled]\n  9595 [label=\"Gorilla gorilla gorilla\"]\n  9593 -> 9595\n  9596 [label=\"9596\"]\n  9596 [label=\"Pan\"]\n  207598 -> 9596\n  9597 [color=\"lightsalmon\",style=filled]\n  9597 [label=\"Pan paniscus\"]\n  9596 -> 9597\n  9598 [color=\"lightsalmon\",style=filled]\n  9598 [label=\"Pan troglodytes\"]\n  9596 -> 9598\n  9605 [label=\"9605\"]\n  9605 [label=\"Homo\"]\n  207598 -> 9605\n  9606 [color=\"lightsalmon\",style=filled]\n  9606 [label=\"Homo sapiens\"]\n  9605 -> 9606\n  37012 [color=\"lightsalmon\",style=filled]\n  37012 [label=\"Pan troglodytes verus\"]\n  9598 -> 37012\n  207598 [label=\"207598\"]\n  207598 [label=\"Homininae\"]\n  499232 [color=\"lightsalmon\",style=filled]\n  499232 [label=\"Gorilla beringei\"]\n  9592 -> 499232\n  1159185 [color=\"lightsalmon\",style=filled]\n  1159185 [label=\"Gorilla beringei beringei\"]\n   499232 -> 1159185\n}"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_programs_dree",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["-n", "-g", "207598"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          }
+        ],
+        "description": "Executes the neighbors program dree remotely",
+        "tags": ["Program"]
+      },
+      "parameters": []
+    },
+    "/programs/fintac": {
+      "parameters": [],
+      "post": {
+        "summary": "Execute fintac remotely",
+        "tags": ["Program"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "#Clade  Targets  Neighbors  Unknowns  Split (%)  Parent  Dist(Parent)\n 5007    22       8          18        98.53      5005    0.000385"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "post-programs-fintac",
+        "description": "Executes the neighbors program fintac remotely",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "example": ["-t", "991910_", "-u", "562_"],
+            "description": "Program options"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["eco7k.nwk"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "extra",
+            "description": "Names of files"
+          }
+        ]
+      }
+    },
+    "/programs/neighbors": {
+      "get": {
+        "summary": "Execute neighbors program",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# MRCA(targets): 9606, Homo sapiens\n# MRCA(targets+neighbors): 9605, Homo\n# Type  Taxon-ID  Name                               Genomes\nt       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1\ntt      63221     Homo sapiens neanderthalensis      -\ntt      741158    Homo sapiens subsp. 'Denisova'     -\nn       1425170   Homo heidelbergensis               -\nn       2665952   environmental samples              -\nn       2665953   Homo sapiens environmental sample  -\nn       2813598   unclassified Homo                  -\nn       2813599   Homo sp.                           -"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_programs_neighbors",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["-L", "complete", "-t", "9606"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          }
+        ],
+        "description": "Executes the program neighbors remotely",
+        "tags": ["Program"]
+      },
+      "parameters": [],
+      "post": {
+        "summary": "Execute neighbors remotely with files",
+        "tags": ["Program"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "TEST"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "post-programs-neighbors",
+        "description": "Executes the program neighbors remotely with files",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["-L", "complete"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["targets.txt"]
+            },
+            "style": "form",
+            "explode": false,
+            "in": "query",
+            "name": "extra",
+            "description": "Names of files"
+          }
+        ]
+      }
+    },
+    "/programs/ranks": {
+      "get": {
+        "summary": "Execute ranks program",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "TEST"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_programs_ranks",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["562"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          }
+        ],
+        "description": "Executes the neighbors program ranks remotely",
+        "tags": ["Program"]
+      },
+      "parameters": [],
+      "post": {
+        "summary": "Execute ranks remotely with files",
+        "tags": ["Program"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "digraph g {\n  rankdir=LR\n  1 [label=\"species\n392350 (97.7%)\"]\n  2 [label=\"no rank\n4503 (1.1%)\"]\n  3 [label=\"no rank\n17 (< 0.1%)\"]\n  4 [label=\"strain\n422 (0.1%)\"]\n  5 [label=\"no rank\n2 (< 0.1%)\"]\n  6 [label=\"serogroup\n1646 (0.4%)\"]\n  7 [label=\"no rank\n15 (< 0.1%)\"]\n  8 [label=\"serotype\n6 (< 0.1%)\"]\n  9 [label=\"strain\n1 (< 0.1%)\"]\n  10 [label=\"strain\n12 (< 0.1%)\"]\n  11 [label=\"serotype\n30 (< 0.1%)\"]\n  12 [label=\"strain\n1 (< 0.1%)\"]\n  13 [label=\"strain\n2438 (0.6%)\"]\n  14 [label=\"no rank\n85 (< 0.1%)\"]\n  1 -> 2\n  2 -> 3\n  2 -> 4\n  4 -> 5\n  1 -> 6\n  6 -> 7\n  6 -> 8\n  8 -> 9\n  6 -> 10\n  1 -> 11\n  11 -> 12\n  1 -> 13\n  13 -> 14\n}"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "post-programs-ranks",
+        "description": "Executes the neighbors program ranks remotely with files",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["-g", "myGenomeList.txt", "562"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          }
+        ]
+      }
+    },
+    "/programs/taxi": {
+      "get": {
+        "summary": "Execute taxi program",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "Example": {
+                    "value": "# ID    Parent  Name\n  9606  9605    Homo sapiens"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "get_programs_taxi",
+        "parameters": [
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["-t", "9606"]
+            },
+            "style": "form",
+            "explode": true,
+            "in": "query",
+            "name": "options",
+            "description": "Program options"
+          }
+        ],
+        "description": "Executes the neighbors program taxi remotely",
+        "tags": ["Program"]
+      },
+      "parameters": []
     }
   },
   "components": {
@@ -2503,10 +2573,6 @@
             }
           }
         }
-      },
-      "AssemblyLevel": {
-        "title": "AssemblyLevel",
-        "enum": ["complete", "chromosome", "scaffold", "contig"]
       },
       "GenomeCount": {
         "title": "GenomeCount",
@@ -2676,33 +2742,6 @@
             }
           }
         }
-      },
-      "TaxonNT": {
-        "title": "TaxonNT",
-        "type": "object",
-        "properties": {
-          "tax-id": {
-            "type": "integer"
-          },
-          "type": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "accessions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Accession"
-            }
-          },
-          "links": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Link"
-            }
-          }
-        }
       }
     },
     "securitySchemes": {},
@@ -2717,7 +2756,7 @@
           "example": 0,
           "minimum": 0
         },
-        "description": "Current page",
+        "description": "Offset of entries when retrieving lists",
         "style": "form"
       },
       "limit": {
@@ -2730,7 +2769,7 @@
           "example": 20,
           "default": -1
         },
-        "description": "Amount of entries per page",
+        "description": "Amount of entries per response",
         "style": "form"
       },
       "field_composite": {
@@ -2751,21 +2790,8 @@
           "type": "boolean"
         },
         "description": "Reduce response to the data property and remove all hyper refereces"
-      },
-      "assembly_levels": {
-        "name": "assembly_levels",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/AssemblyLevel"
-          }
-        },
-        "style": "form",
-        "explode": false,
-        "description": "Quality levels of genome assembly"
       }
     }
-  }
+  },
+  "x-internal": false
 }

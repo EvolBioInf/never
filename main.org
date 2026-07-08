@@ -29,6 +29,7 @@ import (
   func main() {
     //<<Handle io, Pr. \ref{pr:main}>>
     //<<Register packages, Pr. \ref{pr:main}>>
+    //<<Serve Vitax files, Pr. \ref{pr:main}>>
     //<<Define default route, Pr. \ref{pr:main}>>
     //<<Create middleware, Pr. \ref{pr:main}>>
     //<<Start server, Pr. \ref{pr:main}>>
@@ -158,6 +159,16 @@ import (
 	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbPath, dateFilePath)
 	apiv2.RegisterRoutes(apiPref + "/v2", dbPath, host+":"+strconv.Itoa(port))
 	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
+#+end_src
+
+#+begin_export latex
+  The Vitax files are located in directory \ty{vitax}. We make them
+  available by registering a file server to that directory.
+#+end_export
+
+#+begin_src go <<Serve Vitax files, Pr. \ref{pr:nev}>>=
+  vitaxFiles := http.FileServer(http.Dir("vitax"))
+  http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src
 
 #+begin_export latex
