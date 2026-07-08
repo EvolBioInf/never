@@ -1,16 +1,12 @@
 package apiv2
 
 import (
-	"mime/multipart"
-	"os"
-
 	"github.com/elnormous/contenttype"
 
 	"net/http"
 
-	"log"
-
 	"github.com/evolbioinf/neighbors/tdb"
+	"log"
 
 	"strings"
 
@@ -23,7 +19,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -34,6 +29,10 @@ import (
 	"os/exec"
 
 	"sort"
+
+	"mime/multipart"
+
+	"os"
 )
 
 type Accession struct {
@@ -284,7 +283,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progFintacL, fintacEndpoint, dbPath)
+	makeRoute(&progFintacL, programEndpoint, dbPath)
 
 	progNeighborsGetL := Node{
 		Links:    make(map[string][]Node),
@@ -1420,14 +1419,22 @@ func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ..
 }
 
 func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	dbPath := args[0].(string)
+	progName := args[1].(string)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	callArgs := splitArgs(r.URL.Query().Get("options"))
-	callArgs = append(callArgs, "../"+args[0].(string))
-	callArgs = append(callArgs, splitArgs(r.URL.Query().Get("extra"))...)
+	callArgs := r.URL.Query()["options"]
+	if progName == "fintac" {
+		callArgs = append(callArgs, "-H")
+	}
+	callArgs = append(callArgs, "../"+dbPath)
 
-	cmd := exec.CommandContext(ctx, "../prog/"+args[1].(string), callArgs...)
+	callArgs = append(callArgs, r.URL.Query()["extra"]...)
+	callArgs = slices.DeleteFunc(callArgs, func(w string) bool { return w == "-r" })
+
+	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -1454,6 +1461,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 			cmd.Stdin = strings.NewReader(stdin)
 		}
 	}
+
 	res, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -1464,37 +1472,16 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	}
 }
 
-func splitArgs(strArgs string) (args []string) {
-	tArgs := []string{}
-	var sb strings.Builder
-	inLiteral := false
-	for _, v := range strArgs {
-		if v == '"' {
-			inLiteral = !inLiteral
-		} else if v == ' ' && !inLiteral {
-			tArgs = append(tArgs, sb.String())
-			sb.Reset()
-		} else {
-			sb.WriteRune(v)
-		}
-	}
-	if sb.Len() > 0 {
-		tArgs = append(tArgs, sb.String())
-	}
-	args = slices.DeleteFunc(tArgs, func(w string) bool { return w == "-r" })
-	return
-}
-
 func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin string, err error) {
 	err = r.ParseMultipartForm(3_000_000)
 	if err != nil {
 		writeBadRequestResp(w, "Malformed multipart form request.")
-		return
+		return "", err
 	}
 	if len(r.MultipartForm.File) == 0 {
 		err = errors.New("Please provide files, when sending multipart/form-data request.")
 		writeBadRequestResp(w, err.Error())
-		return
+		return "", err
 	} else {
 		keys := []string{}
 		for key := range r.MultipartForm.File {
@@ -1515,7 +1502,6 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin st
 				defer rf.Close()
 				b := make([]byte, h.Size)
 				rf.Read(b)
-
 				if h.Filename == "stdin" {
 					stdin = string(b)
 				} else {
@@ -1529,45 +1515,10 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin st
 					buffer.WriteTo(tf)
 					tf.Close()
 				}
+
 			}
 		}
 		return
 
 	}
-}
-
-func fintacEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	callArgs := splitArgs(r.URL.Query().Get("args"))
-
-	callArgs = append(callArgs, "-H", args[0].(string))
-
-	cmd := exec.CommandContext(ctx, "./prog/fintac", callArgs...)
-	ct, err := contenttype.GetMediaType(r)
-	if err != nil {
-		writeBadRequestResp(w, "Malformed content type.")
-		return
-	}
-	if !ct.EqualsMIME(multipartCt) {
-		w.WriteHeader(http.StatusUnsupportedMediaType)
-		w.Write([]byte("Use multipart/form-data."))
-		return
-	} else {
-		stdin, err := parseFormData(w, r, "")
-		if err != nil {
-			return
-		}
-		cmd.Stdin = strings.NewReader(stdin)
-	}
-	res, err := cmd.CombinedOutput()
-
-	if err != nil {
-		writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
-	} else {
-		w.Header().Set("Content-Type", plainCt.String())
-		w.Write(res)
-	}
-
 }

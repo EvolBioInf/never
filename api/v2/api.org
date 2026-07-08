@@ -506,9 +506,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  \ty{fintac} gets the next endpoint, but it actually gets its
-  own function. It uses a different scheme for defining the database,
-  which is not compatible with the other programs.
+  \ty{fintac} gets the next endpoint.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>=
@@ -519,7 +517,7 @@ type Node struct {
     Action:   http.MethodPost,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progFintacL, fintacEndpoint, dbPath)
+  makeRoute(&progFintacL, programEndpoint, dbPath)
 #+end_src
 
 #+begin_export latex
@@ -2508,11 +2506,22 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Get dbPath and program name, Pa. \ref{pa:api}>>
     //<<Create program call context, Pa. \ref{pa:api}>>
     //<<Determine call arguments, Pa. \ref{pa:api}>>
     //<<Call program, Pa. \ref{pa:api}>>
     //<<Write response, Pa. \ref{pa:api}>>
   }
+#+end_src
+
+#+begin_export latex
+  The database is given as the first value of \ty{args} and the program name as
+  a second.
+#+end_export
+
+#+begin_src go <<Get dbPath and program name, Pa. \ref{pa:api}>>=
+  dbPath := args[0].(string)
+  progName := args[1].(string)
 #+end_src
 
 #+begin_export latex
@@ -2534,65 +2543,51 @@ type Node struct {
   "time"
 #+end_src
 
-#+begin_export latex
-  The arguments we are going to use for calling the
-  program are stored in the query parameters \ty{options} and \ty{extra}.
-  The cli programs follow a certain structure for call parameters.
-  They begin with a set of options specified using \ty{flag}, then the database
-  is passed followed by optional files. For some programs stdin may be used
-  instead of the files. We are going to mock this behaviour by requiring
-  the parameters \ty{options} and \ty{extra}. All files in \ty{extra} and
-  options need to be created later on. This allows us to just add
-  \ty{extra} as if we were doing a normal program call. The parameters
-  themselve also need to be in a shell friendly format. For this we
-  iterate over the pass argument string, split it whenever we hit a
-  space symbol, unless we are currently in a string literal. We need to
-  add the remaining characters when leaving the loop. We should encapsulate
-  this behaviour in a function.
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func splitArgs(strArgs string) (args []string) {
-    tArgs := []string{}
-    var sb strings.Builder
-    inLiteral := false
-    for _, v := range strArgs {
-      if v == '"' {
-        inLiteral = !inLiteral
-      } else if v == ' ' && !inLiteral {
-        tArgs = append(tArgs, sb.String())
-        sb.Reset()
-      } else {
-        sb.WriteRune(v)
-      }
-    }
-    if sb.Len() > 0 {
-      tArgs = append(tArgs, sb.String())
-    }
-    args = 	slices.DeleteFunc(tArgs, func(w string) bool {return w == "-r"})
-    return
-  }
-#+end_src
 
 #+begin_export latex
-  Now we call \ty{splitArgs} for the \ty{options} and \ty{extra}, placing
-  the path to the database in between. All programs are going to be
-  executed in a subdirectory. So we need to prefix the path.
+  The arguments we are going to use for calling the program are stored in the
+  query parameters \ty{options} and \ty{extra}. The cli programs follow a 
+  certain structure for call parameters. They begin with a set of options 
+  specified using \ty{flag}, then the database is passed followed by optional 
+  files. For some programs \ty{stdin} may be used instead of the files. We are
+  going to recreate this behaviour using the exploded query parameters 
+  \ty{options} and \ty{extra}. The values in \ty{extra} and \ty{options} might
+  be files, which we need to create later on. Adding those allows us to use 
+  both \ty{options} and \ty{extra} as if we were doing a normal program call. 
 #+end_export
 
 #+begin_src go <<Determine call arguments, Pa. \ref{pa:api}>>=
-	callArgs := splitArgs(r.URL.Query().Get("options"))
-	callArgs = append(callArgs, "../"+args[0].(string))
-	callArgs = append(callArgs, splitArgs(r.URL.Query().Get("extra"))...)
+	callArgs := r.URL.Query()["options"]
+  //<<Add database to args, Pa. \ref{pa:api}>>
+	callArgs = append(callArgs, r.URL.Query()["extra"]...)
+  callArgs = slices.DeleteFunc(callArgs, func(w string) bool {return w == "-r"})
 #+end_src
 
 #+begin_export latex
-  We are calling the program using the \ty{os/exec} package
-  using the previously defined context.
+  We add the database path between options and extras as an argument. This is
+  the same for all programs except \ty{fintac}. In \ty{fintac} the database is
+  part of the options. This means we pass it with the corresponding switch 
+  \ty{-H}.
+#+end_export
+
+#+begin_src go <<Add database to args, Pa. \ref{pa:api}>>=
+	if progName == "fintac" {
+    callArgs = append(callArgs, "-H")
+  } 
+  callArgs = append(callArgs, "../"+dbPath)
+#+end_src
+
+#+begin_export latex
+  We are calling the program using the \ty{os/exec} package using the
+  previously defined context. Program calls may contain file references. We
+  don't want files of different users to clash, so each command and thus its
+  files are executed within a temporary directory. We use a timestamp as its
+  name, which should be unique. The directory and its contents are removed
+  after execution.
 #+end_export
 
 #+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-  cmd := exec.CommandContext(ctx, "../prog/"+args[1].(string), callArgs...)
+  cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
   dir := strconv.FormatInt(time.Now().UnixNano(), 10)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -2606,7 +2601,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We need to import \ty{os/exec}
+  We need to import \ty{os/exec}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
@@ -2614,9 +2609,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  If a request is sent in \ty{multipart/form-data} we can assume that,
-  there are files to check. \ty{multipart/form-data} is a common content
-  type. Let's create a variable which defines this content type for use.
+  If a request is sent in \ty{multipart/form-data} we can assume that, there 
+  are files to check. \ty{multipart/form-data} is a common content type. Let's
+  create a variable which defines this content type for use.
 #+end_export
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
@@ -2624,9 +2619,11 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Now we check the request method and file type, then
-  parse the files, if there are any, and add all of
-  their data to the command \ty{stdin}.
+  We define that a \ty{post} request has to have \ty{multipart} as a
+  content type. If it does not, the request should have been of type \ty{get}.
+  Then we inspect the form data using \ty{parseFormData}, which we need to 
+  implement in a moment. This returns \ty{stdin}'s content. We may use it as 
+  the commands \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
@@ -2651,18 +2648,16 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Accessing the data of a multipart form request, requires
-  a parsing step. In this the format of provided is checked
-  and loaded into memory. We may define the amount space
-  we are willing to allocate for this data, I've decided
-  on 3MB, the remaining data will be stored on the hard
-  drive. We return a 400 (Bad Request) if the data is
-  malformed.
+  Accessing the data of a multipart form request, requires a parsing step. In
+  this the data is checked for syntactical correctness and loaded into memory.
+  We may define the amount space we are willing to allocate for this data. I've
+  decided on 3MB, the remaining data will be stored on the disk. We return a 
+  400 (Bad Request) if the data is malformed.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func parseFormData(w http.ResponseWriter, r *http.Request) (string, error) {
-    err := r.ParseMultipartForm(3_000_000)
+  func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin string, err error) {
+    err = r.ParseMultipartForm(3_000_000)
     if err != nil {
       writeBadRequestResp(w, "Malformed multipart form request.")
       return "", err
@@ -2679,8 +2674,8 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The files should be sorted by some criterium.
-  We use the keys that indicate the files to do so.
+  Sorting the files is a good idea to ensure their processing order. We use the
+  keys that indicate the files to do so.
 #+end_export
 
 #+begin_src go <<Sort files, Pa. \ref{pa:api}>>=
@@ -2688,7 +2683,6 @@ type Node struct {
   for key := range r.MultipartForm.File {
     keys = append(keys, key)
   }
-  fmt.Println(keys)
   sort.Strings(keys)
 #+end_src
 
@@ -2701,43 +2695,86 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The local programs take data via \ty{stdin} as input.
-  We iterate over the provided files and store their contents
-  in a buffer. After iteration we add all of the buffers content
-  to the command's \ty{stdin}.
+  The \ty{neighbors} programs take a variety of parameters as input. Most don't
+  depend on anything, but some, like filenames, depend environmental 
+  surroundings. For this reason we are going to create all the files, using 
+  their local names and store them in the temporary directory. We are going to
+  extract \ty{stdin} as well and return. If all the files are present during
+  execution, the commands arguments may be left unaltered. In order to ensure 
+  this, we iterate over all the files, extract their data and store it in a new
+  local file.
 #+end_export
 
 #+begin_src go <<Iterate over files, Pa. \ref{pa:api}>>=
-  buf := bytes.NewBuffer([]byte{})
   for _, key := range keys {
-    files := r.MultipartForm.File[key]
-    if len(files) > 0 {
+		mFiles := r.MultipartForm.File[key]
+		if len(mFiles) > 0 {
     //<<Extract request's file data, Pa. \ref{pa:api}>>
     }
   }
-  fmt.Println(buf.Len())
-  return buf.String(), nil
+  return
 #+end_src
 
 #+begin_export latex
-  We expect that each key contains exactly one file. When
-  accesing the \ty{files} variable, we get pointers to the
-  header of a file. Now working with this is rather similar
-  to working with any other file. We may open the file via
-  the header, read it's data to a byte slice and close it again.
+  The map of files we are iterating over, provides a slice of pointers to file 
+  headers. We expect that each key provides exactly one file. This means every
+  has it's own field. Accessing that file allows opening it. We read the data
+  to a byte slice and store it in a file or \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Extract request's file data, Pa. \ref{pa:api}>>=
-  h := *files[0]
-  rf, err := h.Open()
-  if err != nil {
-    writeServerError(w, "Error while opening multipart file", "", err)
-    return "", err
-  }
-  defer rf.Close()
-  b := make([]byte, h.Size)
-  rf.Read(b)
-  buf.Write(b)
+	h := *mFiles[0]
+	var rf multipart.File
+	rf, err = h.Open()
+	if err != nil {
+		writeServerError(w, "Error while opening multipart file", "", err)
+		return
+	}
+	defer rf.Close()
+	b := make([]byte, h.Size)
+	rf.Read(b)
+  //<<Store file content, Pa. \ref{pa:api}>>
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{mime/multipart}
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "mime/multipart"
+#+end_src
+
+#+begin_export latex
+  We store the file's data in a new file using the same name as before, but if
+  it's name was \ty{stdin} we store it in the return variable \ty{stdin} 
+  instead. When writing data to local files, we first need to create that file.
+  We use the previously defined directory and then specify the filename, as 
+  well as the unix permission bits. After opening, we may finally write the 
+  data and close the file afterwards.
+#+end_export
+
+#+begin_src go <<Store file content, Pa. \ref{pa:api}>>=
+	if h.Filename == "stdin" {
+		stdin = string(b)
+	} else {
+		var tf *os.File
+		tf, err = os.OpenFile(dir+"/"+h.Filename, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			writeServerError(w, "Error while opening temp file", "", err)
+			return
+		}
+		buffer := bytes.NewBuffer(b)
+		buffer.WriteTo(tf)
+		tf.Close()
+	}
+#+end_src
+
+#+begin_export latex
+  We need to import "os"
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+  "os"
 #+end_src
 
 #+begin_export latex
@@ -2751,77 +2788,5 @@ type Node struct {
   } else {
     w.Header().Set("Content-Type", plainCt.String())
     w.Write(res)
-  }
-#+end_src
-
-
-
-#+begin_export latex
-  The service \ty{fintacEndpoint} works the exact
-  same way as \ty{programEndpoint}, except for the provided
-  arguments. \ty{fintac} defines it's database via an option,
-  while the other programs define it a certain position -
-  as a single file path after the options.
-
-  This is \ty{fintacEndpoint}'s io:
-  Params:
-    Path:
-      none
-    Query:
-      args string (anything the fintac provides, except -H)
-  Writes:
-    string
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func fintacEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-    //<<Create program call context, Pa. \ref{pa:api}>>
-    //<<Determine call arguments, Pa. \ref{pa:api}>>
-    //<<Add database \ty{fintac}, Pa. \ref{pa:api}>>
-    //<<Call \ty{fintac}, Pa. \ref{pa:api}>>
-    //<<Write response, Pa. \ref{pa:api}>>
-  }
-#+end_src
-
-#+begin_export latex
-  We add the database path provided as a first entry in \ty{args}
-  to the \ty{callArgs} variable, remembering to prepend the \ty{-H} switch.
-#+end_export
-
-#+begin_src go <<Add database \ty{fintac}, Pa. \ref{pa:api}>>=
-  callArgs = append(callArgs, "-H", args[0].(string))
-#+end_src
-
-#+begin_export latex
-  We add the database path provided as a first entry in \ty{args}
-  to the \ty{callArgs} variable, remembering to prepend the \ty{-H} switch.
-#+end_export
-
-#+begin_src go <<Call \ty{fintac}, Pa. \ref{pa:api}>>=
-  cmd := exec.CommandContext(ctx, "./prog/fintac", callArgs...)
-  //<<Handle files \ty{fintac}, Pa. \ref{pa:api}>>
-  res, err := cmd.CombinedOutput()
-#+end_src
-
-#+begin_export latex
-  First we look
-#+end_export
-
-#+begin_src go <<Handle files \ty{fintac}, Pa. \ref{pa:api}>>=
-  ct, err := contenttype.GetMediaType(r)
-  if err != nil {
-    writeBadRequestResp(w, "Malformed content type.")
-    return
-  }
-  if !ct.EqualsMIME(multipartCt) {
-    w.WriteHeader(http.StatusUnsupportedMediaType)
-    w.Write([]byte("Use multipart/form-data."))
-    return
-  } else {
-    str, err := parseFormData(w, r)
-    if err != nil {
-      return
-    }
-    cmd.Stdin = strings.NewReader(str)
   }
 #+end_src
