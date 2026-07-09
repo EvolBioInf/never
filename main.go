@@ -61,6 +61,9 @@ func main() {
 	apiv2.RegisterRoutes(apiPref+"/v2", dbPath, host+":"+strconv.Itoa(port))
 	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
 
+	vitaxFiles := http.FileServer(http.Dir("vitax"))
+	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
+
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})

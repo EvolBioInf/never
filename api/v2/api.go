@@ -33,6 +33,8 @@ import (
 	"mime/multipart"
 
 	"os"
+
+	"mime"
 )
 
 type Accession struct {
@@ -328,33 +330,49 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	}
 	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
 
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"],
+		accessionsL,
+		accessionL,
+		taxaL,
+		taxonL,
+		childrenL,
+		parentL,
+		subtreeL,
+		taxonomyL,
+		taxonAccessionsL,
+		mrcaL,
+		pathL,
+		progAntsL,
+		progDreeL,
+		progFintacL,
+		progNeighborsGetL,
+		progNeighborsPostL,
+		progRanksGetL,
+		progRanksPostL,
+		progTaxiL,
+	)
 	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progAntsL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progDreeL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progFintacL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsGetL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsPostL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksGetL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksPostL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progTaxiL)
+	taxaL.Links["service"] = append(taxaL.Links["service"],
+		taxonL,
+		childrenL,
+		parentL,
+		subtreeL,
+	)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"],
+		taxonAccessionsL,
+		mrcaL,
+		pathL,
+	)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"],
+		progAntsL,
+		progDreeL,
+		progFintacL,
+		progNeighborsGetL,
+		progNeighborsPostL,
+		progRanksGetL,
+		progRanksPostL,
+		progTaxiL,
+	)
 
 	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
 	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
@@ -1434,7 +1452,6 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	callArgs = append(callArgs, r.URL.Query()["extra"]...)
 	callArgs = slices.DeleteFunc(callArgs, func(w string) bool { return w == "-r" })
 
-	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -1442,7 +1459,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		return
 	}
 	defer os.RemoveAll(dir)
-	cmd.Dir = dir
+	var stdinData string
 	if r.Method == http.MethodPost {
 		ct, err := contenttype.GetMediaType(r)
 		if err != nil {
@@ -1454,14 +1471,17 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 			w.Write([]byte("Use multipart/form-data with POST requests."))
 			return
 		} else {
-			stdin, err := parseFormData(w, r, dir)
+			stdinData, err = parseFormData(w, r, dir, callArgs)
 			if err != nil {
 				return
 			}
-			cmd.Stdin = strings.NewReader(stdin)
 		}
 	}
 
+	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
+	cmd.Stdin = strings.NewReader(stdinData)
+	cmd.Dir = dir
+	fmt.Println(cmd)
 	res, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -1472,7 +1492,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	}
 }
 
-func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin string, err error) {
+func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs []string) (stdin string, err error) {
 	err = r.ParseMultipartForm(3_000_000)
 	if err != nil {
 		writeBadRequestResp(w, "Malformed multipart form request.")
@@ -1489,7 +1509,7 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin st
 		}
 		sort.Strings(keys)
 
-		for _, key := range keys {
+		for i, key := range keys {
 			mFiles := r.MultipartForm.File[key]
 			if len(mFiles) > 0 {
 				h := *mFiles[0]
@@ -1506,11 +1526,26 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin st
 					stdin = string(b)
 				} else {
 					var tf *os.File
-					tf, err = os.OpenFile(dir+"/"+h.Filename, os.O_CREATE|os.O_WRONLY, 0644)
+					tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0644)
 					if err != nil {
 						writeServerError(w, "Error while opening temp file", "", err)
 						return
 					}
+					cd := h.Header.Get("Content-Disposition")
+					var params map[string]string
+					_, params, err = mime.ParseMediaType(cd)
+					if err != nil {
+						writeServerError(w, "Error while parsing media type of multipart file", "", err)
+						return
+					}
+					filename := params["filename"]
+
+					for j, arg := range callArgs {
+						if j != 0 && (arg == h.Filename || arg == filename) {
+							callArgs[j] = strconv.Itoa(i)
+						}
+					}
+
 					buffer := bytes.NewBuffer(b)
 					buffer.WriteTo(tf)
 					tf.Close()

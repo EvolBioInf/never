@@ -204,8 +204,8 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	*PageData)) http.HandlerFunc {
 	p := new(PageData)
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin",
-			"*")
+		// w.Header().Set("Access-Control-Allow-Origin",
+		// "*")
 		fn(w, r, p)
 	}
 }
@@ -255,7 +255,7 @@ func taxi(w http.ResponseWriter, r *http.Request, p *PageData) {
 }
 func handleRedirect(path, prefix string) {
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		// w.Header().Set("Access-Control-Allow-Origin", "*")
 		http.Redirect(w, r, prefix+r.URL.RequestURI(), http.StatusMovedPermanently)
 	})
 }
@@ -611,8 +611,6 @@ func RegisterRoutes(apiPref, docsPref, dbPath, dateFilePath string) {
 	staticFiles := http.FileServer(http.Dir("api/v1/never/static"))
 	http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix+"/static/",
 		staticFiles))
-	vitaxFiles := http.FileServer(http.Dir("vitax"))
-	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 	dataFiles := http.FileServer(http.Dir("api/v1/never/data"))
 	http.Handle(docsPrefix+"/data/", http.StripPrefix(docsPrefix+"/data/", dataFiles))
 	http.HandleFunc(docsPrefix, makeHandler(index))

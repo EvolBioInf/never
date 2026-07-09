@@ -627,33 +627,49 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], accessionL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], childrenL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], parentL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], subtreeL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonomyL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], taxonAccessionsL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], mrcaL)
-	rootDocL.Links["service"] = append(rootDocL.Links["service"], pathL)
+	rootDocL.Links["service"] = append(rootDocL.Links["service"],
+		accessionsL,
+		accessionL,
+		taxaL,
+		taxonL,
+		childrenL,
+		parentL,
+		subtreeL,
+		taxonomyL,
+		taxonAccessionsL,
+		mrcaL,
+		pathL,
+		progAntsL,
+		progDreeL,
+		progFintacL,
+		progNeighborsGetL,
+		progNeighborsPostL,
+		progRanksGetL,
+		progRanksPostL,
+		progTaxiL,
+	)
 	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], taxonL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], childrenL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], parentL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], subtreeL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], taxonAccessionsL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], mrcaL)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], pathL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progAntsL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progDreeL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progFintacL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsGetL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progNeighborsPostL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksGetL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progRanksPostL)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], progTaxiL)
+	taxaL.Links["service"] = append(taxaL.Links["service"], 
+		taxonL,
+		childrenL,
+		parentL,
+		subtreeL,
+	)
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], 
+		taxonAccessionsL,
+		mrcaL,
+		pathL,
+	)
+	programsDocL.Links["service"] = append(programsDocL.Links["service"], 
+		progAntsL,
+		progDreeL,
+		progFintacL,
+		progNeighborsGetL,
+		progNeighborsPostL,
+		progRanksGetL,
+		progRanksPostL,
+		progTaxiL,
+	)
 #+end_src
 
 #+begin_export latex
@@ -2536,7 +2552,6 @@ type Node struct {
 	"time"
 #+end_src
 
-
 #+begin_export latex
 	The arguments we are going to use for calling the program are stored in the
 	query parameters \ty{options} and \ty{extra}. The cli programs follow a 
@@ -2576,11 +2591,11 @@ type Node struct {
 	don't want files of different users to clash, so each command and thus its
 	files are executed within a temporary directory. We use a timestamp as its
 	name, which should be unique. The directory and its contents are removed
-	after execution.
+	after execution. Handling files entails creating the necessary temporary 
+	files and taking care of the data provided via \ty{stdin}. 
 #+end_export
 
 #+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -2588,8 +2603,12 @@ type Node struct {
 		return
 	}
 	defer os.RemoveAll(dir)
-	cmd.Dir = dir
+	var stdinData string
 	//<<Handle files, Pa. \ref{pa:api}>>
+	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
+	cmd.Stdin = strings.NewReader(stdinData)
+	cmd.Dir = dir
+	fmt.Println(cmd)
 	res, err := cmd.CombinedOutput()
 #+end_src
 
@@ -2631,25 +2650,24 @@ type Node struct {
 			w.Write([]byte("Use multipart/form-data with POST requests."))
 			return
 		} else {
-			stdin, err := parseFormData(w, r, dir)
+			stdinData, err = parseFormData(w, r, dir, callArgs)
 			if err != nil {
 				return
 			}
-			cmd.Stdin = strings.NewReader(stdin)
 		}
 	}
 #+end_src
 
 #+begin_export latex
 	Accessing the data of a multipart form request, requires a parsing step. In
-	this the data is checked for syntactical correctness and loaded into memory.
-	We may define the amount space we are willing to allocate for this data. I've
-	decided on 3MB, the remaining data will be stored on the disk. We return a 
-	400 (Bad Request) if the data is malformed.
+	this the data is checked for syntactical correctness and loaded into 
+	memory. We may define the amount space we are willing to allocate for this
+	data. I've decided on 3MB, the remaining data will be stored on the disk.
+	We return a 400 (Bad Request) if the data is malformed.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func parseFormData(w http.ResponseWriter, r *http.Request, dir string) (stdin string, err error) {
+	func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs []string) (stdin string, err error) {
 		err = r.ParseMultipartForm(3_000_000)
 		if err != nil {
 			writeBadRequestResp(w, "Malformed multipart form request.")
@@ -2691,15 +2709,16 @@ type Node struct {
 	The \ty{neighbors} programs take a variety of parameters as input. Most don't
 	depend on anything, but some, like filenames, depend environmental 
 	surroundings. For this reason we are going to create all the files, using 
-	their local names and store them in the temporary directory. We are going to
+	and exchange their local names for new ones - this prevents problems cause by
+	relative paths - and store them in the temporary directory. We are going to
 	extract \ty{stdin} as well and return. If all the files are present during
-	execution, the commands arguments may be left unaltered. In order to ensure 
-	this, we iterate over all the files, extract their data and store it in a new
-	local file.
+	execution, the commands arguments may be left almost unaltered. In order to
+	ensure this, we iterate over all the files, extract their data and store it
+	in a new local file.
 #+end_export
 
 #+begin_src go <<Iterate over files, Pa. \ref{pa:api}>>=
-	for _, key := range keys {
+	for i, key := range keys {
 		mFiles := r.MultipartForm.File[key]
 		if len(mFiles) > 0 {
 		//<<Extract request's file data, Pa. \ref{pa:api}>>
@@ -2751,11 +2770,12 @@ type Node struct {
 		stdin = string(b)
 	} else {
 		var tf *os.File
-		tf, err = os.OpenFile(dir+"/"+h.Filename, os.O_CREATE|os.O_WRONLY, 0644)
+		tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			writeServerError(w, "Error while opening temp file", "", err)
 			return
 		}
+		//<<Replace filename, Pa. \ref{pa:api}>>
 		buffer := bytes.NewBuffer(b)
 		buffer.WriteTo(tf)
 		tf.Close()
@@ -2763,11 +2783,56 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	We need to import "os"
+	We need to import \ty{os}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
 	"os"
+#+end_src
+
+#+begin_export latex
+	We just wrote the file data into a new file. Now we need to exchange all the
+	file references in the command for the file's new name. File references may
+	be made using the files base name or a relative/total path to the file. We
+	should first get the complete filename, including it's path, and then check
+	the args for the file's base name and its complete name .
+#+end_export
+
+#+begin_src go <<Replace filename, Pa. \ref{pa:api}>>=
+	//<<Get complete filename, Pa. \ref{pa:api}>>
+	for j, arg := range callArgs {
+		if j != 0 && (arg == h.Filename || arg == filename) {
+			callArgs[j] = strconv.Itoa(i)
+		}
+	} 
+#+end_src
+
+#+begin_export latex
+	A complete name including path segments is stripped when calling 
+	\ty{r.ParseMultipartForm}. \ty{h.Filename} is just the file's base name.
+	However, the header is untouched by this, meaning we can parse the content
+	disposition, where the files complete name is stored, manually. Accessing
+	the \ty{"filename"} field buried somewhere in there, results in the filename
+	we are looking for.
+#+end_export
+
+#+begin_src go <<Get complete filename, Pa. \ref{pa:api}>>=
+	cd := h.Header.Get("Content-Disposition")
+	var params map[string]string
+	_, params, err = mime.ParseMediaType(cd)
+	if err != nil {
+		writeServerError(w, "Error while parsing media type of multipart file", "", err)
+		return
+	}
+	filename := params["filename"]
+#+end_src
+
+#+begin_export latex
+	We need to import \ty{mime}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"mime"
 #+end_src
 
 #+begin_export latex

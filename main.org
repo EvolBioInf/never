@@ -166,7 +166,7 @@ import (
   available by registering a file server to that directory.
 #+end_export
 
-#+begin_src go <<Serve Vitax files, Pr. \ref{pr:nev}>>=
+#+begin_src go <<Serve Vitax files, Pr. \ref{pr:main}>>=
   vitaxFiles := http.FileServer(http.Dir("vitax"))
   http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src

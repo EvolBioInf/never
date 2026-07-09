@@ -136,12 +136,10 @@ and finally there are pages giving access to \ty{tdb} functions.
 #+end_src
 #+begin_export latex
 \subsection{Files}
-We serve three kinds of files. Style files, the files of the Vitax
-interface for visualizing the taxonomy, and data files.
+We serve two kinds of files. Style files and data files.
 #+end_export
 #+begin_src go <<Serve files, Pa. \ref{pa:nev}>>=
   //<<Serve style files, Pa. \ref{pa:nev}>>
-  //<<Serve Vitax files, Pa. \ref{pa:nev}>>
   //<<Serve data files, Pa. \ref{pa:nev}>>
 #+end_src
 #+begin_export latex
@@ -158,14 +156,6 @@ We import \ty{http}.
 #+end_export
 #+begin_src go <<Imports, Pa. \ref{pa:nev}>>=
   "net/http"
-#+end_src
-#+begin_export latex
-The Vitax files are located in directory \ty{vitax}. We make them
-available by registering a file server to that directory.
-#+end_export
-#+begin_src go <<Serve Vitax files, Pa. \ref{pa:nev}>>=
-  vitaxFiles := http.FileServer(http.Dir("vitax"))
-  http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src
 #+begin_export latex
 The data files, finally, are located in the directory \ty{data}. We
@@ -656,8 +646,8 @@ arguments.
 	  ,*PageData)) http.HandlerFunc {
 	  p := new(PageData)
 	  return func(w http.ResponseWriter, r *http.Request) {
-		  w.Header().Set("Access-Control-Allow-Origin",
-			  "*")
+		  // w.Header().Set("Access-Control-Allow-Origin",
+			  // "*")
 		  fn(w, r, p)
 	  }
   }
@@ -826,7 +816,7 @@ to have handled a smooth transitioning phase.
 #+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
 func handleRedirect(path, prefix string) {
   	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-      w.Header().Set("Access-Control-Allow-Origin", "*")
+      // w.Header().Set("Access-Control-Allow-Origin", "*")
 	  	http.Redirect(w, r, prefix+r.URL.RequestURI(), http.StatusMovedPermanently)
   })
 }
