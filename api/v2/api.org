@@ -28,11 +28,10 @@
 #+end_src
 
 #+begin_export latex
-First off we declare the types. This is an easy task as they are already
-defined within the openApi document. We can leave out a few \ty{Taxon} types
-here by just using the \ty{Taxon} type offering the most attributes and adding
-\ty{omitempty} tags for most properties. Every type also needs a \ty{Links}
-attribute which is going to be explained later on.
+	First off we declare the types. This is an easy task as they are already
+	defined within the openApi document. We leave out the \ty{Taxon} types for now
+	and define them in just a second. Every type also needs a \ty{Links} attribute
+	which is going to be explained later on.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
@@ -56,24 +55,39 @@ type Image struct {
 	Url         string `json:"url"`
 	Attribution string `json:"attribution"`
 }
-type Taxon struct {
-	TaxId          int           `json:"tax_id"`
-	Parent         int           `json:"parent,omitempty"`
-	IsLeaf         bool          `json:"is_leaf,omitempty"`
-	Name           string        `json:"name,omitempty"`
-	CommonName     string        `json:"common_name,omitempty"`
-	Rank           string        `json:"rank,omitempty"`
-	Accessions     []Accession   `json:"accessions,omitempty"`
-	RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
-	RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
-	Images         []Image       `json:"images,omitempty"`
-	Links          []Link        `json:"links,omitempty"`
-}
 type TaxonAccession struct {
 	TaxId      int         `json:"tax_id"`
-	Accessions []Accession `json:"accessions,omitempty"`
+	Accessions []Accession `json:"accessions"`
 	Links      []Link      `json:"links,omitempty"`
 }
+#+end_src
+
+#+begin_export latex
+	The \ty{Taxon} types are a bit special. They are subtypes of each other, 
+	which we would usually solve using union types or partials. Sadly Go does not
+	provide those. So instead of using six different types and handling those
+	separately, we are going to write one big type and use \ty{omitempty} on 
+	almost anything. When using them later on, we only set the necessary 
+	attributes and leave out the others. \ty{omitempty} leaves out any attribute
+	containing a zero-value. This means an attribute like \ty{IsLeaf} is always
+	left out for nodes. This is undesirable. We can avert this problem using 
+	pointers. This looks worse, but changes the the zero-value of the attributes,
+	meaning we may specify empty names or non leaves and print them accordingly.
+#+end_export
+
+#+begin_src go <<Types, Pa. \ref{pa:api}>>=
+	type Taxon struct {
+		TaxId          int           `json:"tax_id"`
+		Parent         *int           `json:"parent,omitempty"`
+		IsLeaf         *bool          `json:"is_leaf,omitempty"`
+		Name           *string        `json:"name,omitempty"`
+		CommonName     *string        `json:"common_name,omitempty"`
+		Rank           *string        `json:"rank,omitempty"`
+		RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
+		RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
+		Images         []Image       `json:"images,omitempty"`
+		Links          []Link        `json:"links,omitempty"`
+	}
 #+end_src
 
 #+begin_export latex
@@ -141,7 +155,6 @@ type Node struct {
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
 	var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-	var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 	var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 #+end_src
 
@@ -517,7 +530,7 @@ type Node struct {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progFintacL, programEndpoint, dbPath)
+	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
 #+end_src
 
 #+begin_export latex
@@ -1537,7 +1550,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get raw genome counts, Pa. \ref{pa:api}>>=
-	var raw []GenomeCount
+	raw := make([]GenomeCount, 0)
 	for _, level := range tdb.AssemblyLevels() {
 		var count int
 		count, err = neidb.NumGenomes(id, level)
@@ -1556,7 +1569,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get rec genome counts, Pa. \ref{pa:api}>>=
-	var rec []GenomeCount
+	rec := make([]GenomeCount, 0)
 	for _, level := range tdb.AssemblyLevels() {
 		var count int
 		count, err = neidb.NumGenomesRec(id, level)
@@ -1579,7 +1592,7 @@ type Node struct {
 	if err != nil {
 		return
 	}
-	tax.Rank = rank
+	tax.Rank = new(rank)
 #+end_src
 
 #+begin_export latex
@@ -1602,13 +1615,13 @@ type Node struct {
 	if err != nil {
 		return
 	}
-	tax.Name = sciName
+	tax.Name = new(sciName)
 	var comName string
 	comName, err = neidb.CommonName(id)
 	if err != nil {
 		return
 	}
-	tax.CommonName = comName
+	tax.CommonName = new(comName)
 #+end_src
 
 #+begin_export latex
@@ -1621,7 +1634,7 @@ type Node struct {
 	if err != nil {
 		return
 	}
-	tax.Parent = parent
+	tax.Parent = new(parent)
 #+end_src
 
 #+begin_export latex
@@ -1643,7 +1656,7 @@ type Node struct {
 	if err != nil {
 		return
 	}
-	tax.IsLeaf = isLeaf
+	tax.IsLeaf = new(isLeaf)
 #+end_src
 
 #+begin_export latex
@@ -1656,7 +1669,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get images, Pa. \ref{pa:api}>>=
-	var neiImages []Image
+	neiImages := make([]Image, 0)
 	var images []tdb.Image
 	images, err = neidb.Images(id)
 	if err != nil {
@@ -2608,7 +2621,7 @@ type Node struct {
 	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	cmd.Stdin = strings.NewReader(stdinData)
 	cmd.Dir = dir
-	fmt.Println(cmd)
+	//<<Log command, Pa. \ref{pa:api}>>
 	res, err := cmd.CombinedOutput()
 #+end_src
 
@@ -2833,6 +2846,36 @@ type Node struct {
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
 	"mime"
+#+end_src
+
+#+begin_export latex
+	After doing all of this file handling, we are done with prepping the 
+	program's environment. We might want to check to the program calls at some
+	later stage, though. Logging is a good tool for this.
+#+end_export
+
+#+begin_src go <<Log command, Pa. \ref{pa:api}>>=
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		util.LogWarningDef(
+			util.WarningEntry{
+				Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+			})
+	}
+	util.LogInfoDef(util.InfoEntry{
+		RequestIp:     ip,
+		RequestUrl:    r.URL.String(),
+		RequestMethod: r.Method,
+		Description:   "Program call: " + cmd.String(),
+	})
+#+end_src
+
+#+begin_export latex
+	We need to import \ty{net}, when splitting the ip.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"net"
 #+end_src
 
 #+begin_export latex

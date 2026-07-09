@@ -35,6 +35,8 @@ import (
 	"os"
 
 	"mime"
+
+	"net"
 )
 
 type Accession struct {
@@ -57,23 +59,23 @@ type Image struct {
 	Url         string `json:"url"`
 	Attribution string `json:"attribution"`
 }
+type TaxonAccession struct {
+	TaxId      int         `json:"tax_id"`
+	Accessions []Accession `json:"accessions"`
+	Links      []Link      `json:"links,omitempty"`
+}
+
 type Taxon struct {
 	TaxId          int           `json:"tax_id"`
-	Parent         int           `json:"parent,omitempty"`
-	IsLeaf         bool          `json:"is_leaf,omitempty"`
-	Name           string        `json:"name,omitempty"`
-	CommonName     string        `json:"common_name,omitempty"`
-	Rank           string        `json:"rank,omitempty"`
-	Accessions     []Accession   `json:"accessions,omitempty"`
+	Parent         *int          `json:"parent,omitempty"`
+	IsLeaf         *bool         `json:"is_leaf,omitempty"`
+	Name           *string       `json:"name,omitempty"`
+	CommonName     *string       `json:"common_name,omitempty"`
+	Rank           *string       `json:"rank,omitempty"`
 	RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
 	RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
 	Images         []Image       `json:"images,omitempty"`
 	Links          []Link        `json:"links,omitempty"`
-}
-type TaxonAccession struct {
-	TaxId      int         `json:"tax_id"`
-	Accessions []Accession `json:"accessions,omitempty"`
-	Links      []Link      `json:"links,omitempty"`
 }
 
 type ResponseBody[T any] struct {
@@ -128,7 +130,6 @@ var prefix string
 var serverAddress string
 
 var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-var graphvizCt = contenttype.MediaType{Type: "text", Subtype: "vnd.graphviz", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
 
 var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
@@ -285,7 +286,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progFintacL, programEndpoint, dbPath)
+	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
 
 	progNeighborsGetL := Node{
 		Links:    make(map[string][]Node),
@@ -753,7 +754,7 @@ func parseFieldComposite(arg string) string {
 func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
 	tax.TaxId = id
 	if fieldComposite == "gen_count" || fieldComposite == "all" {
-		var raw []GenomeCount
+		raw := make([]GenomeCount, 0)
 		for _, level := range tdb.AssemblyLevels() {
 			var count int
 			count, err = neidb.NumGenomes(id, level)
@@ -767,7 +768,7 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 
 	}
 	if fieldComposite == "gen_count_rec" || fieldComposite == "all" {
-		var rec []GenomeCount
+		rec := make([]GenomeCount, 0)
 		for _, level := range tdb.AssemblyLevels() {
 			var count int
 			count, err = neidb.NumGenomesRec(id, level)
@@ -786,7 +787,7 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		if err != nil {
 			return
 		}
-		tax.Rank = rank
+		tax.Rank = new(rank)
 
 	}
 	if fieldComposite == "default" || fieldComposite == "all" {
@@ -795,20 +796,20 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		if err != nil {
 			return
 		}
-		tax.Name = sciName
+		tax.Name = new(sciName)
 		var comName string
 		comName, err = neidb.CommonName(id)
 		if err != nil {
 			return
 		}
-		tax.CommonName = comName
+		tax.CommonName = new(comName)
 
 		var parent int
 		parent, err = neidb.Parent(id)
 		if err != nil {
 			return
 		}
-		tax.Parent = parent
+		tax.Parent = new(parent)
 
 	}
 	if fieldComposite == "all" {
@@ -817,9 +818,9 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 		if err != nil {
 			return
 		}
-		tax.IsLeaf = isLeaf
+		tax.IsLeaf = new(isLeaf)
 
-		var neiImages []Image
+		neiImages := make([]Image, 0)
 		var images []tdb.Image
 		images, err = neidb.Images(id)
 		if err != nil {
@@ -1481,7 +1482,20 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	cmd.Stdin = strings.NewReader(stdinData)
 	cmd.Dir = dir
-	fmt.Println(cmd)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		util.LogWarningDef(
+			util.WarningEntry{
+				Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+			})
+	}
+	util.LogInfoDef(util.InfoEntry{
+		RequestIp:     ip,
+		RequestUrl:    r.URL.String(),
+		RequestMethod: r.Method,
+		Description:   "Program call: " + cmd.String(),
+	})
+
 	res, err := cmd.CombinedOutput()
 
 	if err != nil {
