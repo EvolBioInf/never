@@ -1444,13 +1444,15 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	callArgs := r.URL.Query()["options"]
+	options := r.URL.Query()["options"]
+	extra := r.URL.Query()["extra"]
+	callArgs := options
 	if progName == "fintac" {
 		callArgs = append(callArgs, "-H")
 	}
 	callArgs = append(callArgs, "../"+dbPath)
 
-	callArgs = append(callArgs, r.URL.Query()["extra"]...)
+	callArgs = append(callArgs, extra...)
 	callArgs = slices.DeleteFunc(callArgs, func(w string) bool { return w == "-r" })
 
 	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -1481,6 +1483,12 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 
 	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	cmd.Stdin = strings.NewReader(stdinData)
+	dataInStdin := stdinData == ""
+	if len(options) == 0 && len(extra) == 0 && !dataInStdin {
+		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly`)
+		return
+	}
+
 	cmd.Dir = dir
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -1493,7 +1501,8 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		RequestIp:     ip,
 		RequestUrl:    r.URL.String(),
 		RequestMethod: r.Method,
-		Description:   "Program call: " + cmd.String(),
+		Description: "Data in stdin: " + strconv.FormatBool(dataInStdin) +
+			" | Program call: " + cmd.String(),
 	})
 
 	res, err := cmd.CombinedOutput()
@@ -1554,6 +1563,7 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs 
 					}
 					filename := params["filename"]
 
+					fmt.Println(h.Filename, filename)
 					for j, arg := range callArgs {
 						if j != 0 && (arg == h.Filename || arg == filename) {
 							callArgs[j] = strconv.Itoa(i)

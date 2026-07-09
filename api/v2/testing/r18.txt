@@ -1,0 +1,2 @@
+#Clade  Targets  Neighbors  Unknowns  Split (%)  Parent  Dist(Parent)
+5007    22       8          18        98.53      5005    0.000385

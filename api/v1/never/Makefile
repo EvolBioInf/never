@@ -11,8 +11,8 @@ static/templates.html: never.org
 		bash ../../../scripts/org2nw never.org | notangle -Rtemplates.html > static/templates.html;\
 	fi
 tangle: never.go never_test.go
-.PHONY: test
-test: never_test.go never.go
+.PHONY: 1test
+1test: never_test.go never.go
 	go test -v
 never_test.go: testNever.org
 	if [ "$(nw)" != "" ]; then\

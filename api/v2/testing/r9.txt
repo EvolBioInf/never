@@ -1,0 +1,6 @@
+{
+  "tax_id": 9612,
+  "parent": 9611,
+  "name": "Canis lupus",
+  "common_name": "wolf"
+}

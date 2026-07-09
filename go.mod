@@ -6,7 +6,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/elnormous/contenttype v1.0.4
 	github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b
-	github.com/evolbioinf/neighbors v0.0.0-20260701154511-471922f2e94f
+	github.com/evolbioinf/neighbors v0.0.0-20260708172755-004cc8df133e
 	github.com/pb33f/libopenapi v0.36.3
 	golang.org/x/time v0.15.0
 )

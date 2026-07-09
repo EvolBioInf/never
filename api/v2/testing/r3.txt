@@ -1,0 +1,4 @@
+{
+  "accession": "GCF_000001405.40",
+  "level": "chromosome"
+}

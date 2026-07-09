@@ -5,7 +5,7 @@ nw = $(shell which noweb)
 
 all: main $(SUBDIRS)
 
-.PHONY: all clean $(SUBDIRS)
+.PHONY: all clean $(SUBDIRS) test
 
 main: main.go
 	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" main.go
@@ -31,3 +31,8 @@ clean:
 	done
 	rm -rf main.go
 	rm -rf main
+
+test:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir test; \
+	done

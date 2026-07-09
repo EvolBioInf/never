@@ -82,9 +82,9 @@ func (e InfoEntry) Keys() []string {
 		"request_ip",
 		"request_url",
 		"request_method",
-		"request_code",
-		"request_size",
-		"request_time",
+		"response_code",
+		"response_size",
+		"response_time",
 		"description",
 	}
 }

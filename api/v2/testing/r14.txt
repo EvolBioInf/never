@@ -1,0 +1,19 @@
+[
+  {
+    "tax_id": 56312,
+    "parent": 30462,
+    "name": "Tyto"
+  },
+  {
+    "tax_id": 30462,
+    "parent": 30458,
+    "name": "Tytonidae",
+    "common_name": "barn owls"
+  },
+  {
+    "tax_id": 30458,
+    "parent": 3073808,
+    "name": "Strigiformes",
+    "common_name": "owls"
+  }
+]

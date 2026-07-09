@@ -1,0 +1,51 @@
+[
+  {
+    "tax_id": 9605,
+    "parent": 207598,
+    "name": "Homo"
+  },
+  {
+    "tax_id": 9606,
+    "parent": 9605,
+    "name": "Homo sapiens",
+    "common_name": "human"
+  },
+  {
+    "tax_id": 741158,
+    "parent": 9606,
+    "name": "Homo sapiens subsp. 'Denisova'",
+    "common_name": "Denisova hominin"
+  },
+  {
+    "tax_id": 63221,
+    "parent": 9606,
+    "name": "Homo sapiens neanderthalensis",
+    "common_name": "Neandertal"
+  },
+  {
+    "tax_id": 2665952,
+    "parent": 9605,
+    "name": "environmental samples"
+  },
+  {
+    "tax_id": 2665953,
+    "parent": 2665952,
+    "name": "Homo sapiens environmental sample"
+  },
+  {
+    "tax_id": 1425170,
+    "parent": 9605,
+    "name": "Homo heidelbergensis",
+    "common_name": "Heidelberg man"
+  },
+  {
+    "tax_id": 2813598,
+    "parent": 9605,
+    "name": "unclassified Homo"
+  },
+  {
+    "tax_id": 2813599,
+    "parent": 2813598,
+    "name": "Homo sp."
+  }
+]

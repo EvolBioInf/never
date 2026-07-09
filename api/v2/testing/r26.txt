@@ -1,0 +1,6 @@
+digraph g {
+	rankdir=LR
+	1 [label="species\n2 (6.1%)"]
+	2 [label="subspecies\n31 (93.9%)"]
+	1 -> 2
+}

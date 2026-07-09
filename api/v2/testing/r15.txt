@@ -1,0 +1,76 @@
+{
+  "links": [
+    {
+      "rel": "self",
+      "href": "http://localhost:8080/api/v2/programs",
+      "action": "GET",
+      "types": [
+        "application/json;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/ants",
+      "action": "GET",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/dree",
+      "action": "GET",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/fintac",
+      "action": "POST",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/neighbors",
+      "action": "GET",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/neighbors",
+      "action": "POST",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/ranks",
+      "action": "GET",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/ranks",
+      "action": "POST",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
+      "href": "http://localhost:8080/api/v2/programs/taxi",
+      "action": "GET",
+      "types": [
+        "text/plain;charset=utf-8"
+      ]
+    }
+  ]
+}

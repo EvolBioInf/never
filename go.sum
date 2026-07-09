@@ -12,6 +12,8 @@ github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b h1:26/B3KZkdt/NzB5
 github.com/evolbioinf/clio v0.0.0-20240827074707-cb9ff755a85b/go.mod h1:S13GccNRJPbjEsLZ/yCLFRVhdTS4qUJ+mf9GtZja8do=
 github.com/evolbioinf/neighbors v0.0.0-20260701154511-471922f2e94f h1:yFzPy4zvFObGROg/+9rbEUqOBDLFO8XBKaAs7VJFGkg=
 github.com/evolbioinf/neighbors v0.0.0-20260701154511-471922f2e94f/go.mod h1:HwYWj1WAw5xWKsdx6EP+2jaJjI9ZAMQT79wnjdxiSmU=
+github.com/evolbioinf/neighbors v0.0.0-20260708172755-004cc8df133e h1:yiWpBvWmtoRzycVzSVtpZJQbvRUervjzhpNXva+F0Ws=
+github.com/evolbioinf/neighbors v0.0.0-20260708172755-004cc8df133e/go.mod h1:HwYWj1WAw5xWKsdx6EP+2jaJjI9ZAMQT79wnjdxiSmU=
 github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
 github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/pb33f/jsonpath v0.8.2 h1:Ou4C7zjYClBm97dfZjDCjdZGusJoynv/vrtiEKNfj2Y=

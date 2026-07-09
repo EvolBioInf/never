@@ -1,0 +1,37 @@
+# Back  ID       Name                  Rank
+  35    1        root                  no rank
+  34    131567   cellular organisms    cellular root
+  33    2759     Eukaryota             domain
+  32    33154    Opisthokonta          clade
+  31    33208    Metazoa               kingdom
+  30    6072     Eumetazoa             clade
+  29    33213    Bilateria             clade
+  28    33511    Deuterostomia         clade
+  27    7711     Chordata              phylum
+  26    89593    Craniata              subphylum
+  25    7742     Vertebrata            clade
+  24    7776     Gnathostomata         clade
+  23    117570   Teleostomi            clade
+  22    117571   Euteleostomi          clade
+  21    8287     Sarcopterygii         superclass
+  20    1338369  Dipnotetrapodomorpha  clade
+  19    32523    Tetrapoda             clade
+  18    32524    Amniota               clade
+  17    8457     Sauropsida            clade
+  16    32561    Sauria                clade
+  15    1329799  Archelosauria         clade
+  14    8492     Archosauria           clade
+  13    436486   Dinosauria            clade
+  12    436489   Saurischia            clade
+  11    436491   Theropoda             clade
+  10    436492   Coelurosauria         clade
+  9     8782     Aves                  class
+  8     8825     Neognathae            infraclass
+  7     3078114  Neoaves               clade
+  6     3073808  Telluraves            clade
+  5     3073809  Australaves           clade
+  4     9126     Passeriformes         order
+  3     192204   Corvoidea             superfamily
+  2     28725    Corvidae              family
+  1     30420    Corvus                genus
+  0     30422    Corvus corone         species

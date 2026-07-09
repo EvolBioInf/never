@@ -1,0 +1,67 @@
+[
+  {
+    "tax_id": 1608482,
+    "accessions": [
+      {
+        "accession": "GCF_014898765.1",
+        "level": "scaffold"
+      }
+    ]
+  },
+  {
+    "tax_id": 37030,
+    "accessions": [
+      {
+        "accession": "GCA_054601675.1",
+        "level": "scaffold"
+      },
+      {
+        "accession": "GCA_018403415.1",
+        "level": "scaffold"
+      }
+    ]
+  },
+  {
+    "tax_id": 61388,
+    "accessions": [
+      {
+        "accession": "GCA_028551425.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCF_022837055.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCA_018119265.1",
+        "level": "scaffold"
+      }
+    ]
+  },
+  {
+    "tax_id": 37029,
+    "accessions": [
+      {
+        "accession": "GCA_018119505.1",
+        "level": "scaffold"
+      },
+      {
+        "accession": "GCF_016509475.1",
+        "level": "chromosome"
+      }
+    ]
+  },
+  {
+    "tax_id": 61408,
+    "accessions": [
+      {
+        "accession": "GCA_028554675.1",
+        "level": "contig"
+      },
+      {
+        "accession": "GCA_028564725.2",
+        "level": "chromosome"
+      }
+    ]
+  }
+]

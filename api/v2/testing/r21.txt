@@ -1,0 +1,11 @@
+# MRCA(targets): 9606, Homo sapiens
+# MRCA(targets+neighbors): 9605, Homo
+# Type  Taxon-ID  Name                               Genomes
+t       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1
+tt      63221     Homo sapiens neanderthalensis      -
+tt      741158    Homo sapiens subsp. 'Denisova'     -
+n       1425170   Homo heidelbergensis               -
+n       2665952   environmental samples              -
+n       2665953   Homo sapiens environmental sample  -
+n       2813598   unclassified Homo                  -
+n       2813599   Homo sp.                           -
