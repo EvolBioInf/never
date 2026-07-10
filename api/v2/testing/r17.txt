@@ -1,128 +1,32 @@
 digraph g {
 	rankdir=LR
+	9126 [label="9126"]
+	9126 [label="Passeriformes"]
+	3073809 -> 9126
 	28725 [label="28725"]
 	28725 [label="Corvidae"]
-	28726 [label="28726"]
-	28726 [label="Cyanocitta"]
-	28725 -> 28726
-	28727 [color="lightsalmon",style=filled]
-	28727 [label="Cyanocitta cristata"]
-	28726 -> 28727
+	192204 -> 28725
 	30420 [label="30420"]
 	30420 [label="Corvus"]
 	28725 -> 30420
-	30423 [color="lightsalmon",style=filled]
-	30423 [label="Coloeus monedula"]
-	2821309 -> 30423
-	34923 [label="34923"]
-	34923 [label="Pica"]
-	28725 -> 34923
-	34924 [color="lightsalmon",style=filled]
-	34924 [label="Pica pica"]
-	34923 -> 34924
-	36249 [color="lightsalmon",style=filled]
-	36249 [label="Corvus macrorhynchos"]
-	30420 -> 36249
-	39616 [label="39616"]
-	39616 [label="Aphelocoma"]
-	28725 -> 39616
-	39617 [color="lightsalmon",style=filled]
-	39617 [label="Aphelocoma coerulescens"]
-	39616 -> 39617
-	54572 [label="54572"]
-	54572 [label="Perisoreus"]
-	28725 -> 54572
-	54573 [label="54573"]
-	54573 [label="Perisoreus canadensis"]
-	54572 -> 54573
-	54578 [label="54578"]
-	54578 [label="Cyanocorax"]
-	28725 -> 54578
-	54580 [label="54580"]
-	54580 [label="Calocitta"]
-	28725 -> 54580
-	54581 [color="lightsalmon",style=filled]
-	54581 [label="Calocitta formosa"]
-	54580 -> 54581
-	56781 [color="lightsalmon",style=filled]
-	56781 [label="Corvus corax"]
-	30420 -> 56781
-	56782 [label="56782"]
-	56782 [label="Garrulus"]
-	28725 -> 56782
-	56783 [color="lightsalmon",style=filled]
-	56783 [label="Garrulus glandarius"]
-	56782 -> 56783
-	56785 [label="56785"]
-	56785 [label="Nucifraga"]
-	28725 -> 56785
-	56786 [color="lightsalmon",style=filled]
-	56786 [label="Nucifraga caryocatactes"]
-	56785 -> 56786
-	56795 [label="56795"]
-	56795 [label="Urocissa"]
-	28725 -> 56795
-	56796 [color="lightsalmon",style=filled]
-	56796 [label="Urocissa erythroryncha"]
-	56795 -> 56796
-	68294 [color="lightsalmon",style=filled]
-	68294 [label="Corvus kubaryi"]
-	30420 -> 68294
-	75140 [color="lightsalmon",style=filled]
-	75140 [label="Corvus frugilegus"]
-	30420 -> 75140
-	85066 [color="lightsalmon",style=filled]
-	85066 [label="Corvus brachyrhynchos"]
-	30420 -> 85066
-	98139 [label="98139"]
-	98139 [label="Oriolus"]
-	28725 -> 98139
-	108822 [label="108822"]
-	108822 [label="Cnemophilus"]
-	28725 -> 108822
-	114083 [color="lightsalmon",style=filled]
-	114083 [label="Cyanocitta stelleri"]
-	28726 -> 114083
-	134902 [color="lightsalmon",style=filled]
-	134902 [label="Corvus hawaiiensis"]
-	30420 -> 134902
-	142466 [color="lightsalmon",style=filled]
-	142466 [label="Aphelocoma californica"]
-	39616 -> 142466
-	181096 [color="lightsalmon",style=filled]
-	181096 [label="Corvus cornix"]
-	30420 -> 181096
-	181099 [color="lightsalmon",style=filled]
-	181099 [label="Oriolus oriolus"]
-	98139 -> 181099
-	247969 [color="lightsalmon",style=filled]
-	247969 [label="Aphelocoma insularis"]
-	39616 -> 247969
-	247972 [color="lightsalmon",style=filled]
-	247972 [label="Aphelocoma woodhouseii"]
-	39616 -> 247972
-	254448 [color="lightsalmon",style=filled]
-	254448 [label="Cnemophilus loriae"]
-	108822 -> 254448
-	371917 [color="lightsalmon",style=filled]
-	371917 [label="Nucifraga columbiana"]
-	56785 -> 371917
-	402026 [color="lightsalmon",style=filled]
-	402026 [label="Cyanocorax yucatanicus"]
-	54578 -> 402026
-	477934 [color="lightsalmon",style=filled]
-	477934 [label="Corvus dauuricus"]
-	30420 -> 477934
-	932674 [color="lightsalmon",style=filled]
-	932674 [label="Corvus cornix cornix"]
-	181096 -> 932674
-	1196302 [color="lightsalmon",style=filled]
-	1196302 [label="Corvus moneduloides"]
-	30420 -> 1196302
-	2821309 [label="2821309"]
-	2821309 [label="Coloeus"]
-	28725 -> 2821309
-	2898729 [color="lightsalmon",style=filled]
-	2898729 [label="Perisoreus canadensis canadensis"]
-	54573 -> 2898729
+	30422 [label="30422"]
+	30422 [label="Corvus corone"]
+	30420 -> 30422
+	30458 [label="30458"]
+	30458 [label="Strigiformes"]
+	3073808 -> 30458
+	30462 [label="30462"]
+	30462 [label="Tytonidae"]
+	30458 -> 30462
+	56312 [label="56312"]
+	56312 [label="Tyto"]
+	30462 -> 56312
+	192204 [label="192204"]
+	192204 [label="Corvoidea"]
+	9126 -> 192204
+	3073808 [label="3073808"]
+	3073808 [label="Telluraves"]
+	3073809 [label="3073809"]
+	3073809 [label="Australaves"]
+	3073808 -> 3073809
 }

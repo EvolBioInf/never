@@ -2528,11 +2528,25 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
 	func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+		//<<Check for arguments, Pa. \ref{pa:api}>>
 		//<<Get dbPath and program name, Pa. \ref{pa:api}>>
 		//<<Create program call context, Pa. \ref{pa:api}>>
 		//<<Determine call arguments, Pa. \ref{pa:api}>>
 		//<<Call program, Pa. \ref{pa:api}>>
 		//<<Write response, Pa. \ref{pa:api}>>
+	}
+#+end_src
+
+#+begin_export latex
+	Before doing anything we should check whether the request contains any 
+	arguments. If there are neither options, nor extra arguments and no data in
+	the body, we should respond with an error. 
+#+end_export
+
+#+begin_src go <<Check for input, Pa. \ref{pa:api}>>=
+	if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
+		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly`)
+		return
 	}
 #+end_src
 
@@ -2816,7 +2830,6 @@ type Node struct {
 
 #+begin_src go <<Replace filename, Pa. \ref{pa:api}>>=
 	//<<Get complete filename, Pa. \ref{pa:api}>>
-	fmt.Println(h.Filename, filename)
 	for j, arg := range callArgs {
 		if j != 0 && (arg == h.Filename || arg == filename) {
 			callArgs[j] = strconv.Itoa(i)
@@ -2854,21 +2867,6 @@ type Node struct {
 
 #+begin_export latex
 	After doing all of this file handling, we are done with prepping the 
-	program's environment. We should however check, if there was any data 
-	provided. If there are neither options, nor extra arguments and no data in
-	\ty{stdin}, we should respond with an error. 
-#+end_export
-
-#+begin_src go <<Check for input, Pa. \ref{pa:api}>>=
-	dataInStdin := stdinData == ""
-	if len(options) == 0 && len(extra) == 0 && !dataInStdin {
-		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly`)
-		return
-	}
-#+end_src
-
-#+begin_export latex
-	After doing all of this file handling, we are done with prepping the 
 	program's environment. We might want to check to the program calls at some
 	later stage, though. Logging is a good tool for this.
 #+end_export
@@ -2881,6 +2879,7 @@ type Node struct {
 				Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
 			})
 	}
+	dataInStdin := stdinData == ""
 	util.LogInfoDef(util.InfoEntry{
 		RequestIp:     ip,
 		RequestUrl:    r.URL.String(),

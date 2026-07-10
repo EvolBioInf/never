@@ -1438,6 +1438,7 @@ func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ..
 }
 
 func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+
 	dbPath := args[0].(string)
 	progName := args[1].(string)
 
@@ -1483,8 +1484,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 
 	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	cmd.Stdin = strings.NewReader(stdinData)
-	dataInStdin := stdinData == ""
-	if len(options) == 0 && len(extra) == 0 && !dataInStdin {
+	if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
 		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly`)
 		return
 	}
@@ -1497,6 +1497,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 				Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
 			})
 	}
+	dataInStdin := stdinData == ""
 	util.LogInfoDef(util.InfoEntry{
 		RequestIp:     ip,
 		RequestUrl:    r.URL.String(),
@@ -1563,7 +1564,6 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs 
 					}
 					filename := params["filename"]
 
-					fmt.Println(h.Filename, filename)
 					for j, arg := range callArgs {
 						if j != 0 && (arg == h.Filename || arg == filename) {
 							callArgs[j] = strconv.Itoa(i)

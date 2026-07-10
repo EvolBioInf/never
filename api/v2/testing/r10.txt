@@ -2,7 +2,8 @@
   {
     "tax_id": 9605,
     "parent": 207598,
-    "name": "Homo"
+    "name": "Homo",
+    "common_name": ""
   },
   {
     "tax_id": 9606,
@@ -25,12 +26,14 @@
   {
     "tax_id": 2665952,
     "parent": 9605,
-    "name": "environmental samples"
+    "name": "environmental samples",
+    "common_name": ""
   },
   {
     "tax_id": 2665953,
     "parent": 2665952,
-    "name": "Homo sapiens environmental sample"
+    "name": "Homo sapiens environmental sample",
+    "common_name": ""
   },
   {
     "tax_id": 1425170,
@@ -41,11 +44,13 @@
   {
     "tax_id": 2813598,
     "parent": 9605,
-    "name": "unclassified Homo"
+    "name": "unclassified Homo",
+    "common_name": ""
   },
   {
     "tax_id": 2813599,
     "parent": 2813598,
-    "name": "Homo sp."
+    "name": "Homo sp.",
+    "common_name": ""
   }
 ]

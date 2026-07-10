@@ -50,7 +50,13 @@ type SyncMap struct {
 }
 
 func main() {
-	certificate, dbPath, dateFilePath, privateKey, host, port := ioHandling()
+	certificate,
+		dbPath,
+		dateFilePath,
+		privateKey,
+		host,
+		port,
+		noRateLimit := ioHandling()
 
 	docsPref := "/docs"
 	apiPref := "/api"
@@ -108,7 +114,7 @@ func main() {
 
 	middlewareLimiter := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			allowed := !strings.HasPrefix(r.URL.Path, apiPref)
+			allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
 			if !allowed {
 				if generalLimiter.Allow() {
 					ip, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -156,7 +162,7 @@ func main() {
 	fmt.Println("...Stopping server")
 }
 
-func ioHandling() (string, string, string, string, string, int) {
+func ioHandling() (string, string, string, string, string, int, bool) {
 	util.PrepLog("never")
 
 	clio.Usage(
@@ -173,6 +179,7 @@ func ioHandling() (string, string, string, string, string, int) {
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	oFlag := flag.String("o", "http://localhost", "host address")
 	pFlag := flag.Int("p", 8080, "port")
+	rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
 
 	vFlag := flag.Bool("v", false, "print progam info")
 
@@ -183,6 +190,6 @@ func ioHandling() (string, string, string, string, string, int) {
 		os.Exit(0)
 	}
 
-	return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag
+	return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag, *rFlag
 
 }

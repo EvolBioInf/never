@@ -45,11 +45,13 @@ import (
   need be able to pass an address and a port for the server to run on. It would be nice if we could also
   define a path for the HTTP/TLS files i.e. the certificate and the private key. Providing extra options
   for the database path and the date file results in a more flexible setup.
-  This results in five strings and an integer as a return tuple.
+  It should be possible to toggle the rate limit for debugging and testing 
+  purposes.
+  This results in five strings, an integer and a bool as a return tuple.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-  func ioHandling() (string, string, string, string, string, int) {
+  func ioHandling() (string, string, string, string, string, int, bool) {
     //<<Prepare log, Pr. \ref{pr:main}>>
     //<<Set usage, Pr. \ref{pr:main}>>
     //<<Parse flags, Pr. \ref{pr:main}>>
@@ -119,6 +121,7 @@ import (
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
   oFlag := flag.String("o", "http://localhost", "host address")
   pFlag := flag.Int("p", 8080, "port")
+  rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
 
   vFlag := flag.Bool("v", false, "print progam info")
 
@@ -129,7 +132,7 @@ import (
     os.Exit(0)
   }
 
-  return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag
+  return *cFlag, *dbFlag, *dFlag, *kFlag, *oFlag, *pFlag, *rFlag
 #+end_src
 
 #+begin_export latex
@@ -137,7 +140,13 @@ import (
 #+end_export
 
 #+begin_src go <<Handle io, Pr. \ref{pr:main}>>=
-	certificate, dbPath, dateFilePath, privateKey, host, port := ioHandling()
+	certificate,
+  dbPath,
+  dateFilePath,
+  privateKey,
+  host,
+  port,
+  noRateLimit := ioHandling()
 #+end_src
 
 #+begin_export latex
@@ -421,7 +430,7 @@ import (
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
-			allowed := !strings.HasPrefix(r.URL.Path, apiPref)
+			allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
 			if !allowed {
 				if generalLimiter.Allow() {
           //<<Check user limiter, Pr. \ref{pr:main}>>

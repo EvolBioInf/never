@@ -115,4 +115,187 @@ The date and the version are injected at compile time, so like
 #+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
   "github.com/evolbioinf/clio"
 #+end_src
+#+begin_export latex
+\section{\ty{SendGetRequest}}
+  !The function \ty{SendGetRequest} takes as argument an address as a string
+  !and the program's options and extra arguments as string slices. It sends a
+  !get request using these values and returns the result.
 
+  Inside \ty{SendGetRequest} function,
+#+end_export
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func SendGetRequest(address string, options, extraArgs []string) string {
+    //<<Encode query, Pa. \ref{pa:uti}>>
+    //<<Create \ty{get} request, Pa. \ref{pa:uti}>>
+    //<<Execute request, Pa. \ref{pa:uti}>>
+    //<<Parse response, Pa. \ref{pa:uti}>>
+  }
+#+end_src
+#+begin_export latex
+  There may be multiple slices that need to be encoded for a single request.
+  This means we should write a function, which handles this url encoding. We 
+  use the exploded parameters for passing slices via the url. This means we
+  need to iterate over each slice and add key value pairs. The values need to 
+  be encoded. The \ty{net/url} package provides a function for this.
+#+end_export
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func urlEncodeSlice(slc []string, paramName string, hasParam *bool) string {
+    var sb strings.Builder
+    for _, v := range slc {
+      if !(*hasParam) {
+        sb.WriteRune('?')
+        *hasParam = true
+      } else {
+        sb.WriteRune('&')
+      }
+      sb.WriteString(paramName)
+        sb.WriteRune('=')
+      sb.WriteString(url.QueryEscape(v))
+    }
+    return sb.String()
+  }
+#+end_src
+#+begin_export latex
+  Now all we need to do is call \ty{urlEncodeSlice} for both the options and 
+  the extra arguments.
+#+end_export
+#+begin_src go <<Encode query, Pa. \ref{pa:uti}>>=
+  hasParam := new(bool)
+  qOptions := urlEncodeSlice(options, "options", hasParam)
+  qExtraArgs := urlEncodeSlice(extraArgs, "extra", hasParam)
+#+end_src
+#+begin_export latex
+  This requires us to import \ty{net/url} and \ty{strings}.
+#+end_export
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "net/url"
+  "strings"
+#+end_src
+#+begin_export latex
+  The \ty{net/http} package provides functions for creating requests.
+  There is a \ty{Get} function for creating a get request, but it does
+  not allow adding headers. We use \ty{NewRequest} instead and define
+  the http verb manually.
+#+end_export
+#+begin_src go <<Create \ty{get} request, Pa. \ref{pa:uti}>>=
+  req, err := http.NewRequest(http.MethodGet, address+qOptions+qExtraArgs, nil)
+  Check(err)
+#+end_src
+#+begin_export latex
+  Http clients provide methods for invoking requests.
+  The \ty{http} package uses a default client for this,
+  which is public. We are going to use this client as well.
+#+end_export
+#+begin_src go <<Execute request, Pa. \ref{pa:uti}>>=
+  resp, err := http.DefaultClient.Do(req)
+  Check(err)
+#+end_src
+#+begin_export latex
+  Laslty we parse the response using the \ty{io} package and
+  return the data.
+#+end_export
+#+begin_src go <<Parse response, Pa. \ref{pa:uti}>>=
+  body, err := io.ReadAll(resp.Body)
+  Check(err)
+  return string(body)
+#+end_src
+#+begin_export latex
+  Though we still need to import \ty{io}.
+#+end_export
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "io"
+#+end_src
+#+begin_export latex
+\section{\ty{SendPostRequest}}
+  !The function \ty{SendPostRequest} takes as argument an address as a string,
+  !program options and extra arguments as a slice of strings, as well as files
+  !and stdin. It sends a post request using these values and returns the 
+  !result.
+#+end_export
+#+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
+  func SendPostRequest(address string, options, extraArgs []string, files []*os.File, stdin *os.File) string {
+    //<<Encode query, Pa. \ref{pa:uti}>>
+    //<<Set \ty{post} form data, Pa. \ref{pa:uti}>>
+    //<<Create \ty{post} request, Pa. \ref{pa:uti}>>
+    //<<Write \ty{post} headers, Pa. \ref{pa:uti}>>
+    //<<Execute request, Pa. \ref{pa:uti}>>
+    //<<Parse response, Pa. \ref{pa:uti}>>
+  }
+#+end_src
+#+begin_export latex
+  For setting the post form data we use the \ty{multipart} package.
+  First we create a new multipart writer. Then we iterate over all
+  the files. We create an entry using the writer for each file
+  and copy its content. We close the multipart writer at the end.
+#+end_export
+#+begin_src go <<Set \ty{post} form data, Pa. \ref{pa:uti}>>=
+  var b bytes.Buffer
+  w := multipart.NewWriter(&b)
+  for i, file := range files {
+    //<<Create entry in writer, Pa. \ref{pa:uti}>>
+    //<<Copy content, Pa. \ref{pa:uti}>>
+  }
+  //<<Add stdin to writer, Pa. \ref{pa:uti}>>
+  w.Close()
+#+end_src
+#+begin_export latex
+  We import \ty{bytes} and \ty{mime/multipart}.
+#+end_export
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "bytes"
+  "mime/multipart"
+#+end_src
+#+begin_export latex
+  When creating an entry with the multipart writer, we create a new form file.
+  We need to provide a key for the map of files and the name of the file itself.
+  The multipart package takes care of creating the file headers and other meta data.
+#+end_export
+#+begin_src go <<Create entry in writer, Pa. \ref{pa:uti}>>=
+  fw, err := w.CreateFormFile(strconv.Itoa(i), file.Name())
+  Check(err)
+#+end_src
+#+begin_export latex
+  We need the \ty{strconv} package for converting integers into strings.
+#+end_export
+#+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
+  "strconv"
+#+end_src
+#+begin_export latex
+  \ty{io.Copy} allows us to copy the file's content to the filewriter.
+#+end_export
+#+begin_src go <<Copy content, Pa. \ref{pa:uti}>>=
+  _, err = io.Copy(fw, file)
+  Check(err)
+#+end_src
+#+begin_export latex
+  \ty{stdin} needs a slightly different treatment as it's name might raise
+  difficulties.
+#+end_export
+#+begin_src go <<Add stdin to writer, Pa. \ref{pa:uti}>>=
+  if stdin != nil {
+    fw, err := w.CreateFormFile("stdin", "stdin")
+    Check(err)
+	  _, err = io.Copy(fw, stdin)
+	  Check(err)
+  }
+#+end_src
+#+begin_export latex
+  We create \ty{post} request. Adding the query string is the same
+  as for the get request. The body
+#+end_export
+#+begin_src go <<Create \ty{post} request, Pa. \ref{pa:uti}>>=
+  req, err := http.NewRequest(http.MethodPost, address+qOptions+qExtraArgs, &b)
+  Check(err)
+#+end_src
+#+begin_export latex
+  We use the writer to set the correct content type including boundaries.
+#+end_export
+#+begin_src go <<Write \ty{post} headers, Pa. \ref{pa:uti}>>=
+  req.Header.Set("Content-Type", w.FormDataContentType())
+#+end_src
+#+begin_src latex
+  We are done with writing the \ty{util} package, time to test it.
+  \section{Testing}
+  Our testing code for \ty{util} contains hooks for imports and the
+  logic of the testing function.
+#+end_src

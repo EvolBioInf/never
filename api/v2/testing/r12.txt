@@ -1,66 +1,59 @@
 [
   {
-    "tax_id": 1608482,
+    "tax_id": 61379,
     "accessions": [
       {
-        "accession": "GCF_014898765.1",
+        "accession": "GCA_028533295.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCA_032458615.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCA_004023925.1",
         "level": "scaffold"
       }
     ]
   },
   {
-    "tax_id": 37030,
+    "tax_id": 9685,
     "accessions": [
       {
-        "accession": "GCA_054601675.1",
-        "level": "scaffold"
-      },
-      {
-        "accession": "GCA_018403415.1",
-        "level": "scaffold"
-      }
-    ]
-  },
-  {
-    "tax_id": 61388,
-    "accessions": [
-      {
-        "accession": "GCA_028551425.1",
+        "accession": "GCA_013340865.2",
         "level": "chromosome"
       },
       {
-        "accession": "GCF_022837055.1",
+        "accession": "GCA_016509815.2",
         "level": "chromosome"
       },
       {
-        "accession": "GCA_018119265.1",
-        "level": "scaffold"
-      }
-    ]
-  },
-  {
-    "tax_id": 37029,
-    "accessions": [
-      {
-        "accession": "GCA_018119505.1",
-        "level": "scaffold"
+        "accession": "GCA_000181335.6",
+        "level": "chromosome"
       },
       {
-        "accession": "GCF_016509475.1",
-        "level": "chromosome"
-      }
-    ]
-  },
-  {
-    "tax_id": 61408,
-    "accessions": [
-      {
-        "accession": "GCA_028554675.1",
-        "level": "contig"
+        "accession": "GCA_051911875.1",
+        "level": "complete"
       },
       {
-        "accession": "GCA_028564725.2",
+        "accession": "GCA_056512455.1",
         "level": "chromosome"
+      },
+      {
+        "accession": "GCF_018350175.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCA_051911835.1",
+        "level": "complete"
+      },
+      {
+        "accession": "GCA_000003115.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCA_051911995.1",
+        "level": "complete"
       }
     ]
   }

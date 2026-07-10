@@ -68,8 +68,8 @@
   running on the local host listening at port 8080
 #+end_export
 #+begin_src go <<Construct tests, Pa. \ref{pa:api}>>=
-  prog := "../../bin/fetch"
-	url := "http://localhost:8080/api/v2/"
+  prog := "../../fetch/fetch"
+	url := "http://localhost:8080/api/v2"
 #+end_src
 #+begin_export latex
   We send queries to each endpoint testing their responses. The endpoints are 
@@ -102,7 +102,7 @@
   to all its subservices.
 #+end_export
 #+begin_src go <<Test root document, Pa. \ref{pa:api}>>=
-  u := fmt.Sprintf(tmpl, url, "", "")
+  u := url
   exTest := ExTest{t: exec.Command(prog, u), r: 1}
   exTests = append(exTests, exTest)
 #+end_src
@@ -155,7 +155,7 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{taxa}, Pa. \ref{pa:api}>>=
   service = "taxa"
-  u = fmt.Sprintf(tmpl, url, service, "?name=Canis+lupus+familiaris&exact=true&scientific=true&plain_data=true")
+  u = fmt.Sprintf(tmpl, url, service, "?name=Canis+lupus+familiaris&exact=true&scientific=true&limit=1&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 4}
   exTests = append(exTests, exTest)
 #+end_src
@@ -187,7 +187,7 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{children}, Pa. \ref{pa:api}>>=
   service = "taxa/9612/children"
-  u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+  u = fmt.Sprintf(tmpl, url, service, "?limit=5&offset=3&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 8}
   exTests = append(exTests, exTest)
 #+end_src
@@ -205,7 +205,7 @@ We import \ty{fmt}.
   of the \ty{Homo} taxon.
 #+end_export
 #+begin_src go <<Test \ty{subtree}, Pa. \ref{pa:api}>>=
-  service = "taxa/9606/subtree"
+  service = "taxa/9605/subtree"
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 10}
   exTests = append(exTests, exTest)
@@ -241,11 +241,11 @@ We import \ty{fmt}.
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
-  Now lets look at the most recent common ancestor of three owl taxa.
+  Now lets look at the most recent common ancestor of a couple of owl taxa.
 #+end_export
 #+begin_src go <<Test \ty{mrca}, Pa. \ref{pa:api}>>=
   service = "taxonomy/mrca"
-  u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56313,111818,507991&plain_data=true")
+  u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56312,28725,8825&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 13}
   exTests = append(exTests, exTest)
 #+end_src
@@ -254,7 +254,7 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{path}, Pa. \ref{pa:api}>>=
   service = "taxonomy/path"
-  u = fmt.Sprintf(tmpl, url, service, "?start_id=56313&end_id=30458&plain_data=true")
+  u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 14}
   exTests = append(exTests, exTest)
 #+end_src
@@ -287,72 +287,24 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{ants}, Pa. \ref{pa:api}>>=
   service = "programs/ants"
-  u = fmt.Sprintf(tmpl, url, service, "?options=30422")
+  u = fmt.Sprintf(tmpl, url, service, "?options=56312")
   exTest = ExTest{t: exec.Command(prog, u), r: 16}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
-  Lets draw a tree of all the crows using the \ty{dree} endpoint.
+  Lets draw a tree of Telluraves using the \ty{dree} endpoint.
 #+end_export
 #+begin_src go <<Test \ty{dree}, Pa. \ref{pa:api}>>=
   service = "programs/dree"
-  u = fmt.Sprintf(tmpl, url, service, "?options=-r&options=-n&options=-g&options=28725")
+  u = fmt.Sprintf(tmpl, url, service, "?options=-r&options=-n&options=3073808")
   exTest = ExTest{t: exec.Command(prog, u), r: 17}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
-  Now we begin with the library tests. \ty{util} allows us to send post 
-  requests. We use this to look for a clade in ecoli using \ty{fintac}, 
-  sending the file once as a normal file reference and once using \ty{stdin}. 
-  We should also check whats happening, when we're not sending call arguments.
-#+end_export
-#+begin_src go <<Test \ty{fintac}, Pa. \ref{pa:api}>>=
-  service = "programs/fintac"
-  u = fmt.Sprintf(tmpl, url, service, "")
-  eco7k := util.Open("eco7k.nwk")
-  defer eco7k.Close()
-  libTest := LibTest{t: func() string {return util.SendPostRequest(
-			u,
-			[]string{"-t", "991910_", "-u", "562_"},
-			[]string{"eco7k.nwk"},
-      []*os.File{eco7k},
-			nil,
-		)},
-    r: 18}
-  libTests = append(libTests, libTest)
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
-			u,
-			[]string{"-t", "991910_", "-u", "562_"},
-			[]string{},
-			nil,
-      eco7k,
-		)},
-    r: 18}
-  libTests = append(libTests, libTest)
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
-			u,
-			[]string{"-t", "991910_"},
-			[]string{},
-			nil,
-      eco7k,
-		)},
-    r: 19}
-  libTests = append(libTests, libTest)
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
-			u,
-			[]string{},
-			[]string{},
-			nil,
-      nil,
-		)},
-    r: 20}
-  libTests = append(libTests, libTest)
-#+end_src
-#+begin_export latex
   We also need to import \ty{util}.
 #+end_export
-#+begin_src go <<Testing Imports, Pa. \ref{pa:api}>>=
-  "github.com/evolbioinf/neighbors/util"
+#+begin_src go <<Testing imports, Pa. \ref{pa:api}>>=
+  util "github.com/evolbioinf/never/util"
 #+end_src
 #+begin_export latex
   We keep going with the library tests and check the \ty{neighbors} endpoint.
@@ -361,58 +313,61 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{neighbors}, Pa. \ref{pa:api}>>=
   service = "programs/neighbors"
-  u = fmt.Sprintf(tmpl, url, service, "")
-  targets := util.Open("testig/targets.txt")
-  defer targets.Close()
-  libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+  nu := fmt.Sprintf(tmpl, url, service, "")
+  libTest := LibTest{t: func() string {return util.SendGetRequest(
+			nu,
 			[]string{"-t", "9606", "-L", "complete"},
 			[]string{},
 		)},
     r: 21}
   libTests = append(libTests, libTest)
+  t1, err := os.Open("testing/targets.txt")
+  util.Check(err)
+  defer t1.Close()
   libTest = LibTest{t: func() string {return util.SendPostRequest(
-			u,
+			nu,
 			[]string{"-L", "complete"},
-			[]string{"targets.txt"},
-      []*os.File{targets},
+			[]string{"testing/targets.txt"},
+      []*os.File{t1},
 			nil,
 		)},
     r: 21}
   libTests = append(libTests, libTest)
+  t2, err := os.Open("testing/targets.txt")
+  util.Check(err)
+  defer t2.Close()
   libTest = LibTest{t: func() string {return util.SendPostRequest(
-			u,
+			nu,
 			[]string{"-L", "complete"},
-			nil,
+			[]string{},
       nil,
-			targets,
+			t2,
 		)},
     r: 21}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
-			nil,
-			nil,
-      nil,
+			nu,
+			[]string{},
+			[]string{},
 		)},
-    r: 19}
+    r: 20}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			nu,
 			[]string{"-t", "9685", "-l"},
 			[]string{},
 		)},
     r: 22}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			nu,
 			[]string{"-t", "9685", "-l", "-o"},
 			[]string{},
 		)},
     r: 23}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			nu,
 			[]string{"-l", "-t", "9612,9615", "-T"},
 			[]string{},
 		)},
@@ -424,45 +379,46 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{ranks}, Pa. \ref{pa:api}>>=
   service = "programs/ranks"
-  u = fmt.Sprintf(tmpl, url, service, "")
-  genomeList := util.Open("testig/myGenomeList.txt")
-  defer genomeList.Close()
+  ru := fmt.Sprintf(tmpl, url, service, "")
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			ru,
 			[]string{"9612"},
 			[]string{},
 		)},
     r: 25}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			ru,
 			[]string{"-L", "chromosome", "9612"},
 			[]string{},
 		)},
     r: 26}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			ru,
 			[]string{"-t", "-L", "chromosome", "9612"},
 			[]string{},
 		)},
     r:27}
   libTests = append(libTests, libTest)
+  g1, err := os.Open("testing/myGenomeList.txt")
+  util.Check(err)
+  defer g1.Close()
   libTest = LibTest{t: func() string {return util.SendPostRequest(
-			u,
-			[]string{"-g", "testig/myGenomeList.txt", "9612"},
+			ru,
+			[]string{"-g", "testing/myGenomeList.txt", "9612"},
 			[]string{},
-      []*os.File{genomeList},
+      []*os.File{g1},
 			nil,
 		)},
     r:28}
   libTests = append(libTests, libTest)
-  libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+    libTest = LibTest{t: func() string {return util.SendGetRequest(
+			ru,
 			[]string{},
 			[]string{},
 		)},
-    r:19}
+    r:20}
   libTests = append(libTests, libTest)
 #+end_src
 #+begin_export latex
@@ -470,30 +426,30 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{taxi}, Pa. \ref{pa:api}>>=
   service = "programs/taxi"
-  u = fmt.Sprintf(tmpl, url, service, "")
-  defer genomeList.Close()
+  tu := fmt.Sprintf(tmpl, url, service, "")
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			tu,
 			[]string{"-t", "9612"},
 			[]string{},
 		)},
     r: 29}
   libTests = append(libTests, libTest)
-  libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+    libTest = LibTest{t: func() string {return util.SendGetRequest(
+			tu,
 			[]string{"homo sapiens"},
 			[]string{},
 		)},
     r: 30}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
-			u,
+			tu,
 			[]string{},
 			[]string{},
 		)},
-    r:19}
+    r:20}
   libTests = append(libTests, libTest)
 #+end_src
+
 
 #+begin_export latex
   We are done with writing the tests. For the external tests we just
@@ -527,16 +483,13 @@ We import \ty{strconv}, \ty{os}, and \ty{bytes}.
   the corresponding file.
 #+end_export
 #+begin_src go <<Run library test, Pa. \ref{pa:api}>>=
-  get, err := test.t()
-  if err != nil {
-	  t.Error(err)
-  }
+  get := test.t()
   f := "testing/r" + strconv.Itoa(test.r) + ".txt"
   want, err := os.ReadFile(f)
   if err != nil {
 	  t.Error(err)
   }
-  if !bytes.Equal(get, want) {
+  if !bytes.Equal([]byte(get), want) {
 	  t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
   }
 #+end_src
