@@ -6,7 +6,7 @@ nw = $(shell which noweb)
 
 all: main $(SUBDIRS)
 
-.PHONY: all clean $(SUBDIRS) test
+.PHONY: all clean $(SUBDIRS) test test_db
 
 main: main.go
 	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" main.go
@@ -33,7 +33,16 @@ clean:
 	rm -rf main.go
 	rm -rf main
 
-test:
+test: test_db main
+	./main -db testing/testdb -p 8008 --no-rate-limit & \
+	SERVER_PID=$$! ; \
+	trap "kill $$SERVER_PID" EXIT ; \
+	sleep 1 ; \
 	for dir in $(TESTDIRS); do \
 		$(MAKE) -C $$dir test; \
 	done
+
+test_db: testing/testdb
+
+testing/testdb: testing/testdb_dump.sql
+	cd testing && sqlite3 testdb < testdb_dump.sql

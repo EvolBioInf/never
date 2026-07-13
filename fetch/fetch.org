@@ -174,7 +174,7 @@ We use a locally hosted server as our test domain. We begin by
 querying its index page.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:fet}>>=
-  url := "http://localhost:8080"
+  url := "http://localhost:8008"
   test := exec.Command("./fetch", url+"/docs/api/v1")
   tests = append(tests, test)
 #+end_src

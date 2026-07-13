@@ -2,7 +2,7 @@
   "links": [
     {
       "rel": "self",
-      "href": "http://localhost:8080/api/v2",
+      "href": "http://localhost:8008/api/v2",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -10,7 +10,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/accessions",
+      "href": "http://localhost:8008/api/v2/accessions",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -18,7 +18,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/accessions/{accession_id}",
+      "href": "http://localhost:8008/api/v2/accessions/{accession_id}",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -26,7 +26,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxa",
+      "href": "http://localhost:8008/api/v2/taxa",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -34,7 +34,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxa/{taxon_id}",
+      "href": "http://localhost:8008/api/v2/taxa/{taxon_id}",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8",
@@ -43,7 +43,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxa/{taxon_id}/children",
+      "href": "http://localhost:8008/api/v2/taxa/{taxon_id}/children",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -51,7 +51,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxa/{taxon_id}/parent",
+      "href": "http://localhost:8008/api/v2/taxa/{taxon_id}/parent",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -59,7 +59,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxa/{taxon_id}/subtree",
+      "href": "http://localhost:8008/api/v2/taxa/{taxon_id}/subtree",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -67,7 +67,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxonomy",
+      "href": "http://localhost:8008/api/v2/taxonomy",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -75,7 +75,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxonomy/accessions",
+      "href": "http://localhost:8008/api/v2/taxonomy/accessions",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -83,7 +83,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxonomy/mrca",
+      "href": "http://localhost:8008/api/v2/taxonomy/mrca",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -91,7 +91,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/taxonomy/path",
+      "href": "http://localhost:8008/api/v2/taxonomy/path",
       "action": "GET",
       "types": [
         "application/json;charset=utf-8"
@@ -99,7 +99,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/ants",
+      "href": "http://localhost:8008/api/v2/programs/ants",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -107,7 +107,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/dree",
+      "href": "http://localhost:8008/api/v2/programs/dree",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -115,7 +115,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/fintac",
+      "href": "http://localhost:8008/api/v2/programs/fintac",
       "action": "POST",
       "types": [
         "text/plain;charset=utf-8"
@@ -123,7 +123,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/neighbors",
+      "href": "http://localhost:8008/api/v2/programs/neighbors",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -131,7 +131,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/neighbors",
+      "href": "http://localhost:8008/api/v2/programs/neighbors",
       "action": "POST",
       "types": [
         "text/plain;charset=utf-8"
@@ -139,7 +139,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/ranks",
+      "href": "http://localhost:8008/api/v2/programs/ranks",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -147,7 +147,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/ranks",
+      "href": "http://localhost:8008/api/v2/programs/ranks",
       "action": "POST",
       "types": [
         "text/plain;charset=utf-8"
@@ -155,7 +155,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8080/api/v2/programs/taxi",
+      "href": "http://localhost:8008/api/v2/programs/taxi",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"

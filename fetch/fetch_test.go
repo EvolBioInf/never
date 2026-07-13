@@ -10,7 +10,7 @@ import (
 
 func TestFetch(t *testing.T) {
 	tests := []*exec.Cmd{}
-	url := "http://localhost:8080"
+	url := "http://localhost:8008"
 	test := exec.Command("./fetch", url+"/docs/api/v1")
 	tests = append(tests, test)
 	query := "t=9606"

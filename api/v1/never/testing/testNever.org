@@ -38,12 +38,12 @@ We import \ty{exec}.
 #+end_src
 #+begin_export latex
 We use our program \ty{fetch} to query \ty{never}, which needs to be
-running on the local host listening at port 8080. In our first test we
+running on the local host listening at port 8008. In our first test we
 fetch the data from the root of \ty{never}.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:nev}>>=
   prog := "../../../../fetch/fetch"
-  url := "http://localhost:8080"
+  url := "http://localhost:8008"
   test := exec.Command(prog, url+"/docs/api/v1")
   tests = append(tests, test)
 #+end_src

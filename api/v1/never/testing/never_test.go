@@ -12,7 +12,7 @@ import (
 func TestNever(t *testing.T) {
 	tests := []*exec.Cmd{}
 	prog := "../../../../fetch/fetch"
-	url := "http://localhost:8080"
+	url := "http://localhost:8008"
 	test := exec.Command(prog, url+"/docs/api/v1")
 	tests = append(tests, test)
 	tmpl := "%s/api/v1/%s/?%s"

@@ -65,11 +65,11 @@
 #+end_src
 #+begin_export latex
   We use our program \ty{fetch} to query \ty{never}, which needs to be
-  running on the local host listening at port 8080
+  running on the local host listening at port 8008
 #+end_export
 #+begin_src go <<Construct tests, Pa. \ref{pa:api}>>=
   prog := "../../fetch/fetch"
-	url := "http://localhost:8080/api/v2"
+	url := "http://localhost:8008/api/v2"
 #+end_src
 #+begin_export latex
   We send queries to each endpoint testing their responses. The endpoints are

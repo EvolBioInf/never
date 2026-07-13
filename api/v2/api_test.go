@@ -23,7 +23,7 @@ func TestApi(t *testing.T) {
 	exTests := []ExTest{}
 	libTests := []LibTest{}
 	prog := "../../fetch/fetch"
-	url := "http://localhost:8080/api/v2"
+	url := "http://localhost:8008/api/v2"
 	tmpl := "%s/%s%s"
 	u := url
 	exTest := ExTest{t: exec.Command(prog, u), r: 1}
