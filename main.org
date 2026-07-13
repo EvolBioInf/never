@@ -45,7 +45,7 @@ import (
   need be able to pass an address and a port for the server to run on. It would be nice if we could also
   define a path for the HTTP/TLS files i.e. the certificate and the private key. Providing extra options
   for the database path and the date file results in a more flexible setup.
-  It should be possible to toggle the rate limit for debugging and testing 
+  It should be possible to toggle the rate limit for debugging and testing
   purposes.
   This results in five strings, an integer and a bool as a return tuple.
 #+end_export
@@ -151,11 +151,11 @@ import (
 
 #+begin_export latex
   The packages we want to register each provide their own register function called \ty{registerRoutes}.
-  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each 
+  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each
   others existance. So this task falls to the managing part of the software, which is this server.
-  Additionally to the prefix \ty{apiv2} needs to know the host and where the database is located. \ty{neverv1} receives 
+  Additionally to the prefix \ty{apiv2} needs to know the host and where the database is located. \ty{neverv1} receives
   these arguments as well, but it gets two prefixes as the package is not divided into api and docs. It also needs to get
-  an extra filepath for the \ty{dateFile}. \ty{docsv2} needs to know whether it is being hosted locally and on what 
+  an extra filepath for the \ty{dateFile}. \ty{docsv2} needs to know whether it is being hosted locally and on what
   port, so we need to provide data for that.
 #+end_export
 
@@ -235,7 +235,7 @@ import (
 #+begin_export latex
   We write an outline of the logger middleware and think about how and exactly what
   to log in the next step. A log entry contains data about the response, specifically
-  it's size, status code and processing time. Measuring the processing time may be done 
+  it's size, status code and processing time. Measuring the processing time may be done
   by subtracting a timestamp before passing the request and after getting it's response.
   Obtaining the the response code and size is a bit trickier, as the writer does not give
   access to it's response - probably because it's not yet written... We are going to address
@@ -262,7 +262,7 @@ import (
 #+end_src
 
 #+begin_export latex
-  Back to getting the response data. To obtain this data anyways we wrap the writer, 
+  Back to getting the response data. To obtain this data anyways we wrap the writer,
   into a custom one. This wrapper just saves the status code and bytes it wrote.
   We need to define a type for this and redefine the functions \ty{Write} and
   \ty{WriteHeader}.
@@ -298,15 +298,15 @@ import (
 #+end_src
 
 #+begin_export latex
-  We don't want to log every single request. Parts of the the server, mostly the frontend, 
-  make a lot of consecutive requests, that aren't worth logging. It's interesting to get 
-  a log entry, when someone is requesting the docs, but we don't need to log the follow up 
-  requests for all the css files etc. This means we need to check the request url. 
+  We don't want to log every single request. Parts of the the server, mostly the frontend,
+  make a lot of consecutive requests, that aren't worth logging. It's interesting to get
+  a log entry, when someone is requesting the docs, but we don't need to log the follow up
+  requests for all the css files etc. This means we need to check the request url.
 #+end_export
 
 #+begin_src go <<Log request, Pr. \ref{pr:main}>>=
-  if r.URL.Path == docsV2Pref || 
-    r.URL.Path == docsV1Pref || 
+  if r.URL.Path == docsV2Pref ||
+    r.URL.Path == docsV1Pref ||
     !strings.Contains(r.URL.Path, docsPref) {
     //<<Write log entry, Pr. \ref{pr:main}>>
   }
@@ -504,7 +504,7 @@ import (
 	var err error
 	fmt.Printf("Starting server at %s:%d ...\n", host, port)
 	if host == "http://localhost" {
-		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
+    err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
 	} else {
 		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
 	}
