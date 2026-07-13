@@ -1,8 +1,8 @@
 #+begin_export latex
   \section{Testing}
   With this we are going to test the second iteration of \ty{never}'s api.
-  This is an important step, as we need to ensure that the new version actually 
-  works as intended. We are going to use the testing suite of the old version as 
+  This is an important step, as we need to ensure that the new version actually
+  works as intended. We are going to use the testing suite of the old version as
   a baseline. With this we begin testing as we did before:
   Our outline for testing \ty{never} contains hooks for imports and the
   testing logic.
@@ -27,10 +27,10 @@
   "testing"
 #+end_src
 #+begin_export latex
-  We construct a set of external and library tests and run each one. External 
+  We construct a set of external and library tests and run each one. External
   tests are a tuple of some command and an index for the corresponding result
   file. If the results of the first test are found in ty{r1.txt}, then the
-  corresponding index is 1. Library tests are the same, but they invoke a 
+  corresponding index is 1. Library tests are the same, but they invoke a
   function of some library, rather than a binary program.
 #+end_export
 #+begin_src go <<Testing, Pa. \ref{pa:api}>>=
@@ -72,8 +72,8 @@
 	url := "http://localhost:8080/api/v2"
 #+end_src
 #+begin_export latex
-  We send queries to each endpoint testing their responses. The endpoints are 
-  categorized by their url hierarchy. Let's write down the groups and then test 
+  We send queries to each endpoint testing their responses. The endpoints are
+  categorized by their url hierarchy. Let's write down the groups and then test
   all endpoints of each group. The root document is an exception, as it does not
   belong to a group.
 #+end_export
@@ -121,7 +121,7 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
   \ty{accessions} is a collection, which allows fetching accessions filter by
-  their id. We check for two specific accessions. For this test and whenever 
+  their id. We check for two specific accessions. For this test and whenever
   possible, we use the \ty{plain_data} argument.
 #+end_export
 #+begin_src go <<Test \ty{accessions}, Pa. \ref{pa:api}>>=
@@ -150,7 +150,7 @@ We import \ty{fmt}.
   //<<Test \ty{subtree}, Pa. \ref{pa:api}>>
 #+end_src
 #+begin_export latex
-  \ty{taxa} is the collection of taxa and provides a set of subservices. We 
+  \ty{taxa} is the collection of taxa and provides a set of subservices. We
   test this endpoint by looking for the dog taxon.
 #+end_export
 #+begin_src go <<Test \ty{taxa}, Pa. \ref{pa:api}>>=
@@ -160,10 +160,10 @@ We import \ty{fmt}.
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
-  \ty{taxon} allows requesting single taxa of the collection above. We test 
+  \ty{taxon} allows requesting single taxa of the collection above. We test
   this endpoint by requesting data on house cats. All endpoints responding with
   taxon entities use field composites. As they all use the same mechanism for
-  getting the different fields, it suffices to test this with one endpoint, 
+  getting the different fields, it suffices to test this with one endpoint,
   i.e. this one. We also only test for the default field composite as well as
   \ty{id} and \ty{rank}. The remaining composites include genome counts, which
   change too much.
@@ -231,7 +231,7 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
   \ty{accessions} is used to get the accessions of a taxon or its children. We
-  use it to look at ancestors of the common house cat. There are too many 
+  use it to look at ancestors of the common house cat. There are too many
   accessions so we limit the output.
 #+end_export
 #+begin_src go <<Test \ty{taxonAccessions}, Pa. \ref{pa:api}>>=
@@ -259,7 +259,7 @@ We import \ty{fmt}.
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
-  That's all for the taxonomy category. We continue by testing the 
+  That's all for the taxonomy category. We continue by testing the
   \ty{programs} category.
 #+end_export
 #+begin_src go <<Test programs category, Pa. \ref{pa:api}>>=
@@ -307,6 +307,60 @@ We import \ty{fmt}.
   util "github.com/evolbioinf/never/util"
 #+end_src
 #+begin_export latex
+  We begin writing the library tests and check the \ty{fintac} endpoint.
+  This should include a test for using files, \ty{stdin}, and several options,
+  as well as no provided arguments.
+#+end_export
+#+begin_src go <<Test \ty{fintac}, Pa. \ref{pa:api}>>=
+  service = "programs/fintac"
+  fu := fmt.Sprintf(tmpl, url, service, "")
+  e1, err := os.Open("testing/eco7k.nwk")
+  util.Check(err)
+  defer e1.Close()
+  libTest := LibTest{t: func() string {return util.SendPostRequest(
+			fu,
+			[]string{"-t", "991910_", "-u", "562_"},
+			[]string{"testing/eco7k.nwk"},
+      []*os.File{e1},
+			nil,
+		)},
+    r: 18}
+  libTests = append(libTests, libTest)
+  e2, err := os.Open("testing/eco7k.nwk")
+  util.Check(err)
+  defer e2.Close()
+  libTest = LibTest{t: func() string {return util.SendPostRequest(
+			fu,
+			[]string{"-t", "991910_", "-u", "562_"},
+			[]string{},
+      nil,
+			e2,
+		)},
+    r: 18}
+  libTests = append(libTests, libTest)
+  e3, err := os.Open("testing/eco7k.nwk")
+  util.Check(err)
+  defer e3.Close()
+  libTest = LibTest{t: func() string {return util.SendPostRequest(
+			fu,
+			[]string{"-t", "991910_"},
+			[]string{},
+      nil,
+			e3,
+		)},
+    r: 19}
+  libTests = append(libTests, libTest)
+  libTest = LibTest{t: func() string {return util.SendPostRequest(
+			fu,
+			[]string{},
+			[]string{},
+      nil,
+			nil,
+		)},
+    r: 31}
+  libTests = append(libTests, libTest)
+#+end_src
+#+begin_export latex
   We keep going with the library tests and check the \ty{neighbors} endpoint.
   This should include a test for using files, \ty{stdin}, and several options,
   as well as no provided arguments.
@@ -314,7 +368,7 @@ We import \ty{fmt}.
 #+begin_src go <<Test \ty{neighbors}, Pa. \ref{pa:api}>>=
   service = "programs/neighbors"
   nu := fmt.Sprintf(tmpl, url, service, "")
-  libTest := LibTest{t: func() string {return util.SendGetRequest(
+  libTest = LibTest{t: func() string {return util.SendGetRequest(
 			nu,
 			[]string{"-t", "9606", "-L", "complete"},
 			[]string{},

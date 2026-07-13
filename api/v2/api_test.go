@@ -90,10 +90,64 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?options=-r&options=-n&options=3073808")
 	exTest = ExTest{t: exec.Command(prog, u), r: 17}
 	exTests = append(exTests, exTest)
-
+	service = "programs/fintac"
+	fu := fmt.Sprintf(tmpl, url, service, "")
+	e1, err := os.Open("testing/eco7k.nwk")
+	util.Check(err)
+	defer e1.Close()
+	libTest := LibTest{t: func() string {
+		return util.SendPostRequest(
+			fu,
+			[]string{"-t", "991910_", "-u", "562_"},
+			[]string{"testing/eco7k.nwk"},
+			[]*os.File{e1},
+			nil,
+		)
+	},
+		r: 18}
+	libTests = append(libTests, libTest)
+	e2, err := os.Open("testing/eco7k.nwk")
+	util.Check(err)
+	defer e2.Close()
+	libTest = LibTest{t: func() string {
+		return util.SendPostRequest(
+			fu,
+			[]string{"-t", "991910_", "-u", "562_"},
+			[]string{},
+			nil,
+			e2,
+		)
+	},
+		r: 18}
+	libTests = append(libTests, libTest)
+	e3, err := os.Open("testing/eco7k.nwk")
+	util.Check(err)
+	defer e3.Close()
+	libTest = LibTest{t: func() string {
+		return util.SendPostRequest(
+			fu,
+			[]string{"-t", "991910_"},
+			[]string{},
+			nil,
+			e3,
+		)
+	},
+		r: 19}
+	libTests = append(libTests, libTest)
+	libTest = LibTest{t: func() string {
+		return util.SendPostRequest(
+			fu,
+			[]string{},
+			[]string{},
+			nil,
+			nil,
+		)
+	},
+		r: 31}
+	libTests = append(libTests, libTest)
 	service = "programs/neighbors"
 	nu := fmt.Sprintf(tmpl, url, service, "")
-	libTest := LibTest{t: func() string {
+	libTest = LibTest{t: func() string {
 		return util.SendGetRequest(
 			nu,
 			[]string{"-t", "9606", "-L", "complete"},
