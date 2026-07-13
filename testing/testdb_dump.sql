@@ -4043,10 +4043,28 @@ INSERT INTO taxon VALUES(244325,562,'Escherichia coli O153:H7','','no rank',1.0)
   (3379134,2,'Pseudomonadati','','kingdom',2211952.0),
   (561,543,'Escherichia','','genus',411539.0),
   (91347,1236,'Enterobacterales','','order',1297451.0),
-  (543,91347,'Enterobacteriaceae','enterobacteria','family',4873753.0);
+  (543,91347,'Enterobacteriaceae','enterobacteria','family',4873753.0),
+  (314146,1437010,'Euarchontoglires','','superorder',3503.0),
+  (1437010,9347,'Boreoeutheria','','clade',4992.0),
+  (32525,40674,'Theria','','clade',5465.0),
+  (9604,314295,'Hominidae','great apes','family',3611486.0),
+  (379583,33554,'Feliformia','','suborder',84.0),
+  (9526,314293,'Catarrhini','','parvorder',2806.0),
+  (40674,32524,'Mammalia','mammals','class',3614338.0),
+  (9347,32525,'Eutheria','placentals','clade',3613932.0),
+  (338152,9681,'Felinae','','subfamily',40.0),
+  (314145,1437010,'Laurasiatheria','','superorder',1489.0),
+  (9443,314146,'Primates','primates','order',3611891.0),
+  (9608,379584,'Canidae','dog, coyote, wolf, fox','family',3608941.0),
+  (9681,379583,'Felidae','cat family','family',3608936.0),
+  (314293,376913,'Simiiformes','','infraorder',2941.0),
+  (314295,9526,'Hominoidea','apes','superfamily',3611512.0),
+  (33554,314145,'Carnivora','carnivores','order',3609171.0),
+  (376913,9443,'Haplorrhini','','suborder',2946.0),
+  (379584,33554,'Caniformia','','suborder',221.0);
 CREATE TABLE genome (
             taxid int,
-            size real, 
+            size real,
             accession text primary key,
             level text,
             foreign key(taxid) references taxon(taxid));
@@ -432259,7 +432277,11 @@ INSERT INTO genome_count VALUES(3413167,'complete',0,0),
   (91347,'complete',0,22706),
   (91347,'chromosome',0,2322),
   (91347,'scaffold',0,70904),
-  (91347,'contig',0,1201519);
+  (91347,'contig',0,1201519),
+  (40674,'chromosome',0,2020),
+  (40674,'complete',0,24);
+INSERT INTO genome_count VALUES(40674,'scaffold',0,2285),
+  (40674,'contig',0,974);
 CREATE TABLE image (
              image_id int,
              url text,
@@ -432277,7 +432299,8 @@ INSERT INTO image VALUES(64784,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images
   (65090,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/725','Cedric Gravelle'),
   (72280,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/5958','Ian Kirk'),
   (89156,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/22210','Gerbil'),
-  (92811,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/27418','Sina xiave');
+  (92811,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/27418','Sina xiave'),
+  (70910,'http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/4591','');
 CREATE TABLE tax2ima (
              taxid int,
              image_id int,
@@ -432296,7 +432319,8 @@ INSERT INTO tax2ima VALUES(9606,64784),
   (1608482,65090),
   (30422,72280),
   (1425170,89156),
-  (9615,92811);
+  (9615,92811),
+  (562,70910);
 CREATE INDEX taxon_parent_idx on taxon(parent);
 CREATE INDEX taxon_score_idx on taxon(score);
 CREATE INDEX genome_taxid_idx on genome(taxid);

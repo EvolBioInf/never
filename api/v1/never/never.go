@@ -195,6 +195,7 @@ func inc(i int) int {
 	return i + 1
 }
 func init() {
+	fmt.Println("in here")
 	templateFuncs["inc"] = inc
 	templates = templates.Funcs(templateFuncs)
 	path := "api/v1/never/static/templates.html"

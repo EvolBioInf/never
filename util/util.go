@@ -82,7 +82,7 @@ func urlEncodeSlice(slc []string, paramName string, hasParam *bool) string {
 	return sb.String()
 }
 
-// The function SendPostRequest takes as argument an address as a string, program options and extra arguments as a slice of strings, as well as files and stdin. It sends a post request using these values and returns the  result.
+// The function SendPostRequest takes as argument an address as a string, program options and extra arguments as a slice of strings, as well as files and stdin. It sends a post request using these values and returns the result.
 func SendPostRequest(address string, options, extraArgs []string, files []*os.File, stdin *os.File) string {
 	hasParam := new(bool)
 	qOptions := urlEncodeSlice(options, "options", hasParam)

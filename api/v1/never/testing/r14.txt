@@ -1,0 +1,26 @@
+[
+    {
+        "taxid": 37029,
+        "parent": 37028,
+        "name": "Prionailurus bengalensis",
+        "common_name": "leopard cat"
+    },
+    {
+        "taxid": 61388,
+        "parent": 37028,
+        "name": "Prionailurus viverrinus",
+        "common_name": "fishing cat"
+    },
+    {
+        "taxid": 61408,
+        "parent": 61407,
+        "name": "Otocolobus manul",
+        "common_name": "Pallas's cat"
+    },
+    {
+        "taxid": 37030,
+        "parent": 37028,
+        "name": "Prionailurus iriomotensis",
+        "common_name": "Iriomote cat"
+    }
+]

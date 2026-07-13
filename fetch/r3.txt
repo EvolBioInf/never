@@ -5,7 +5,7 @@
     },
     {
         "level": "chromosome",
-        "count": 1107
+        "count": 1173
     },
     {
         "level": "scaffold",

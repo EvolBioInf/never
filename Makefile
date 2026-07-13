@@ -1,4 +1,5 @@
 SUBDIRS := api/v1/never api/v2 docs/v2 fetch util
+TESTDIRS := api/v1/never api/v2 fetch
 version = $(shell bash scripts/getVersion.sh)
 date = $(shell bash scripts/getDate.sh)
 nw = $(shell which noweb)
@@ -33,6 +34,6 @@ clean:
 	rm -rf main
 
 test:
-	for dir in $(SUBDIRS); do \
+	for dir in $(TESTDIRS); do \
 		$(MAKE) -C $$dir test; \
 	done

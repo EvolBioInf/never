@@ -3,12 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/evolbioinf/clio"
+	"github.com/evolbioinf/never/util"
 	"io"
 	"net/http"
 	"os"
-
-	"github.com/evolbioinf/clio"
-	"github.com/evolbioinf/never/util"
 )
 
 func main() {

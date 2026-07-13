@@ -17,6 +17,8 @@ main function.  \bpr{fetch}{pr:fet}
   func main() {
 	  //<<Main function, Pr. \ref{pr:fet}>>
   }
+
+  //<<Functions, Pr. \ref{pr:fet}>>
 #+end_src
 #+begin_export latex
 \epr
@@ -158,7 +160,7 @@ We construct a set of tests and run them.
   tests := []*exec.Cmd{}
   //<<Construct tests, Pr. \ref{pr:fet}>>
   for i, test := range tests {
-	  //<<Run test, Pr. \ref{pr:fet}>>
+    //<<Run test, Pr. \ref{pr:fet}>>
   }
 #+end_src
 #+begin_export latex
@@ -168,12 +170,12 @@ We import \ty{exec}.
   "os/exec"
 #+end_src
 #+begin_export latex
-We use \ty{neighbors.evolbio.mpg.de} as our test domain. We begin by
+We use a locally hosted server as our test domain. We begin by
 querying its index page.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:fet}>>=
-  url := "https://neighbors.evolbio.mpg.de"
-  test := exec.Command("./fetch", url)
+  url := "http://localhost:8080"
+  test := exec.Command("./fetch", url+"/docs/api/v1")
   tests = append(tests, test)
 #+end_src
 #+begin_export latex
@@ -205,11 +207,12 @@ url/service/?query
 \end{verbatim}
 We use a template to construct these extended URLs for testing
 \ty{children}, \ty{num\_genomes}, \ty{num\_genomes\_rec}, \ty{parent},
-and \ty{subtree}.
+and \ty{subtree}. The tests run on a testing database, which is significantly
+smaller than the original.
 #+end_export
 #+begin_src go <<Query single taxid, Pr. \ref{pr:fet}>>=
   query := "t=9606"
-  tmpl := "%s/%s/?%s"
+  tmpl := "%s/api/v1/%s/?%s"
   //<<Test \ty{children}, Pr. \ref{pr:fet}>>
   //<<Test \ty{num\_genomes}, Pr. \ref{pr:fet}>>
   //<<Test \ty{num\_genomes\_rec}, Pr. \ref{pr:fet}>>
@@ -335,11 +338,11 @@ We set our query to the single taxon \emph{Homo sapiens} and run the
 services \ty{taxids} and \ty{taxi}.
 #+end_export
 #+begin_src go <<Query single name, Pr. \ref{pr:fet}>>=
-  query = "t=Homo sapiens"
+  query = "t=Homo+sapiens"
   eURL = fmt.Sprintf(tmpl, url, "taxids", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
-  query += "&n=10&p=1"
+  query += "&n=3&p=1"
   eURL = fmt.Sprintf(tmpl, url, "taxi", query)
   test = exec.Command("./fetch", eURL)
   tests = append(tests, test)
@@ -357,7 +360,8 @@ service.
 #+begin_export latex
 We have now constructed all our tests. When we run one of them, we
 compare what we get to what we want, which is stored in files
-\ty{r1.txt}, \ty{r2.txt}, and so on.
+\ty{r1.txt}, \ty{r2.txt}, and so on. We check the results line by line,
+which makes debugging easier.
 #+end_export
 #+begin_src go <<Run test, Pr. \ref{pr:fet}>>=
   get, err := test.Output()
@@ -369,15 +373,29 @@ compare what we get to what we want, which is stored in files
   if err != nil {
 	  t.Error(err)
   }
-  if !bytes.Equal(get, want) {
-	  t.Errorf("%s get:\n%s\nwant:\n%s\n", f, get, want)
+  wantLines := strings.Split(string(want), "\n")
+  getLines := strings.Split(string(get), "\n")
+  mismatched := false
+  for i := range wantLines {
+		if i < len(getLines) {
+      if strings.TrimSpace(getLines[i]) != strings.TrimSpace(wantLines[i]) {
+        mismatched = true
+        t.Errorf("Differed in line %d\nget:\n%s\nwant:\n%s", i, getLines[i], wantLines[i])
+      }
+    }
+  }
+  if len(getLines) != len(wantLines) {
+      t.Errorf("Line length mismatch\nget:\n%d\nwant:\n%d\n", len(getLines), len(wantLines))
+  }
+
+  if mismatched {
+      t.Errorf("total: %s\n get:\n%s\nwant:\n%s\n", f, get, want)
   }
 #+end_src
 #+begin_export latex
-We import \ty{os} and \ty{bytes}.
+We import \ty{os} and \ty{strings}.
 #+end_export
 #+begin_src go <<Testing imports, Pr. \ref{pr:fet}>>=
   "os"
-  "bytes"
+  "strings"
 #+end_src
-

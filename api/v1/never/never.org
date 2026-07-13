@@ -613,6 +613,7 @@ the directory \ty{static}.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
   func init() {
+    fmt.Println("in here")
 	  //<<Add template functions, Pa. \ref{pa:nev}>>
 	  templates = templates.Funcs(templateFuncs)
 	  path := "api/v1/never/static/templates.html"

@@ -133,9 +133,9 @@ The date and the version are injected at compile time, so like
 #+end_src
 #+begin_export latex
   There may be multiple slices that need to be encoded for a single request.
-  This means we should write a function, which handles this url encoding. We 
+  This means we should write a function, which handles this url encoding. We
   use the exploded parameters for passing slices via the url. This means we
-  need to iterate over each slice and add key value pairs. The values need to 
+  need to iterate over each slice and add key value pairs. The values need to
   be encoded. The \ty{net/url} package provides a function for this.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
@@ -156,7 +156,7 @@ The date and the version are injected at compile time, so like
   }
 #+end_src
 #+begin_export latex
-  Now all we need to do is call \ty{urlEncodeSlice} for both the options and 
+  Now all we need to do is call \ty{urlEncodeSlice} for both the options and
   the extra arguments.
 #+end_export
 #+begin_src go <<Encode query, Pa. \ref{pa:uti}>>=
@@ -209,7 +209,7 @@ The date and the version are injected at compile time, so like
 \section{\ty{SendPostRequest}}
   !The function \ty{SendPostRequest} takes as argument an address as a string,
   !program options and extra arguments as a slice of strings, as well as files
-  !and stdin. It sends a post request using these values and returns the 
+  !and stdin. It sends a post request using these values and returns the
   !result.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
@@ -292,10 +292,4 @@ The date and the version are injected at compile time, so like
 #+end_export
 #+begin_src go <<Write \ty{post} headers, Pa. \ref{pa:uti}>>=
   req.Header.Set("Content-Type", w.FormDataContentType())
-#+end_src
-#+begin_src latex
-  We are done with writing the \ty{util} package, time to test it.
-  \section{Testing}
-  Our testing code for \ty{util} contains hooks for imports and the
-  logic of the testing function.
 #+end_src

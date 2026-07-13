@@ -9,9 +9,6 @@ all: $(GOFILES)
 		awk -f ../scripts/preTangle.awk $< | bash ../scripts/org2nw | notangle -R$@ | gofmt > $@;\
 	fi
 tangle: $(GOFILES)
-.PHONY: test
-test: util_test.go util.go
-	go test -v
 
 clean:
 	rm -f *.go

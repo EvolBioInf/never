@@ -9,37 +9,37 @@
         "raw_genome_counts": [
             {
                 "level": "complete",
-                "count": 7163
+                "count": 7355
             },
             {
                 "level": "chromosome",
-                "count": 724
+                "count": 760
             },
             {
                 "level": "scaffold",
-                "count": 25804
+                "count": 26419
             },
             {
                 "level": "contig",
-                "count": 354942
+                "count": 365685
             }
         ],
         "rec_genome_counts": [
             {
                 "level": "complete",
-                "count": 7723
+                "count": 7916
             },
             {
                 "level": "chromosome",
-                "count": 749
+                "count": 785
             },
             {
                 "level": "scaffold",
-                "count": 27574
+                "count": 28189
             },
             {
                 "level": "contig",
-                "count": 361764
+                "count": 372512
             }
         ],
         "images": [
@@ -64,7 +64,7 @@
             },
             {
                 "level": "chromosome",
-                "count": 1107
+                "count": 1173
             },
             {
                 "level": "scaffold",
@@ -82,7 +82,7 @@
             },
             {
                 "level": "chromosome",
-                "count": 1107
+                "count": 1173
             },
             {
                 "level": "scaffold",

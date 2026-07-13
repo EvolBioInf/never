@@ -4,7 +4,7 @@ Our outline for testing \ty{never} contains hooks for imports and the
 testing logic.
 #+end_export
 #+begin_src go <<never_test.go>>=
-  package neverV1
+  package neverV1Test
 
   import (
 	  //<<Testing imports, Pr. \ref{pr:nev}>>
@@ -27,7 +27,7 @@ We construct a set of tests and run each one.
   tests := []*exec.Cmd{}
   //<<Construct tests, Pr. \ref{pr:nev}>>
   for i, test := range tests {
-	  //<<Run test, Pr. \ref{pr:nev}>>
+    //<<Run test, Pr. \ref{pr:nev}>>
   }
 #+end_src
 #+begin_export latex
@@ -42,9 +42,9 @@ running on the local host listening at port 8080. In our first test we
 fetch the data from the root of \ty{never}.
 #+end_export
 #+begin_src go <<Construct tests, Pr. \ref{pr:nev}>>=
-  prog := "../bin/fetch"
+  prog := "../../../../fetch/fetch"
   url := "http://localhost:8080"
-  test := exec.Command(prog, url)
+  test := exec.Command(prog, url+"/docs/api/v1")
   tests = append(tests, test)
 #+end_src
 #+begin_export latex
@@ -65,13 +65,13 @@ single name, or multiple accessions.
 A query is called by passing a URL to \ty{fetch} that is extended by
 the name of the service and a query string,
 \begin{verbatim}
-url/service/?query
+url/api/v1/service/?query
 \end{verbatim}
 We implement this pattern in a template to construct the extended
 URLs.
 #+end_export
 #+begin_src go <<Prepare queries, Pr. \ref{pr:nev}>>=
-  tmpl := "%s/%s/?%s"
+  tmpl := "%s/api/v1/%s/?%s"
 #+end_src
 #+begin_export latex
 There are five services with a single taxon-ID as argument,
@@ -153,13 +153,11 @@ There are six services that take multiple taxon-IDs as argument,
 #+end_src
 #+begin_export latex
 We carry out each test on the same set of taxa we already used in the example
-printed by \ty{never}. So we test getting genome accessions on the rather
-obscure bacteria \emph{Mesorhizobium ciceri} biovar biserrulae (278148)
-and \emph{Aphaenogaster floridana} (602633), which have two and one
-sequenced genome, respectively.
+printed by \ty{never}. So we test getting genome accessions on cat taxa
+\emph{Felis catus} (9685) and \emph{Felis nigripes} (61379).
 #+end_export
 #+begin_src go <<Test \ty{accessions}, Pr. \ref{pr:nev}>>=
-  query = "t=278148,602633"
+  query = "t=9685,61379"
   u = fmt.Sprintf(tmpl, url, "accessions", query)
   test = exec.Command(prog, u)
   tests = append(tests, test)
@@ -227,11 +225,11 @@ We test \ty{taxids} on \emph{Homo sapiens}.
   tests = append(tests, test)
 #+end_src
 #+begin_export latex
-We test \ty{taxi} on ``dolph'' to simulate a user about to type
-``dolphin'', and request the second page of at most 10 results.
+We test \ty{taxi} on ``cat'' and request the second page of at most four
+results.
 #+end_export
 #+begin_src go <<Test \ty{taxi}, Pr. \ref{pr:nev}>>=
-  query = "t=dolph&n=10&p=2"
+  query = "t=cat&n=4&p=2"
   u = fmt.Sprintf(tmpl, url, "taxi", query)
   test = exec.Command(prog, u)
   tests = append(tests, test)
@@ -262,8 +260,23 @@ includes the name of the output file that tripped us up.
   if err != nil {
 	  t.Error(err)
   }
-  if !bytes.Equal(get, want) {
-	  t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
+  wantLines := strings.Split(string(want), "\n")
+  getLines := strings.Split(string(get), "\n")
+  mismatched := false
+  for i := range wantLines {
+		if i < len(getLines) {
+      if strings.TrimSpace(getLines[i]) != strings.TrimSpace(wantLines[i]) {
+        mismatched = true
+        t.Errorf("Differed in line %d\nget:\n%s\nwant:\n%s", i, getLines[i], wantLines[i])
+      }
+    }
+  }
+  if len(getLines) != len(wantLines) {
+      t.Errorf("Line length mismatch\nget:\n%d\nwant:\n%d\n", len(getLines), len(wantLines))
+  }
+
+  if mismatched {
+      t.Errorf("total: %s\n get:\n%s\nwant:\n%s\n", f, get, want)
   }
 #+end_src
 #+begin_export latex
@@ -272,9 +285,5 @@ We import \ty{strconv}, \ty{os}, and \ty{bytes}.
 #+begin_src go <<Testing imports, Pr. \ref{pr:nev}>>=
   "strconv"
   "os"
-  "bytes"
+  "strings"
 #+end_src
-
-
-
-

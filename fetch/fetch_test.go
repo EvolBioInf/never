@@ -1,0 +1,94 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+	"testing"
+)
+
+func TestFetch(t *testing.T) {
+	tests := []*exec.Cmd{}
+	url := "http://localhost:8080"
+	test := exec.Command("./fetch", url+"/docs/api/v1")
+	tests = append(tests, test)
+	query := "t=9606"
+	tmpl := "%s/api/v1/%s/?%s"
+	eURL := fmt.Sprintf(tmpl, url, "children", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "num_genomes", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "num_genomes_rec", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "parent", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "subtree", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	query = "t=9606,741158,63221"
+	eURL = fmt.Sprintf(tmpl, url, "accessions", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "mrca", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "names", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	query = "t=9606,40674"
+	eURL = fmt.Sprintf(tmpl, url, "path", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "ranks", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	eURL = fmt.Sprintf(tmpl, url, "taxa_info", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	query = "t=Homo+sapiens"
+	eURL = fmt.Sprintf(tmpl, url, "taxids", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	query += "&n=3&p=1"
+	eURL = fmt.Sprintf(tmpl, url, "taxi", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	query = "a=GCF_000001405.40,GCA_000002115.2"
+	eURL = fmt.Sprintf(tmpl, url, "levels", query)
+	test = exec.Command("./fetch", eURL)
+	tests = append(tests, test)
+	for i, test := range tests {
+		get, err := test.Output()
+		if err != nil {
+			t.Error(err)
+		}
+		f := fmt.Sprintf("r%d.txt", i+1)
+		want, err := os.ReadFile(f)
+		if err != nil {
+			t.Error(err)
+		}
+		wantLines := strings.Split(string(want), "\n")
+		getLines := strings.Split(string(get), "\n")
+		mismatched := false
+		for i := range wantLines {
+			if i < len(getLines) {
+				if strings.TrimSpace(getLines[i]) != strings.TrimSpace(wantLines[i]) {
+					mismatched = true
+					t.Errorf("Differed in line %d\nget:\n%s\nwant:\n%s", i, getLines[i], wantLines[i])
+				}
+			}
+		}
+		if len(getLines) != len(wantLines) {
+			t.Errorf("Line length mismatch\nget:\n%d\nwant:\n%d\n", len(getLines), len(wantLines))
+		}
+
+		if mismatched {
+			t.Errorf("total: %s\n get:\n%s\nwant:\n%s\n", f, get, want)
+		}
+	}
+}
