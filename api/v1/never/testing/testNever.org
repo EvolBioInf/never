@@ -280,7 +280,7 @@ includes the name of the output file that tripped us up.
   }
 #+end_src
 #+begin_export latex
-We import \ty{strconv}, \ty{os}, and \ty{bytes}.
+We import \ty{strconv}, \ty{os}, and \ty{strings}.
 #+end_export
 #+begin_src go <<Testing imports, Pr. \ref{pr:nev}>>=
   "strconv"

@@ -34,7 +34,7 @@ clean:
 	rm -rf main
 
 test: test_db main
-	./main -db testing/testdb -p 8008 --no-rate-limit & \
+	./main -d testing/testdb -p 8008 --no-rate-limit & \
 	SERVER_PID=$$! ; \
 	trap "kill $$SERVER_PID" EXIT ; \
 	sleep 1 ; \

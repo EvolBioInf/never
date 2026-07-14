@@ -151,26 +151,32 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
   \ty{taxa} is the collection of taxa and provides a set of subservices. We
-  test this endpoint by looking for the dog taxon.
+  test this endpoint by looking for the dog taxon. We further test it by
+  shortening the input name and using limits and an offset.
 #+end_export
 #+begin_src go <<Test \ty{taxa}, Pa. \ref{pa:api}>>=
   service = "taxa"
   u = fmt.Sprintf(tmpl, url, service, "?name=Canis+lupus+familiaris&exact=true&scientific=true&limit=1&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 4}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?name=Canis&limit=10&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 32}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?name=Canis&limit=3&offset=5&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 33}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   \ty{taxon} allows requesting single taxa of the collection above. We test
   this endpoint by requesting data on house cats. All endpoints responding with
-  taxon entities use field composites. As they all use the same mechanism for
-  getting the different fields, it suffices to test this with one endpoint,
-  i.e. this one. We also only test for the default field composite as well as
-  \ty{id} and \ty{rank}. The remaining composites include genome counts, which
-  change too much.
+  taxon entities use field composites. So we should test those as well.
 #+end_export
 #+begin_src go <<Test \ty{taxon}, Pa. \ref{pa:api}>>=
   service = "taxa/9685"
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 5}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?field_composite=default&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 5}
   exTests = append(exTests, exTest)
   u = fmt.Sprintf(tmpl, url, service, "?field_composite=id&plain_data=true")
@@ -179,15 +185,35 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?field_composite=rank&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 7}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?field_composite=gen_count&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 34}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?field_composite=gen_count_rec&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 35}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?field_composite=all&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 36}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   Lets look at the children of the wolf taxon for checking ty{children}.
-  Here we might check limits and offset. So why don't we limit the result to
-  five taxa and offset it by three.
+  We again check the limit and offset, as well as one extra composited result.
+  There are a total of seven children for taxon 9612 (wolf) in this database.
+  We check the responses to limits and offsets partially and totally exceeding
+  the result set. Limit 0 and limit -1 are also arguments we did not check yet.
 #+end_export
 #+begin_src go <<Test \ty{children}, Pa. \ref{pa:api}>>=
   service = "taxa/9612/children"
-  u = fmt.Sprintf(tmpl, url, service, "?limit=5&offset=3&plain_data=true")
+  u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 8}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?limit=1&offset=8&field_composite=id&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 38}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?limit=0&field_composite=id&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 38}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?limit=-1&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 8}
   exTests = append(exTests, exTest)
 #+end_src
@@ -519,17 +545,37 @@ We import \ty{fmt}.
   if err != nil {
 	  t.Error(err)
   }
-  if !bytes.Equal(get, want) {
-	  t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
-  }
+  //<<Compare results, Pa. \ref{pa:api}>>
 #+end_src
 #+begin_export latex
-We import \ty{strconv}, \ty{os}, and \ty{bytes}.
+We import \ty{strconv}, \ty{os}, and \ty{strings}.
 #+end_export
 #+begin_src go <<Testing imports, Pa. \ref{pa:api}>>=
   "strconv"
   "os"
-  "bytes"
+  "strings"
+#+end_src
+#+begin_export latex
+#+end_export
+#+begin_src go <<Compare results, Pa. \ref{pa:api}>>=
+  wantLines := strings.Split(string(want), "\n")
+  getLines := strings.Split(string(get), "\n")
+  mismatched := false
+  for i := range wantLines {
+		if i < len(getLines) {
+      if strings.TrimSpace(getLines[i]) != strings.TrimSpace(wantLines[i]) {
+        mismatched = true
+        t.Errorf("Differed in line %d\nget:\n%s\nwant:\n%s", i, getLines[i], wantLines[i])
+      }
+    }
+  }
+  if len(getLines) != len(wantLines) {
+      t.Errorf("Line length mismatch\nget:\n%d\nwant:\n%d\n", len(getLines), len(wantLines))
+  }
+
+  if mismatched {
+      t.Errorf("total: %s\n get:\n%s\nwant:\n%s\n", f, get, want)
+  }
 #+end_src
 
 #+begin_export latex
@@ -543,7 +589,5 @@ We import \ty{strconv}, \ty{os}, and \ty{bytes}.
   if err != nil {
 	  t.Error(err)
   }
-  if !bytes.Equal([]byte(get), want) {
-	  t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
-  }
+  //<<Compare results, Pa. \ref{pa:api}>>
 #+end_src

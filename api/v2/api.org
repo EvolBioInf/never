@@ -1681,6 +1681,7 @@ type Node struct {
 			Attribution: image.Attribution}
 		neiImages = append(neiImages, i)
 	}
+	tax.Images = neiImages
 #+end_src
 
 #+begin_export latex

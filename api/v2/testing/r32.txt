@@ -1,0 +1,62 @@
+[
+  {
+    "tax_id": 9611,
+    "parent": 9608,
+    "name": "Canis",
+    "common_name": ""
+  },
+  {
+    "tax_id": 9612,
+    "parent": 9611,
+    "name": "Canis lupus",
+    "common_name": "wolf"
+  },
+  {
+    "tax_id": 9615,
+    "parent": 9612,
+    "name": "Canis lupus familiaris",
+    "common_name": "dog"
+  },
+  {
+    "tax_id": 68724,
+    "parent": 9611,
+    "name": "Canis aureus",
+    "common_name": "golden jackal"
+  },
+  {
+    "tax_id": 143281,
+    "parent": 9612,
+    "name": "Canis lupus baileyi",
+    "common_name": "Mexican gray wolf"
+  },
+  {
+    "tax_id": 286419,
+    "parent": 9612,
+    "name": "Canis lupus dingo",
+    "common_name": "dingo"
+  },
+  {
+    "tax_id": 9614,
+    "parent": 9611,
+    "name": "Canis latrans",
+    "common_name": "coyote"
+  },
+  {
+    "tax_id": 728234,
+    "parent": 9612,
+    "name": "Canis lupus hallstromi",
+    "common_name": "New Guinea singing dog"
+  },
+  {
+    "tax_id": 2841922,
+    "parent": 9612,
+    "name": "Canis lupus nubilus",
+    "common_name": ""
+  },
+  {
+    "tax_id": 246882,
+    "parent": 9612,
+    "name": "Canis lupus pallipes",
+    "common_name": "Indian wolf"
+  }
+]

@@ -832,6 +832,7 @@ func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.Taxonomy
 				Attribution: image.Attribution}
 			neiImages = append(neiImages, i)
 		}
+		tax.Images = neiImages
 
 	}
 	if !plain {

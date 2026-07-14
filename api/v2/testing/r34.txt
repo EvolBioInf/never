@@ -1,0 +1,21 @@
+{
+  "tax_id": 9685,
+  "raw_genome_counts": [
+    {
+      "level": "complete",
+      "count": 3
+    },
+    {
+      "level": "chromosome",
+      "count": 6
+    },
+    {
+      "level": "scaffold",
+      "count": 0
+    },
+    {
+      "level": "contig",
+      "count": 0
+    }
+  ]
+}

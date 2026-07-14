@@ -1,5 +1,23 @@
 [
   {
+    "tax_id": 1605264,
+    "parent": 9612,
+    "name": "Canis lupus variabilis",
+    "common_name": ""
+  },
+  {
+    "tax_id": 728234,
+    "parent": 9612,
+    "name": "Canis lupus hallstromi",
+    "common_name": "New Guinea singing dog"
+  },
+  {
+    "tax_id": 2841922,
+    "parent": 9612,
+    "name": "Canis lupus nubilus",
+    "common_name": ""
+  },
+  {
     "tax_id": 246882,
     "parent": 9612,
     "name": "Canis lupus pallipes",

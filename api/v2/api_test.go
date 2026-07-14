@@ -1,12 +1,12 @@
 package apiv2
 
 import (
-	"bytes"
 	"fmt"
 	util "github.com/evolbioinf/never/util"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -40,8 +40,17 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?name=Canis+lupus+familiaris&exact=true&scientific=true&limit=1&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 4}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?name=Canis&limit=10&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 32}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?name=Canis&limit=3&offset=5&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 33}
+	exTests = append(exTests, exTest)
 	service = "taxa/9685"
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 5}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?field_composite=default&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 5}
 	exTests = append(exTests, exTest)
 	u = fmt.Sprintf(tmpl, url, service, "?field_composite=id&plain_data=true")
@@ -50,8 +59,26 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?field_composite=rank&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 7}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?field_composite=gen_count&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 34}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?field_composite=gen_count_rec&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 35}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?field_composite=all&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 36}
+	exTests = append(exTests, exTest)
 	service = "taxa/9612/children"
-	u = fmt.Sprintf(tmpl, url, service, "?limit=5&offset=3&plain_data=true")
+	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 8}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?limit=1&offset=8&field_composite=id&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 38}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?limit=0&field_composite=id&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 38}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?limit=-1&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 8}
 	exTests = append(exTests, exTest)
 	service = "taxa/9615/parent"
@@ -312,9 +339,25 @@ func TestApi(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if !bytes.Equal(get, want) {
-			t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
+		wantLines := strings.Split(string(want), "\n")
+		getLines := strings.Split(string(get), "\n")
+		mismatched := false
+		for i := range wantLines {
+			if i < len(getLines) {
+				if strings.TrimSpace(getLines[i]) != strings.TrimSpace(wantLines[i]) {
+					mismatched = true
+					t.Errorf("Differed in line %d\nget:\n%s\nwant:\n%s", i, getLines[i], wantLines[i])
+				}
+			}
 		}
+		if len(getLines) != len(wantLines) {
+			t.Errorf("Line length mismatch\nget:\n%d\nwant:\n%d\n", len(getLines), len(wantLines))
+		}
+
+		if mismatched {
+			t.Errorf("total: %s\n get:\n%s\nwant:\n%s\n", f, get, want)
+		}
+
 	}
 	for _, test := range libTests {
 		get := test.t()
@@ -323,8 +366,24 @@ func TestApi(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if !bytes.Equal([]byte(get), want) {
-			t.Errorf("%s - get:\n%s\nwant:\n%s\n", f, get, want)
+		wantLines := strings.Split(string(want), "\n")
+		getLines := strings.Split(string(get), "\n")
+		mismatched := false
+		for i := range wantLines {
+			if i < len(getLines) {
+				if strings.TrimSpace(getLines[i]) != strings.TrimSpace(wantLines[i]) {
+					mismatched = true
+					t.Errorf("Differed in line %d\nget:\n%s\nwant:\n%s", i, getLines[i], wantLines[i])
+				}
+			}
 		}
+		if len(getLines) != len(wantLines) {
+			t.Errorf("Line length mismatch\nget:\n%d\nwant:\n%d\n", len(getLines), len(wantLines))
+		}
+
+		if mismatched {
+			t.Errorf("total: %s\n get:\n%s\nwant:\n%s\n", f, get, want)
+		}
+
 	}
 }

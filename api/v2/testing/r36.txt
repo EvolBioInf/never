@@ -1,0 +1,51 @@
+{
+  "tax_id": 9685,
+  "parent": 9682,
+  "is_leaf": true,
+  "name": "Felis catus",
+  "common_name": "domestic cat",
+  "rank": "species",
+  "raw_genome_counts": [
+    {
+      "level": "complete",
+      "count": 3
+    },
+    {
+      "level": "chromosome",
+      "count": 6
+    },
+    {
+      "level": "scaffold",
+      "count": 0
+    },
+    {
+      "level": "contig",
+      "count": 0
+    }
+  ],
+  "rec_genome_counts": [
+    {
+      "level": "complete",
+      "count": 3
+    },
+    {
+      "level": "chromosome",
+      "count": 6
+    },
+    {
+      "level": "scaffold",
+      "count": 0
+    },
+    {
+      "level": "contig",
+      "count": 0
+    }
+  ],
+  "images": [
+    {
+      "id": 65066,
+      "url": "http://www.ncbi.nlm.nih.gov/Taxonomy/taxi/images/701",
+      "attribution": "Basile Morin"
+    }
+  ]
+}
