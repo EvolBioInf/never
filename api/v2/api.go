@@ -1371,8 +1371,8 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		return
 	}
 
-	var data []Taxon
-	for i := 0; (i < offset+limit || limit == -1) && start != end; i++ {
+	data := []Taxon{}
+	for i := 0; (len(data) < limit || limit == -1) && start != end; i++ {
 		parent, err := neidb.Parent(start)
 
 		if err != nil {
@@ -1385,13 +1385,15 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		}
 
 		start = parent
-		tax, err := getTaxonData(start, plain, fieldComposite, neidb)
-		if err != nil {
-			writeServerError(w, "fn path - Error from getTaxonData", "", err)
-			return
-		}
-		data = append(data, tax)
+		if i >= offset {
+			tax, err := getTaxonData(start, plain, fieldComposite, neidb)
+			if err != nil {
+				writeServerError(w, "fn path - Error from getTaxonData", "", err)
+				return
+			}
+			data = append(data, tax)
 
+		}
 	}
 	out := ResponseBody[[]Taxon]{Data: data}
 

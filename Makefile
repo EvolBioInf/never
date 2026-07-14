@@ -9,7 +9,9 @@ all: main $(SUBDIRS)
 .PHONY: all clean $(SUBDIRS) test test_db
 
 main: main.go
-	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" main.go
+	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" main.go && \
+	mkdir -p bin && \
+	cp main bin/never 
 
 main.go: main.org $(SUBDIRS)
 	if [ "$(nw)" != "" ]; then\
@@ -29,9 +31,10 @@ $(SUBDIRS):
 clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
-	done
-	rm -rf main.go
-	rm -rf main
+	done ; \
+	rm -rf main.go ; \
+	rm -rf main ; \
+	rm -rf bin
 
 test: test_db main
 	./main -d testing/testdb -p 8008 --no-rate-limit & \

@@ -72,6 +72,9 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 8}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?limit=3&offset=6&field_composite=id&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 37}
+	exTests = append(exTests, exTest)
 	u = fmt.Sprintf(tmpl, url, service, "?limit=1&offset=8&field_composite=id&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 38}
 	exTests = append(exTests, exTest)
@@ -85,9 +88,15 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 9}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?field_composite=rank&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 39}
+	exTests = append(exTests, exTest)
 	service = "taxa/9605/subtree"
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 10}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?field_composite=gen_count&limit=3&offset=1&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 40}
 	exTests = append(exTests, exTest)
 	service = "taxonomy"
 	u = fmt.Sprintf(tmpl, url, service, "")
@@ -98,12 +107,18 @@ func TestApi(t *testing.T) {
 	exTest = ExTest{t: exec.Command(prog, u), r: 12}
 	exTests = append(exTests, exTest)
 	service = "taxonomy/mrca"
-	u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56312,28725,8825&plain_data=true")
+	u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56312,28725,8825&field_composite=default&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 13}
 	exTests = append(exTests, exTest)
 	service = "taxonomy/path"
 	u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 14}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&limit=3&offset=2&field_composite=id&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 41}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&limit=0&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 38}
 	exTests = append(exTests, exTest)
 	service = "programs"
 	u = fmt.Sprintf(tmpl, url, service, "")

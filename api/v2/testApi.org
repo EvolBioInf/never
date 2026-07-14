@@ -207,6 +207,9 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 8}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?limit=3&offset=6&field_composite=id&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 37}
+  exTests = append(exTests, exTest)
   u = fmt.Sprintf(tmpl, url, service, "?limit=1&offset=8&field_composite=id&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 38}
   exTests = append(exTests, exTest)
@@ -219,21 +222,29 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
   Next up is \ty{parent}. We could test this by looking at the dogs's parent.
+  We also check a composite field with this request.
 #+end_export
 #+begin_src go <<Test \ty{parent}, Pa. \ref{pa:api}>>=
   service = "taxa/9615/parent"
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 9}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?field_composite=rank&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 39}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   \ty{subtree} is the last service of this category. We use it get the subtree
-  of the \ty{Homo} taxon.
+  of the \ty{Homo} taxon. We also test, that we've integrated limits, offsets
+  and field composites again.
 #+end_export
 #+begin_src go <<Test \ty{subtree}, Pa. \ref{pa:api}>>=
   service = "taxa/9605/subtree"
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 10}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?field_composite=gen_count&limit=3&offset=1&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 40}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
@@ -271,17 +282,24 @@ We import \ty{fmt}.
 #+end_export
 #+begin_src go <<Test \ty{mrca}, Pa. \ref{pa:api}>>=
   service = "taxonomy/mrca"
-  u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56312,28725,8825&plain_data=true")
+  u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56312,28725,8825&field_composite=default&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 13}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   We use this result to check the path from the western barn the owl taxa to its order.
+  We also check for limit, offset and field composite integration again.
 #+end_export
 #+begin_src go <<Test \ty{path}, Pa. \ref{pa:api}>>=
   service = "taxonomy/path"
   u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 14}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&limit=3&offset=2&field_composite=id&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 41}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&limit=0&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 38}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex

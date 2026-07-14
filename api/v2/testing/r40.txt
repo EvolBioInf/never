@@ -1,0 +1,65 @@
+[
+  {
+    "tax_id": 9606,
+    "raw_genome_counts": [
+      {
+        "level": "complete",
+        "count": 3
+      },
+      {
+        "level": "chromosome",
+        "count": 1173
+      },
+      {
+        "level": "scaffold",
+        "count": 978
+      },
+      {
+        "level": "contig",
+        "count": 410
+      }
+    ]
+  },
+  {
+    "tax_id": 741158,
+    "raw_genome_counts": [
+      {
+        "level": "complete",
+        "count": 0
+      },
+      {
+        "level": "chromosome",
+        "count": 0
+      },
+      {
+        "level": "scaffold",
+        "count": 0
+      },
+      {
+        "level": "contig",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "tax_id": 63221,
+    "raw_genome_counts": [
+      {
+        "level": "complete",
+        "count": 0
+      },
+      {
+        "level": "chromosome",
+        "count": 0
+      },
+      {
+        "level": "scaffold",
+        "count": 0
+      },
+      {
+        "level": "contig",
+        "count": 0
+      }
+    ]
+  }
+]

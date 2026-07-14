@@ -2422,15 +2422,15 @@ type Node struct {
 
 #+begin_export latex
 	We climb the taxonomy until we reach its end or the root, whichever comes
-	first. As we accomodate paging with this endpoint, we also stop if
-	go past the last entry of the current page. We need to begin at the start
+	first. As we accomodate pagination with this endpoint, we also stop if
+	exceed limit, thoug we only start counting. We need to begin at the start
 	node either way, because we cant't index the path by our offset.
 	Using the resulting ids for retrieving the requested taxon fields.
 #+end_export
 
 #+begin_src go <<Climb taxonomy, Pa. \ref{pa:api}>>=
-	var data []Taxon
-	for i := 0; (i < offset + limit || limit == -1) && start != end; i++ {
+	data := []Taxon{}
+	for i := 0; (len(data) < limit || limit == -1) && start != end; i++ {
 		parent, err := neidb.Parent(start)
 
 		if err != nil {
@@ -2439,7 +2439,9 @@ type Node struct {
 		}
 		//<<Has the path reached the root?, Pa. \ref{pa:api}>>
 		start = parent
-		//<<Store new node on path, Pa. \ref{pa:api}>>
+		if i >= offset {
+			//<<Store new node on path, Pa. \ref{pa:api}>>
+		}
 	}
 	out := ResponseBody[[]Taxon]{Data: data}
 #+end_src
