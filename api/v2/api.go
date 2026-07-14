@@ -1438,6 +1438,13 @@ func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ..
 }
 
 func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	options := r.URL.Query()["options"]
+	extra := r.URL.Query()["extra"]
+
+	if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
+		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly.`)
+		return
+	}
 
 	dbPath := args[0].(string)
 	progName := args[1].(string)
@@ -1445,8 +1452,6 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	options := r.URL.Query()["options"]
-	extra := r.URL.Query()["extra"]
 	callArgs := options
 	if progName == "fintac" {
 		callArgs = append(callArgs, "-H")
@@ -1454,7 +1459,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	callArgs = append(callArgs, "../"+dbPath)
 
 	callArgs = append(callArgs, extra...)
-	callArgs = slices.DeleteFunc(callArgs, func(w string) bool { return w == "-r" })
+	callArgs = slices.DeleteFunc(callArgs, func(w string) bool { return w == "-r" || w == "--r" })
 
 	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
 	err := os.MkdirAll(dir, os.ModePerm)
@@ -1484,10 +1489,10 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 
 	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
 	cmd.Stdin = strings.NewReader(stdinData)
-	if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
-		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly`)
-		return
-	}
+	res := &bytes.Buffer{}
+	cmd.Stdout = res
+	cmdErr := &bytes.Buffer{}
+	cmd.Stderr = cmdErr
 
 	cmd.Dir = dir
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -1506,13 +1511,15 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 			" | Program call: " + cmd.String(),
 	})
 
-	res, err := cmd.CombinedOutput()
+	err = cmd.Run()
 
-	if err != nil {
+	if cmdErr.Len() != 0 {
+		writeBadRequestResp(w, cmdErr.String())
+	} else if err != nil {
 		writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
 	} else {
 		w.Header().Set("Content-Type", plainCt.String())
-		w.Write(res)
+		w.Write(res.Bytes())
 	}
 }
 

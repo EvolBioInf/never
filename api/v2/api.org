@@ -2528,10 +2528,10 @@ type Node struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
 	func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check for arguments, Pa. \ref{pa:api}>>
+		//<<Check for input, Pa. \ref{pa:api}>>
 		//<<Get dbPath and program name, Pa. \ref{pa:api}>>
 		//<<Create program call context, Pa. \ref{pa:api}>>
-		//<<Determine call arguments, Pa. \ref{pa:api}>>
+		//<<Set call arguments, Pa. \ref{pa:api}>>
 		//<<Call program, Pa. \ref{pa:api}>>
 		//<<Write response, Pa. \ref{pa:api}>>
 	}
@@ -2539,13 +2539,16 @@ type Node struct {
 
 #+begin_export latex
 	Before doing anything we should check whether the request contains any 
-	arguments. If there are neither options, nor extra arguments and no data in
+	input. If there are neither options, nor extra arguments and no data in
 	the body, we should respond with an error. 
 #+end_export
 
 #+begin_src go <<Check for input, Pa. \ref{pa:api}>>=
+	options := r.URL.Query()["options"]
+	extra := r.URL.Query()["extra"]
+
 	if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
-		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly`)
+		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly.`)
 		return
 	}
 #+end_src
@@ -2591,13 +2594,11 @@ type Node struct {
 	both \ty{options} and \ty{extra} as if we were doing a normal program call. 
 #+end_export
 
-#+begin_src go <<Determine call arguments, Pa. \ref{pa:api}>>=
-	options := r.URL.Query()["options"]
-	extra := r.URL.Query()["extra"]
+#+begin_src go <<Set call arguments, Pa. \ref{pa:api}>>=
 	callArgs := options
 	//<<Add database to args, Pa. \ref{pa:api}>>
 	callArgs = append(callArgs, extra...)
-	callArgs = slices.DeleteFunc(callArgs, func(w string) bool {return w == "-r"})
+	callArgs = slices.DeleteFunc(callArgs, func(w string) bool {return w == "-r" || w == "--r"})
 #+end_src
 
 #+begin_export latex
@@ -2635,11 +2636,10 @@ type Node struct {
 	var stdinData string
 	//<<Handle files, Pa. \ref{pa:api}>>
 	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
-	cmd.Stdin = strings.NewReader(stdinData)
-	//<<Check for input, Pa. \ref{pa:api}>>
+	//<<Set pipes, Pa. \ref{pa:api}>>
 	cmd.Dir = dir
 	//<<Log command, Pa. \ref{pa:api}>>
-	res, err := cmd.CombinedOutput()
+	err = cmd.Run()
 #+end_src
 
 #+begin_export latex
@@ -2866,9 +2866,22 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	After doing all of this file handling, we are done with prepping the 
-	program's environment. We might want to check to the program calls at some
-	later stage, though. Logging is a good tool for this.
+	After doing all of this file handling, all that is left to do is, set the 
+	pipes for input and output of the command. Then we are done with prepping the 
+	program's environment. 
+#+end_export
+
+#+begin_src go <<Set pipes, Pa. \ref{pa:api}>>=
+	cmd.Stdin = strings.NewReader(stdinData)
+	res := &bytes.Buffer{}
+	cmd.Stdout = res
+	cmdErr := &bytes.Buffer{}
+	cmd.Stderr = cmdErr
+#+end_src
+
+#+begin_export latex
+	At some point, we might want to see what programs were called and what string
+	was used to call the programs. Logging is a good tool for this.
 #+end_export
 
 #+begin_src go <<Log command, Pa. \ref{pa:api}>>=
@@ -2904,10 +2917,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Write response, Pa. \ref{pa:api}>>=
-	if err != nil {
+	if cmdErr.Len() != 0 {
+		writeBadRequestResp(w, cmdErr.String())
+	} else if err != nil {
 		writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
 	} else {
 		w.Header().Set("Content-Type", plainCt.String())
-		w.Write(res)
+		w.Write(res.Bytes())
 	}
 #+end_src
