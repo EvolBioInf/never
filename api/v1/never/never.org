@@ -144,26 +144,37 @@ We serve two kinds of files. Style files and data files.
 #+end_src
 #+begin_export latex
 The style files are locate in the directory \ty{static}. We make them
-available by registering a file server to that directory.
+available by registering a file server to that directory. We use the \ty{embed}
+package for deployment purposes. This bundles files for us and directories for
+us, rendering the file resolution independent of the current workind directory.
+The files are marked and resolved using go directives.
 #+end_export
 #+begin_src go <<Serve style files, Pa. \ref{pa:nev}>>=
-  staticFiles := http.FileServer(http.Dir("api/v1/never/static"))
-  http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix+"/static/",
+  staticFiles := http.FileServer(http.FS(staticFS))
+  http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix,
 	  staticFiles))
 #+end_src
 #+begin_export latex
-We import \ty{http}.
+We import \ty{http} and \ty{embed}.
 #+end_export
 #+begin_src go <<Imports, Pa. \ref{pa:nev}>>=
+  "embed"
   "net/http"
+#+end_src
+#+begin_export latex
+  We also need to write the go directive in order to get the data.
+#+end_export
+#+begin_src go <<Variables, Pa. \ref{pa:nev}>>=
+//go:embed static/*
+var staticFS embed.FS
 #+end_src
 #+begin_export latex
 The data files, finally, are located in the directory \ty{data}. We
 make them available by registering a file server to that directory.
 #+end_export
 #+begin_src go <<Serve data files, Pa. \ref{pa:nev}>>=
-  dataFiles := http.FileServer(http.Dir("api/v1/never/data"))
-  http.Handle(docsPrefix+"/data/", http.StripPrefix(docsPrefix+"/data/", dataFiles))
+  dataFiles := http.FileServer(http.Dir("data"))
+  http.Handle("/data/", http.StripPrefix("/data/", dataFiles))
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
@@ -609,14 +620,14 @@ function, in which we add the template functions to their map and then
 add the map to the templates. Having added the functions to the
 templates, we can carry out the initial parsing of the templates. We
 have written these to the file \ty{templates.html}, which we keep in
-the directory \ty{static}.
+the directory \ty{static}. We again make this available to our executable using
+\ty{embed}.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:nev}>>=
   func init() {
 	  //<<Add template functions, Pa. \ref{pa:nev}>>
 	  templates = templates.Funcs(templateFuncs)
-	  path := "api/v1/never/static/templates.html"
-	  templates = template.Must(templates.ParseFiles(path))
+	  templates = template.Must(templates.ParseFS(staticFS, "static/*.html"))
   }
 #+end_src
 #+begin_export latex

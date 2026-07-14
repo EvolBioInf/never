@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"html/template"
 
-	"net/http"
-	"path"
+	"embed"
 
-	"os"
 	"strings"
 
 	"github.com/pb33f/libopenapi"
@@ -18,6 +16,8 @@ import (
 	"encoding/json"
 
 	"bytes"
+
+	"net/http"
 )
 
 type Content struct {
@@ -70,6 +70,15 @@ type Response struct {
 	Mime        string
 }
 
+//go:embed pages/*
+var pagesFS embed.FS
+
+//go:embed components/*
+var componentsFS embed.FS
+
+//go:embed static/*
+var staticFS embed.FS
+
 func RegisterRoutes(prefix string, local bool, port int) {
 	fmt.Println("docsV2: Creating template")
 	tmpl := template.New("app")
@@ -115,35 +124,23 @@ func RegisterRoutes(prefix string, local bool, port int) {
 		},
 	})
 
-	fmt.Println("docsV2: Reading files")
-	files := []string{
-		path.Join("docs", "v2", "pages", "*.html"),
-		path.Join("docs", "v2", "components", "*.html"),
-		path.Join("docs", "v2", "components", "*", "*.html"),
-	}
+	fmt.Println("docsV2: Reading html files")
+	tmpl = template.Must(tmpl.ParseFS(pagesFS, "pages/*.html"))
+	tmpl = template.Must(tmpl.ParseFS(componentsFS, "components/*.html", "components/*/*.html"))
 
-	var err error
-	for _, file := range files {
-		tmpl, err = tmpl.ParseGlob(file)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Internal Server error: %s\n %d\n", err.Error(), http.StatusInternalServerError)
-		}
-	}
-
-	content := retrieveData("docs/v2/static/api_spec.json", local, port)
+	content := retrieveData(local, port)
 	content.Prefix = prefix
 
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
 
 	// The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
 	// The path before that are the ones I may use within the browser to ask for these files from the file server.
-	http.Handle(prefix+"/static/", http.StripPrefix(prefix+"/static/", http.FileServer(http.Dir("docs/v2/static"))))
+	http.Handle(prefix+"/static/", http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 }
 
-func retrieveData(filepath string, local bool, port int) Content {
-	fmt.Println("docsV2: reading spec")
-	spec, _ := os.ReadFile(filepath)
-
+func retrieveData(local bool, port int) Content {
+	fmt.Println("docsV2: reading api document")
+	spec, _ := staticFS.ReadFile("static/api_spec.json")
 	fmt.Println("docsV2: creating document")
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
@@ -420,6 +417,5 @@ func parseResponseSchema(t map[string]any) string {
 }
 
 func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
-	fmt.Println("docsV2: served default")
 	tmpl.ExecuteTemplate(w, "app.html", content)
 }

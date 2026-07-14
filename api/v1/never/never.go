@@ -1,6 +1,7 @@
 package neverV1
 
 import (
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -94,6 +95,9 @@ var apiPrefix string
 var docsPrefix string
 var neidb *tdb.TaxonomyDB
 var dateFile string
+
+//go:embed static/*
+var staticFS embed.FS
 var services []Service
 var templates = template.New("templates")
 var templateFuncs = make(template.FuncMap)
@@ -197,8 +201,7 @@ func inc(i int) int {
 func init() {
 	templateFuncs["inc"] = inc
 	templates = templates.Funcs(templateFuncs)
-	path := "api/v1/never/static/templates.html"
-	templates = template.Must(templates.ParseFiles(path))
+	templates = template.Must(templates.ParseFS(staticFS, "static/*.html"))
 }
 func makeHandler(fn func(http.ResponseWriter, *http.Request,
 	*PageData)) http.HandlerFunc {
@@ -608,11 +611,11 @@ func RegisterRoutes(apiPref, docsPref, dbPath, dateFilePath string) {
 	if _, err := os.Stat(dateFile); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("neverV1: dateFile does not exist")
 	}
-	staticFiles := http.FileServer(http.Dir("api/v1/never/static"))
-	http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix+"/static/",
+	staticFiles := http.FileServer(http.FS(staticFS))
+	http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix,
 		staticFiles))
-	dataFiles := http.FileServer(http.Dir("api/v1/never/data"))
-	http.Handle(docsPrefix+"/data/", http.StripPrefix(docsPrefix+"/data/", dataFiles))
+	dataFiles := http.FileServer(http.Dir("data"))
+	http.Handle("/data/", http.StripPrefix("/data/", dataFiles))
 	http.HandleFunc(docsPrefix, makeHandler(index))
 	handleRedirect("/taxi/", apiPrefix)
 	http.HandleFunc(apiPrefix+"/taxi/", makeHandler(taxi))

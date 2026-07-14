@@ -21,6 +21,7 @@
   )
 
   //<<Types, Pa. \ref{pa:docs}>>
+  //<<Embedded files, Pa. \ref{pa:docs}>>
   //<<Functions, Pa. \ref{pa:docs}>>
 #+end_src
 
@@ -152,39 +153,35 @@
 #+end_src
 
 #+begin_export latex
-  Reading the HTML files is rather simple. We just define an
-  array of strings to all the files paths and parse them using the
-  template object. Instead of writing down every HTML file
-  explicitly, we can use wildcards. This allows us to just define
-  the directories of the files instead. Addionally we need to react
-  to errors during parsing. The easiest way to do this is by printing
-  them to the console.
+  When reading the html files, we use the \ty{embed} package, which bundles all
+  our read-only files with the resulting binary. Now reading the files is about
+  extracting them from their filesystems and parsing them using \ty{ParseFS}.
 #+end_export
 
 #+begin_src go <<Read HTML files, Pa. \ref{pa:docs}>>=
-  fmt.Println("docsV2: Reading files")
-  files:= []string{
-    path.Join("docs", "v2","pages", "*.html"),
-    path.Join("docs", "v2","components", "*.html"),
-    path.Join("docs", "v2","components", "*", "*.html"),
-  }
-
-  var err error
-  for _, file := range files {
-    tmpl, err = tmpl.ParseGlob(file)
-    if err != nil {
-      fmt.Fprintf(os.Stderr, "Internal Server error: %s\n %d\n", err.Error(), http.StatusInternalServerError)
-    }
-  }
+  fmt.Println("docsV2: Reading html files")
+  tmpl = template.Must(tmpl.ParseFS(pagesFS, "pages/*.html"))
+  tmpl = template.Must(tmpl.ParseFS(componentsFS, "components/*.html", "components/*/*.html"))
 #+end_src
 
 #+begin_export latex
-  We also need to add an import for \ty{net/http} and \ty{path}
+  The filesystems themselves need to be defined using go directives.
+#+end_export
+
+#+begin_src go <<Embedded files, Pa. \ref{pa:docs}>>=
+	//go:embed pages/*
+	var pagesFS embed.FS
+  
+	//go:embed components/*
+	var componentsFS embed.FS
+#+end_src
+
+#+begin_export latex
+  We need to import the \ty{embed} package.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
-	"net/http"
- 	"path"
+  "embed"
 #+end_src
 
 #+begin_export latex
@@ -255,7 +252,6 @@ type Response struct {
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
-	"os"
 	"strings"
 
 	"github.com/pb33f/libopenapi"
@@ -263,16 +259,33 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  We might aswell provide the assigned prefix, so the html pages may use them for dynamic linking.
+  We might aswell provide the assigned prefix, so the html pages may use them 
+  for dynamic linking.
 #+end_export
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
-  content := retrieveData("docs/v2/static/api_spec.json", local, port)
+  content := retrieveData(local, port)
   content.Prefix = prefix
 #+end_src
 
+#+begin_export latex
+  Relative file references break whenever the binary is called from somewhere 
+  outside the top level directory. We already used the \ty{embed} package 
+  ealier to fix this. Let's do that again.
+#+end_export
+
+#+begin_src go <<Embedded files, Pa. \ref{pa:docs}>>=
+  //go:embed static/*
+  var staticFS embed.FS
+#+end_src
+
+#+begin_export latex
+  Our function for retrieving data, takes the data file, a flag stating, 
+  whether this is hosted locally and lastly the server's port.
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
-  func retrieveData(filepath string, local bool, port int) Content {
+  func retrieveData(local bool, port int) Content {
     // <<Create Model from library, Pa. \ref{pa:docs}>>
     // <<Parse data to Content, Pa. \ref{pa:docs}>>
   }
@@ -285,9 +298,8 @@ type Response struct {
 #+end_export
 
 #+begin_src go <<Create Model from library, Pa. \ref{pa:docs}>>=
-  fmt.Println("docsV2: reading spec")
-  spec, _ := os.ReadFile(filepath)
-
+  fmt.Println("docsV2: reading api document")
+  spec, _ := staticFS.ReadFile("static/api_spec.json")
   fmt.Println("docsV2: creating document")
   document, err := libopenapi.NewDocument(spec)
   if err != nil {
@@ -940,23 +952,35 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
 #+end_src
 
+#+begin_export latex
+  We also need to add an import for \ty{net/http}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+	"net/http"
+#+end_src
+
+#+begin_export latex
+  The default handler does nothing except executing the \ty{app} template for
+  now.
+#+end_export
+
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
   func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
-    fmt.Println("docsV2: served default")
     tmpl.ExecuteTemplate(w, "app.html", content)
   }
 #+end_src
 
 #+begin_export latex
-  As already mentioned the frontend relies on static files. Those
-  are mostly style sheets. Serving those requires a fileserver.
-  To improve url readability and conform to the given prefix
-  we make use of the stripprefix function, when registering
+  As already mentioned the frontend relies on static files. Those are mostly 
+  style sheets. Serving those requires a fileserver. We again use \ty{emebd} to
+  keep file access when using binaries. To improve url readability and conform
+  to the given prefix we make use of the stripprefix function, when registering
   the handler.
 #+end_export
 
 #+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
   // The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
   // The path before that are the ones I may use within the browser to ask for these files from the file server.
- 	http.Handle(prefix+"/static/", http.StripPrefix(prefix+"/static/", http.FileServer(http.Dir("docs/v2/static"))))
+  http.Handle(prefix+"/static/", http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 #+end_src
