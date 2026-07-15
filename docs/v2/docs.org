@@ -100,7 +100,8 @@
   we make all characters lowercased  as well.
   Then we join the strings and delete leading dashes as well as dashes followed
   by another dash. The path parameters are enclosed by curly brackets. We remove
-  those as well.
+  those as well. If an argument is empty or just a \ty{/} we convert it to 
+  \ty{em}.
 #+end_export
 
 #+begin_src go <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>=
@@ -108,6 +109,9 @@
 		noSlash := make([]string, len(args))
 		for i, str := range args {
 			noSlash[i] = strings.ReplaceAll(str, "/", "-")
+      if noSlash[i] == "" ||  noSlash[i] == "-" {
+        noSlash[i] = "em"
+      }
 		}
 
 		joined := strings.ReplaceAll(strings.Join(noSlash, "-"), "--", "-")
@@ -236,6 +240,7 @@ type Parameter struct {
 	Required    bool
   Extra       string
 	Example     string
+	Explode     bool
 	Schema      string
 }
 
@@ -418,9 +423,9 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_export latex
   There is basic data that describes the parameter,
   opposed to the examples or the actual schema we'll need to display.
-  This data is the parameter's type as in whether it's a query or path parameter,
+  This data is the parameter's type, as in whether it's a query or path parameter,
   the parameter's name and its description. Checking if the parameter is required
-  is also trivial.
+  and whether to explode it are also trivial.
 #+end_export
 
 #+begin_src go <<Retrieve basic parameter info, Pa. \ref{pa:docs}>>=
@@ -433,6 +438,10 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	if parameter.Required != nil {
 		param.Required = *parameter.Required
 	}
+
+  if parameter.Explode != nil {
+    param.Explode = *parameter.Explode
+  }
 #+end_src
 
 #+begin_export latex
@@ -591,37 +600,55 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  Appending the query parameters is relatively straight forward.
-  If there are any query parameters, that have examples we append
-  a question mark. We then iterate over the parameters, if they
-  have an example value we append their name followed by '='
-  and the example value. The discriminator is defined as '&'.
+  Appending the query parameters is relatively straight forward. If there are 
+  any query parameters, that have examples we append a question mark. We then
+  iterate over the parameters, if they have an example value we append their
+  name followed by '=' and the example value. The discriminator is defined as
+  '&'. Array parameters might have an explode option. The explode options 
+  says that instead of passing array items in one comma separated string, we 
+  need to pass them as separate arguments, each prefixed by the parameters 
+  name.
 #+end_export
 
 #+begin_src go <<Append query parameters, Pa. \ref{pa:docs}>>=
-
-	needsAnd := false
+	sb := new(strings.Builder)
 	for _, param := range queryParams {
 		if param.Example != "" {
-			if needsAnd {
-				examplePath += "&"
-			} else {
-        examplePath += "?"
-				needsAnd = true
-			}
-
-			examplePath += fmt.Sprintf("%s=%s", param.Name, param.Example)
+      if param.Explode {
+				for val := range strings.SplitSeq(param.Example, ",") {
+          addSingleArg(sb, param.Name, val)
+        }
+      } else {
+        addSingleArg(sb, param.Name, param.Example)
+      }
 		}
 	}
 
-	newOperation.ExampleRequest = examplePath
+	newOperation.ExampleRequest = examplePath + sb.String()
 #+end_src
 
 #+begin_export latex
-  The response contains different data depending on which
-  type of response we are currently handling. While all of
-  them provide a code and description, it's just the response
-  with code 200 that provides and example and schema.
+  We implement a function that handles prepending the correct character and
+  builds the arguments according to our definition above.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
+  func addSingleArg(base *strings.Builder, name, value string) {
+    if base.Len() == 0 {
+			base.WriteRune('?')
+		} else {
+			base.WriteRune('&')
+		}
+    base.WriteString(name)
+    base.WriteRune('=')
+    base.WriteString(value)
+  }
+#+end_src
+
+#+begin_export latex
+  The response contains different data depending on which type of response we
+  are currently handling. While all of them provide a code and description,
+  it's just the response with code 200 that provides and example and schema.
 #+end_export
 
 #+begin_src go <<Parse Responses, Pa. \ref{pa:docs}>>=
@@ -636,9 +663,9 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  The code is provided as the key for the current response.
-  As it is a string and we expect an integer, we need to convert it.
-  To do that we import \ty{strconv} and later use it to call \ty{Atoi}.
+  The code is provided as the key for the current response. As it is a string
+  and we expect an integer, we need to convert it. To do that we import
+  \ty{strconv} and later use it to call \ty{Atoi}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
@@ -664,12 +691,13 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   To differentiate between response codes we first check whether it is of code
-  200 (OK). If it is we need to make sure that is has content. A single response
-  code may store multiple response contents, meaning we need to iterate over 
-  the provided map. This is also the only step were the acceptable content types
-  are defined. Mime types/ content types of 200 (OK) responses indicate that this 
-  server accepts requests asking for these content types. We want to document them,
-  which means we add them to the operations list of \ty{AcceptHeaders}.
+  200 (OK). If it is we need to make sure that is has content. A single 
+  response code may store multiple response contents, meaning we need to
+  iterate over the provided map. This is also the only step were the acceptable
+  content types are defined. Mime types/ content types of 200 (OK) responses
+  indicate that this server accepts requests asking for these content types.
+  We want to document them, which means we add them to the operations list of
+  \ty{AcceptHeaders}.
 #+end_export
 
 #+begin_src go <<Act on response code, Pa. \ref{pa:docs}>>=
@@ -677,68 +705,17 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	  newResponse.Mime = mime
 	  if newResponse.Code == 200 && contentValue != nil {
         newOperation.AcceptHeader = append(newOperation.AcceptHeader, mime)
-        // <<Parse response example, Pa. \ref{pa:docs}>>
         // <<Parse response schema, Pa. \ref{pa:docs}>>
+        // <<Parse response example, Pa. \ref{pa:docs}>>
 	  }
   }
 #+end_src
 
 #+begin_export latex
-  Parsing the example requires \ty{encoding/json}. This package provides
-  json specific utility functions. Most importantly it allows us to pretty print
-  using \ty{MarshalIndent}.
-  So we need to import the package.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
-  "encoding/json"
-#+end_src
-
-#+begin_export latex
-  To parse the example we first check, whether there is an example to begin with.
-  If there is an example we take it and marshal that. The example is, for some reason,
-  wrapped in an object called \ty{"value"}. Before turning it into our final json
-  representation, we need to unwrap the response, to comply with the underlying api.
-#+end_export
-
-#+begin_src go <<Parse response example, Pa. \ref{pa:docs}>>=
-	if contentValue.Examples.Len() > 0 {
-		ex := contentValue.Examples.First().Value()
-		marhshalled, err := ex.MarshalJSON()
-
-		if err != nil {
-			panic(fmt.Sprintf("cannot marshal example: %e", err))
-		}
-
-    // <<Unwrap response example, Pa. \ref{pa:docs}>>
-	}
-#+end_src
-
-#+begin_export latex
-  My idea of unwrapping an object consists of two steps:
-  The first one is to use the json string to create a json object, essentially unmarshalling it.
-  The second step is remarshalling it with the correct indentation using a deeper key.
-  I use this marshal and unmarshal strategy to get the json out of the libraries \ty{yaml.Node} format.
-  It might be possible to do all of this in one go, but I don't see how, given the example's node structure.
-#+end_export
-
-#+begin_src go <<Unwrap response example, Pa. \ref{pa:docs}>>=
-	var wrapped map[string]any
-	json.Unmarshal(marhshalled, &wrapped)
-	unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
-
-	if err != nil {
-		panic(fmt.Sprintf("cannot unwrap example: %e", err))
-	}
-
-	newOperation.ExampleResponse = string(unwrapped)
-#+end_src
-
-#+begin_export latex
-  Parsing the schema is a bit more complex. So we divide the problem into multiple steps.
-  Step one is building the schema. Then we need to get a better representation.
-  The next step is to parse the new representation. Lastly we need to write the
-  result into our \ty{Operation} type.
+  Parsing the schema is rather complex. So we divide the problem into multiple
+  steps. Step one is building the schema. Then we need to get a better 
+  representation. The next step is to parse the new representation. Lastly we
+  need to write the result into our \ty{Operation} type.
 #+end_export
 
 #+begin_src go <<Parse response schema, Pa. \ref{pa:docs}>>=
@@ -763,8 +740,13 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  To get this schema in a more manageable representation we use the
-  \ty{Marshal}, \ty{Unmarshal} approach again.
+  To get this schema in a more manageable representation, we are going to 
+  unwrap it. My idea of unwrapping an object consists of two steps:
+  The first one is to use the yaml representation to create a json string, 
+  essentially marshalling it. The second step is unmarshalling it, to get a 
+  json object. I use this marshal and unmarshal strategy to get the json out of
+  the libraries \ty{yaml.Node} format. It might be possible to do all of this
+  in one go, but I don't see how, given the example's node structure. 
 #+end_export
 
 #+begin_src go <<Change schema representation, Pa. \ref{pa:docs}>>=
@@ -775,6 +757,16 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 	var rawSchema map[string]any
 	json.Unmarshal(schemaMarshalled, &rawSchema)
+#+end_src
+
+#+begin_export latex
+  Marshalling requires \ty{encoding/json}. This package provides json
+  specific utility functions. Most importantly it allows us to pretty print 
+  using \ty{MarshalIndent}. So we need to import the package.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+  "encoding/json"
 #+end_src
 
 #+begin_export latex
@@ -904,9 +896,9 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  Lastly we handle the default case. This is by far the easiest.
-  All we need to do is take the given type and put it into a string literal
-  notation i.e. pre- and postpend quotation marks.
+  Lastly we handle the default case. This is by far the easiest. All we need to
+  do is take the given type and put it into a string literal notation i.e. pre-
+  and postpend quotation marks.
 #+end_export
 
 #+begin_src go <<Handle default case, Pa. \ref{pa:docs}>>=
@@ -914,10 +906,10 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  With the schema parsing function done we return to parsing the operation. Here
-  we need to call the function we just created and use the json module to correctly indent it.
-  The \ty{indent} function expects a buffer from the bytes package. So we need to import that
-  first.
+  With the schema parsing function done we return to parsing the operation.
+  Here we need to call the function we just created and use the json module to
+  correctly indent it. The \ty{indent} function expects a buffer from the
+  \ty{bytes} package. So we need to import that first.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
@@ -925,7 +917,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  Now we are ready to call the parse function
+  Now we are ready to call the parse function.
 #+end_export
 
 #+begin_src go <<Parse new schema representation, Pa. \ref{pa:docs}>>=
@@ -940,6 +932,76 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   var indented bytes.Buffer
 	json.Indent(&indented, []byte(parsed), "", "  ")
 	newOperation.Schema = indented.String()
+#+end_src
+
+#+begin_export latex
+  To parse the example, we first check whether there is an example to begin
+  with. If there is an example we take it and marshal that. The example is, for
+  some reason, wrapped in an object called \ty{"value"}. Before turning it into
+  our final json representation, we need to unwrap the response, to comply with
+  the underlying api.
+#+end_export
+
+#+begin_src go <<Parse response example, Pa. \ref{pa:docs}>>=
+	if contentValue.Examples.Len() > 0 {
+		ex := contentValue.Examples.First().Value()
+		marhshalled, err := ex.MarshalJSON()
+
+		if err != nil {
+			panic(fmt.Sprintf("cannot marshal example: %e", err))
+		}
+
+    // <<Unwrap response example, Pa. \ref{pa:docs}>>
+	}
+#+end_src
+
+#+begin_export latex
+  Unwrapping the response is again about marshalling and unmarshalling the 
+  json. If the response schema is plain text, i.e. the response is a single 
+  string, we need to modify the example. The plain text examples are enclosed
+  in \ty{"}, to comply with json format. The actual response however is not
+  enclosed by \ty{"}. So we need to remove this. Then there is a \ty{\n} 
+  string, which should instead be single rune, and lastly there are 
+  escaped quotation marks \ty{"}, in the strings, which need to be unescaped.
+#+end_export
+
+#+begin_src go <<Unwrap response example, Pa. \ref{pa:docs}>>=
+	var wrapped map[string]any
+	json.Unmarshal(marhshalled, &wrapped)
+	unwrapped, err := marshal(wrapped["value"])
+
+	if err != nil {
+		panic(fmt.Sprintf("cannot unwrap example: %e", err))
+	}
+	
+  if newOperation.Schema == `"string"` {
+    rawStr := string(unwrapped)
+    rawStr = rawStr[1:len(rawStr)-1]
+    rawStr = strings.ReplaceAll(rawStr, `\"`, `"`)
+		rawStr = strings.ReplaceAll(rawStr, "\\r\\n", "\n")
+	  newOperation.ExampleResponse = rawStr
+  } else {
+	  newOperation.ExampleResponse = string(unwrapped)
+  }
+#+end_src
+
+#+begin_export latex
+  The value of \ty{ExampleResponse}, is directly passed to an html tag, that
+  renders it as is. \ty{Marshal} introduces html escaping which clashes with
+  the html tag we use for rendering. We quickly write a custom version for
+  unmarshal using the json encoder, which avoids html escaping, but keeps 
+  indentation and overall pretty printing.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
+  func marshal(x any) ([]byte, error) {
+    buf := new(bytes.Buffer)
+	  encoder := json.NewEncoder(buf)
+	  encoder.SetEscapeHTML(false)
+	  encoder.SetIndent("", "  ")
+	  err := encoder.Encode(x)
+    return buf.Bytes(), err
+  }
 #+end_src
 
 #+begin_export latex

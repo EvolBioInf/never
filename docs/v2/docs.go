@@ -61,6 +61,7 @@ type Parameter struct {
 	Required    bool
 	Extra       string
 	Example     string
+	Explode     bool
 	Schema      string
 }
 
@@ -92,6 +93,9 @@ func RegisterRoutes(prefix string, local bool, port int) {
 			noSlash := make([]string, len(args))
 			for i, str := range args {
 				noSlash[i] = strings.ReplaceAll(str, "/", "-")
+				if noSlash[i] == "" || noSlash[i] == "-" {
+					noSlash[i] = "em"
+				}
 			}
 
 			joined := strings.ReplaceAll(strings.Join(noSlash, "-"), "--", "-")
@@ -199,21 +203,20 @@ func retrieveData(local bool, port int) Content {
 			examplePath = strings.ReplaceAll(examplePath, "{", "")
 			examplePath = strings.ReplaceAll(examplePath, "}", "")
 
-			needsAnd := false
+			sb := new(strings.Builder)
 			for _, param := range queryParams {
 				if param.Example != "" {
-					if needsAnd {
-						examplePath += "&"
+					if param.Explode {
+						for val := range strings.SplitSeq(param.Example, ",") {
+							addSingleArg(sb, param.Name, val)
+						}
 					} else {
-						examplePath += "?"
-						needsAnd = true
+						addSingleArg(sb, param.Name, param.Example)
 					}
-
-					examplePath += fmt.Sprintf("%s=%s", param.Name, param.Example)
 				}
 			}
 
-			newOperation.ExampleRequest = examplePath
+			newOperation.ExampleRequest = examplePath + sb.String()
 
 			for strCode, response := range operation.Responses.Codes.FromOldest() {
 				code, err := strconv.Atoi(strCode)
@@ -231,26 +234,6 @@ func retrieveData(local bool, port int) Content {
 						newResponse.Mime = mime
 						if newResponse.Code == 200 && contentValue != nil {
 							newOperation.AcceptHeader = append(newOperation.AcceptHeader, mime)
-							if contentValue.Examples.Len() > 0 {
-								ex := contentValue.Examples.First().Value()
-								marhshalled, err := ex.MarshalJSON()
-
-								if err != nil {
-									panic(fmt.Sprintf("cannot marshal example: %e", err))
-								}
-
-								var wrapped map[string]any
-								json.Unmarshal(marhshalled, &wrapped)
-								unwrapped, err := json.MarshalIndent(wrapped["value"], "", "  ")
-
-								if err != nil {
-									panic(fmt.Sprintf("cannot unwrap example: %e", err))
-								}
-
-								newOperation.ExampleResponse = string(unwrapped)
-
-							}
-
 							if contentValue.Schema != nil {
 								schema, err := contentValue.Schema.BuildSchema()
 								if err != nil {
@@ -270,6 +253,34 @@ func retrieveData(local bool, port int) Content {
 								var indented bytes.Buffer
 								json.Indent(&indented, []byte(parsed), "", "  ")
 								newOperation.Schema = indented.String()
+
+							}
+
+							if contentValue.Examples.Len() > 0 {
+								ex := contentValue.Examples.First().Value()
+								marhshalled, err := ex.MarshalJSON()
+
+								if err != nil {
+									panic(fmt.Sprintf("cannot marshal example: %e", err))
+								}
+
+								var wrapped map[string]any
+								json.Unmarshal(marhshalled, &wrapped)
+								unwrapped, err := marshal(wrapped["value"])
+
+								if err != nil {
+									panic(fmt.Sprintf("cannot unwrap example: %e", err))
+								}
+
+								if newOperation.Schema == `"string"` {
+									rawStr := string(unwrapped)
+									rawStr = rawStr[1 : len(rawStr)-1]
+									rawStr = strings.ReplaceAll(rawStr, `\"`, `"`)
+									rawStr = strings.ReplaceAll(rawStr, "\\r\\n", "\n")
+									newOperation.ExampleResponse = rawStr
+								} else {
+									newOperation.ExampleResponse = string(unwrapped)
+								}
 
 							}
 
@@ -307,6 +318,10 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 		if parameter.Required != nil {
 			param.Required = *parameter.Required
+		}
+
+		if parameter.Explode != nil {
+			param.Explode = *parameter.Explode
 		}
 
 		if len(schema.Type) > 0 {
@@ -355,6 +370,17 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	}
 
 	return parsed
+}
+
+func addSingleArg(base *strings.Builder, name, value string) {
+	if base.Len() == 0 {
+		base.WriteRune('?')
+	} else {
+		base.WriteRune('&')
+	}
+	base.WriteString(name)
+	base.WriteRune('=')
+	base.WriteString(value)
 }
 
 func parseResponseSchema(t map[string]any) string {
@@ -414,6 +440,15 @@ func parseResponseSchema(t map[string]any) string {
 
 	return res
 
+}
+
+func marshal(x any) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err := encoder.Encode(x)
+	return buf.Bytes(), err
 }
 
 func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {

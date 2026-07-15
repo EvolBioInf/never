@@ -2184,7 +2184,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "# Back  ID       Name                  Rank\n  31    1        root                  no rank\n  30    131567   cellular organisms    cellular root\n  29    2759     Eukaryota             domain\n  28    33154    Opisthokonta          clade\n  27    33208    Metazoa               kingdom\n  26    6072     Eumetazoa             clade\n  25    33213    Bilateria             clade\n  24    33511    Deuterostomia         clade\n  23    7711     Chordata              phylum\n  22    89593    Craniata              subphylum\n  21    7742     Vertebrata            clade\n  20    7776     Gnathostomata         clade\n  19    117570   Teleostomi            clade\n  18    117571   Euteleostomi          clade\n  17    8287     Sarcopterygii         superclass\n  16    1338369  Dipnotetrapodomorpha  clade\n  15    32523    Tetrapoda             clade\n  14    32524    Amniota               clade\n  13    40674    Mammalia              class\n  12    32525    Theria                clade\n  11    9347     Eutheria              clade\n  10    1437010  Boreoeutheria         clade\n  9     314146   Euarchontoglires      superorder\n  8     9443     Primates              order\n  7     376913   Haplorrhini           suborder\n  6     314293   Simiiformes           infraorder\n  5     9526     Catarrhini            parvorder\n  4     314295   Hominoidea            superfamily\n  3     9604     Hominidae             family\n  2     207598   Homininae             subfamily\n  1     9605     Homo                  genus\n  0     9606     Homo sapiens          species"
+                    "value": "# Back  ID       Name                  Rank\r\n  31    1        root                  no rank\r\n  30    131567   cellular organisms    cellular root\r\n  29    2759     Eukaryota             domain\r\n  28    33154    Opisthokonta          clade\r\n  27    33208    Metazoa               kingdom\r\n  26    6072     Eumetazoa             clade\r\n  25    33213    Bilateria             clade\r\n  24    33511    Deuterostomia         clade\r\n  23    7711     Chordata              phylum\r\n  22    89593    Craniata              subphylum\r\n  21    7742     Vertebrata            clade\r\n  20    7776     Gnathostomata         clade\r\n  19    117570   Teleostomi            clade\r\n  18    117571   Euteleostomi          clade\r\n  17    8287     Sarcopterygii         superclass\r\n  16    1338369  Dipnotetrapodomorpha  clade\r\n  15    32523    Tetrapoda             clade\r\n  14    32524    Amniota               clade\r\n  13    40674    Mammalia              class\r\n  12    32525    Theria                clade\r\n  11    9347     Eutheria              clade\r\n  10    1437010  Boreoeutheria         clade\r\n  9     314146   Euarchontoglires      superorder\r\n  8     9443     Primates              order\r\n  7     376913   Haplorrhini           suborder\r\n  6     314293   Simiiformes           infraorder\r\n  5     9526     Catarrhini            parvorder\r\n  4     314295   Hominoidea            superfamily\r\n  3     9604     Hominidae             family\r\n  2     207598   Homininae             subfamily\r\n  1     9605     Homo                  genus\r\n  0     9606     Homo sapiens          species"
                   }
                 }
               }
@@ -2229,7 +2229,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "digraph g {\n  rankdir=LR\n  9592 [label=\"9592\"]\n  9592 [label=\"Gorilla\"]\n  207598 -> 9592\n  9593 [color=\"lightsalmon\",style=filled]\n  9593 [label=\"Gorilla gorilla\"]\n  9592 -> 9593\n  9595 [color=\"lightsalmon\",style=filled]\n  9595 [label=\"Gorilla gorilla gorilla\"]\n  9593 -> 9595\n  9596 [label=\"9596\"]\n  9596 [label=\"Pan\"]\n  207598 -> 9596\n  9597 [color=\"lightsalmon\",style=filled]\n  9597 [label=\"Pan paniscus\"]\n  9596 -> 9597\n  9598 [color=\"lightsalmon\",style=filled]\n  9598 [label=\"Pan troglodytes\"]\n  9596 -> 9598\n  9605 [label=\"9605\"]\n  9605 [label=\"Homo\"]\n  207598 -> 9605\n  9606 [color=\"lightsalmon\",style=filled]\n  9606 [label=\"Homo sapiens\"]\n  9605 -> 9606\n  37012 [color=\"lightsalmon\",style=filled]\n  37012 [label=\"Pan troglodytes verus\"]\n  9598 -> 37012\n  207598 [label=\"207598\"]\n  207598 [label=\"Homininae\"]\n  499232 [color=\"lightsalmon\",style=filled]\n  499232 [label=\"Gorilla beringei\"]\n  9592 -> 499232\n  1159185 [color=\"lightsalmon\",style=filled]\n  1159185 [label=\"Gorilla beringei beringei\"]\n   499232 -> 1159185\n}"
+                    "value": "digraph g {\r\n  rankdir=LR\r\n  9592 [label=\"9592\"]\r\n  9592 [label=\"Gorilla\"]\r\n  207598 -> 9592\r\n  9593 [color=\"lightsalmon\",style=filled]\r\n  9593 [label=\"Gorilla gorilla\"]\r\n  9592 -> 9593\r\n  9595 [color=\"lightsalmon\",style=filled]\r\n  9595 [label=\"Gorilla gorilla gorilla\"]\r\n  9593 -> 9595\r\n  9596 [label=\"9596\"]\r\n  9596 [label=\"Pan\"]\r\n  207598 -> 9596\r\n  9597 [color=\"lightsalmon\",style=filled]\r\n  9597 [label=\"Pan paniscus\"]\r\n  9596 -> 9597\r\n  9598 [color=\"lightsalmon\",style=filled]\r\n  9598 [label=\"Pan troglodytes\"]\r\n  9596 -> 9598\r\n  9605 [label=\"9605\"]\r\n  9605 [label=\"Homo\"]\r\n  207598 -> 9605\r\n  9606 [color=\"lightsalmon\",style=filled]\r\n  9606 [label=\"Homo sapiens\"]\r\n  9605 -> 9606\r\n  37012 [color=\"lightsalmon\",style=filled]\r\n  37012 [label=\"Pan troglodytes verus\"]\r\n  9598 -> 37012\r\n  207598 [label=\"207598\"]\r\n  207598 [label=\"Homininae\"]\r\n  499232 [color=\"lightsalmon\",style=filled]\r\n  499232 [label=\"Gorilla beringei\"]\r\n  9592 -> 499232\r\n  1159185 [color=\"lightsalmon\",style=filled]\r\n  1159185 [label=\"Gorilla beringei beringei\"]\r\n  499232 -> 1159185}"
                   }
                 }
               }
@@ -2276,7 +2276,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "#Clade  Targets  Neighbors  Unknowns  Split (%)  Parent  Dist(Parent)\n 5007    22       8          18        98.53      5005    0.000385"
+                    "value": "#Clade  Targets  Neighbors  Unknowns  Split (%)  Parent  Dist(Parent)\r\n 5007    22       8          18        98.53      5005    0.000385"
                   }
                 }
               }
@@ -2333,7 +2333,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "# MRCA(targets): 9606, Homo sapiens\n# MRCA(targets+neighbors): 9605, Homo\n# Type  Taxon-ID  Name                               Genomes\nt       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1\ntt      63221     Homo sapiens neanderthalensis      -\ntt      741158    Homo sapiens subsp. 'Denisova'     -\nn       1425170   Homo heidelbergensis               -\nn       2665952   environmental samples              -\nn       2665953   Homo sapiens environmental sample  -\nn       2813598   unclassified Homo                  -\nn       2813599   Homo sp.                           -"
+                    "value": "# MRCA(targets): 9606, Homo sapiens\r\n# MRCA(targets+neighbors): 9605, Homo\r\n# Type  Taxon-ID  Name                               Genomes\r\nt       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1\r\ntt      63221     Homo sapiens neanderthalensis      -\r\ntt      741158    Homo sapiens subsp. 'Denisova'     -\r\nn       1425170   Homo heidelbergensis               -\r\nn       2665952   environmental samples              -\r\nn       2665953   Homo sapiens environmental sample  -\r\nn       2813598   unclassified Homo                  -\r\nn       2813599   Homo sp.                           -"
                   }
                 }
               }
@@ -2377,7 +2377,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "TEST"
+                    "value": "# MRCA(targets): 9606, Homo sapiens\r\n# MRCA(targets+neighbors): 9605, Homo\r\n# Type  Taxon-ID  Name                               Genomes\r\nt       9606      Homo sapiens                       GCA_947361175.1|GCA_963931935.1|GCF_009914755.1\r\ntt      63221     Homo sapiens neanderthalensis      -\r\ntt      741158    Homo sapiens subsp. 'Denisova'     -\r\nn       1425170   Homo heidelbergensis               -\r\nn       2665952   environmental samples              -\r\nn       2665953   Homo sapiens environmental sample  -\r\nn       2813598   unclassified Homo                  -\r\nn       2813599   Homo sp.                           -"
                   }
                 }
               }
@@ -2434,7 +2434,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "TEST"
+                    "value": "digraph g {\r\n  rankdir=LR\r\n  1 [label=\"species\n392350 (97.7%)\"]\r\n  2 [label=\"no rank\n4503 (1.1%)\"]\r\n  3 [label=\"no rank\n17 (< 0.1%)\"]\r\n  4 [label=\"strain\n422 (0.1%)\"]\r\n  5 [label=\"no rank\n2 (< 0.1%)\"]\r\n  6 [label=\"serogroup\n1646 (0.4%)\"]\r\n  7 [label=\"no rank\n15 (< 0.1%)\"]\r\n  8 [label=\"serotype\n6 (< 0.1%)\"]\r\n  9 [label=\"strain\n1 (< 0.1%)\"]\r\n  10 [label=\"strain\n12 (< 0.1%)\"]\r\n  11 [label=\"serotype\n30 (< 0.1%)\"]\r\n  12 [label=\"strain\n1 (< 0.1%)\"]\r\n  13 [label=\"strain\n2438 (0.6%)\"]\r\n  14 [label=\"no rank\n85 (< 0.1%)\"]\r\n  1 -> 2\r\n  2 -> 3\r\n  2 -> 4\r\n  4 -> 5\r\n  1 -> 6\r\n  6 -> 7\r\n  6 -> 8\r\n  8 -> 9\r\n  6 -> 10\r\n  1 -> 11\r\n  11 -> 12\r\n  1 -> 13\r\n  13 -> 14\r\n}"
                   }
                 }
               }
@@ -2478,7 +2478,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "digraph g {\n  rankdir=LR\n  1 [label=\"species\n392350 (97.7%)\"]\n  2 [label=\"no rank\n4503 (1.1%)\"]\n  3 [label=\"no rank\n17 (< 0.1%)\"]\n  4 [label=\"strain\n422 (0.1%)\"]\n  5 [label=\"no rank\n2 (< 0.1%)\"]\n  6 [label=\"serogroup\n1646 (0.4%)\"]\n  7 [label=\"no rank\n15 (< 0.1%)\"]\n  8 [label=\"serotype\n6 (< 0.1%)\"]\n  9 [label=\"strain\n1 (< 0.1%)\"]\n  10 [label=\"strain\n12 (< 0.1%)\"]\n  11 [label=\"serotype\n30 (< 0.1%)\"]\n  12 [label=\"strain\n1 (< 0.1%)\"]\n  13 [label=\"strain\n2438 (0.6%)\"]\n  14 [label=\"no rank\n85 (< 0.1%)\"]\n  1 -> 2\n  2 -> 3\n  2 -> 4\n  4 -> 5\n  1 -> 6\n  6 -> 7\n  6 -> 8\n  8 -> 9\n  6 -> 10\n  1 -> 11\n  11 -> 12\n  1 -> 13\n  13 -> 14\n}"
+                    "value": "digraph g {\r\n  rankdir=LR\r\n  1 [label=\"species\n392350 (97.7%)\"]\r\n  2 [label=\"no rank\n4503 (1.1%)\"]\r\n  3 [label=\"no rank\n17 (< 0.1%)\"]\r\n  4 [label=\"strain\n422 (0.1%)\"]\r\n  5 [label=\"no rank\n2 (< 0.1%)\"]\r\n  6 [label=\"serogroup\n1646 (0.4%)\"]\r\n  7 [label=\"no rank\n15 (< 0.1%)\"]\r\n  8 [label=\"serotype\n6 (< 0.1%)\"]\r\n  9 [label=\"strain\n1 (< 0.1%)\"]\r\n  10 [label=\"strain\n12 (< 0.1%)\"]\r\n  11 [label=\"serotype\n30 (< 0.1%)\"]\r\n  12 [label=\"strain\n1 (< 0.1%)\"]\r\n  13 [label=\"strain\n2438 (0.6%)\"]\r\n  14 [label=\"no rank\n85 (< 0.1%)\"]\r\n  1 -> 2\r\n  2 -> 3\r\n  2 -> 4\r\n  4 -> 5\r\n  1 -> 6\r\n  6 -> 7\r\n  6 -> 8\r\n  8 -> 9\r\n  6 -> 10\r\n  1 -> 11\r\n  11 -> 12\r\n  1 -> 13\r\n  13 -> 14\r\n}"
                   }
                 }
               }
@@ -2521,7 +2521,7 @@
                 },
                 "examples": {
                   "Example": {
-                    "value": "# ID    Parent  Name\n  9606  9605    Homo sapiens"
+                    "value": "# ID    Parent  Name\r\n  9606  9605    Homo sapiens"
                   }
                 }
               }
