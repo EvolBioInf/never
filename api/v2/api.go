@@ -5,9 +5,8 @@ import (
 
 	"net/http"
 
-	"log"
-
 	"github.com/evolbioinf/neighbors/tdb"
+	"log"
 
 	"strings"
 
@@ -20,7 +19,6 @@ import (
 
 	"encoding/json"
 	"fmt"
-
 	"github.com/evolbioinf/never/util"
 
 	"slices"
@@ -407,6 +405,11 @@ func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ..
 	})
 }
 
+func writeBadRequestResp(w http.ResponseWriter, text string) {
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write([]byte(text))
+}
+
 func makeOptionsRoute(nodes []Node) {
 	http.HandleFunc("OPTIONS "+nodes[0].BasePath, func(w http.ResponseWriter, r *http.Request) {
 		methods := []string{"OPTIONS"}
@@ -534,11 +537,6 @@ func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
 		}
 	}
 	return true
-}
-
-func writeBadRequestResp(w http.ResponseWriter, text string) {
-	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(text))
 }
 
 func extractPaging(r *http.Request) (offset, limit int) {

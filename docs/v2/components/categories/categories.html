@@ -1,4 +1,4 @@
-{{define "components/endpoint"}}
+{{define "components/categories/categories"}}
 <script type="text/javascript">
   // This manages folding and expanding of the endpoint headers
   const onHashUpdate = ({ oldURL }) => {
@@ -14,7 +14,6 @@
     const newBodyId = "body-" + newHash;
 
     const oldHeaderId = "header-" + oldHash;
-    const newHeaderId = "header-" + newHash;
 
     const oldEndpoint = document.getElementById(oldBodyId);
     if (oldEndpoint) {
@@ -30,28 +29,20 @@
     if (newEndpoint) {
       newEndpoint.style.display = "flex";
     }
-
-    const newHeader = document.getElementById(newHeaderId);
-    if (newHeader) {
-      newHeader.classList.add("a");
-    }
-
-    const endpointCard = document.getElementById("card-" + newHash);
-    endpointCard?.scrollIntoView();
   };
 
   window.addEventListener("hashchange", onHashUpdate);
   window.onload = () => onHashUpdate({ oldURL: "" });
 </script>
 
-{{range .Paths}} {{template "components/endpoint-card/endpoint-card" .}} {{end}}
-
-<script>
-  // Scroll example inputs to right end,
-  // so we can see more of the important part of the url.
-  const elements = document.getElementsByClassName("input-example");
-  for (const el of elements) {
-    el.scrollLeft = el.scrollWidth;
-  }
-</script>
+{{range .Paths}}
+  {{$OpName := .Name}}
+  {{range .Operations}}
+    {{if (or (gt (len .Tags) 1) (eq (len .Tags) 0))}}
+      {{template "components/endpoint-card/endpoint-card" (dict "Name" $OpName "Op" .)}} 
+    {{end}}
+  {{end}}
+{{end}}
+{{$Paths := .Paths}} {{range .Tags}} 
+  {{template "components/categories/category" (dict "Paths" $Paths "Tag" .)}} {{end}} 
 {{end}}

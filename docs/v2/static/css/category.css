@@ -1,0 +1,17 @@
+.category-header {
+  cursor: pointer;
+  width: 12rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  border-bottom: 3px solid var(--secondary-color);
+  gap: 1rem;
+}
+
+.category-header h3 {
+  align-self: center;
+}
+
+.category-header .category-header-arrow {
+  align-self: center;
+}

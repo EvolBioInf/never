@@ -85,7 +85,7 @@
   fmt.Println("docsV2: Registering custom functions")
   tmpl.Funcs(template.FuncMap{
     "sub": func(a, b int) int {
-  return a - b
+      return a - b
     },
     // <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>
     // <<Create dict from args, Pa. \ref{pa:docs}>>
@@ -319,11 +319,10 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  Just like the openAPI spec allows for broad and immensely
-  detailed and broad specifications so does the model created by the library.
-  This means the Model is too unspecific and powerful for our purpose.
-  We now go through it and parse it bit by bit into our Content structure,
-  which is much more managable.
+  Just like the openAPI spec allows for broad and immensely detailed and broad
+  specifications so does the model created by the library. This means the Model
+  is too unspecific and powerful for our purpose. We now go through it and
+  parse it bit by bit into our Content structure, which is much more managable.
 #+end_export
 
 #+begin_src go <<Parse data to Content, Pa. \ref{pa:docs}>>=

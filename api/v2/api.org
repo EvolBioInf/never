@@ -196,7 +196,7 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
 	func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), args ...any) {
 		http.HandleFunc(node.Action + " " + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-				fn(w, r, node, args...)
+			fn(w, r, node, args...)
 		})
 	}
 #+end_src
@@ -208,6 +208,19 @@ type Node struct {
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
 	"net/http"
 #+end_src
+
+#+begin_export latex
+	When writing a bad request response, we want to set the 400 (Bad Request)
+	HTTP response code and write some message for elaboration.
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+	func writeBadRequestResp(w http.ResponseWriter, text string) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(text))
+	}
+#+end_src
+
 
 #+begin_export latex
 	All of the endpoints need to access the database.
@@ -1021,19 +1034,8 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	When writing a bad request response, we want to set the 400 (Bad Request)
-	HTTP response code and write some message for elaboration.
-#+end_export
-
-#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func writeBadRequestResp(w http.ResponseWriter, text string) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(text))
-	}
-#+end_src
-
-#+begin_export latex
-	In this case we say that the request is missing a required parameter.
+	In this case 400 (Bad Request) response, we say that the request is missing a
+	required parameter.
 #+end_export
 
 #+begin_src go <<Write bad request, Pa. \ref{pa:api}>>=

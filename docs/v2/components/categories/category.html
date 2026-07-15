@@ -1,0 +1,12 @@
+{{define "components/categories/category"}}
+  {{template "components/categories/category-header" .Tag.Name}}
+  {{$TagName := .Tag.Name}}
+  {{range .Paths}}
+    {{$OpName := .Name}}
+    {{range .Operations}}
+      {{if (and (eq (len .Tags) 1) (eq (index .Tags 0) $TagName) )}}
+        {{template "components/endpoint-card/endpoint-card" (dict "Name" $OpName "Op" .)}} 
+      {{end}}
+    {{end}}
+  {{end}}
+{{end}}

@@ -25,12 +25,12 @@
       "description": "Endpoints concerning taxon accessions"
     },
     {
-      "name": "Program",
-      "description": "Endpoints executing programs"
-    },
-    {
       "name": "Taxon",
       "description": "Endpoints concerning one or several taxa"
+    },
+    {
+      "name": "Program",
+      "description": "Endpoints executing programs"
     }
   ],
   "paths": {
@@ -1361,7 +1361,7 @@
     "/taxonomy/accessions": {
       "get": {
         "summary": "Get most recent common ancestor",
-        "tags": ["Taxon", "Accession"],
+        "tags": ["Taxon"],
         "responses": {
           "200": {
             "description": "OK",
