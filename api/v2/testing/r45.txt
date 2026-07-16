@@ -1,0 +1,6 @@
+[
+  {
+    "accession": "GCA_009802015.1",
+    "level": "scaffold"
+  }
+]

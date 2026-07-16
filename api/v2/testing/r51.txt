@@ -1,0 +1,27 @@
+# Back  ID       Name                  Rank
+  25    1        root                  no rank
+  24    131567   cellular organisms    cellular root
+  23    2759     Eukaryota             domain
+  22    33154    Opisthokonta          clade
+  21    33208    Metazoa               kingdom
+  20    6072     Eumetazoa             clade
+  19    33213    Bilateria             clade
+  18    33511    Deuterostomia         clade
+  17    7711     Chordata              phylum
+  16    89593    Craniata              subphylum
+  15    7742     Vertebrata            clade
+  14    7776     Gnathostomata         clade
+  13    117570   Teleostomi            clade
+  12    117571   Euteleostomi          clade
+  11    8287     Sarcopterygii         superclass
+  10    1338369  Dipnotetrapodomorpha  clade
+  9     32523    Tetrapoda             clade
+  8     8292     Amphibia              class
+  7     41666    Batrachia             superorder
+  6     8342     Anura                 order
+  5     8416     Neobatrachia          suborder
+  4     30352    Ranoidea              superfamily
+  3     8397     Ranidae               family
+  2     8399     Rana                  genus
+  1     121175   Rana                  subgenus
+  0     8407     Rana temporaria       species

@@ -1,0 +1,23 @@
+[
+  {
+    "tax_id": 8407,
+    "accessions": [
+      {
+        "accession": "GCA_009802015.1",
+        "level": "scaffold"
+      },
+      {
+        "accession": "GCA_058280865.1",
+        "level": "chromosome"
+      },
+      {
+        "accession": "GCA_905171725.1",
+        "level": "scaffold"
+      },
+      {
+        "accession": "GCF_905171775.1",
+        "level": "chromosome"
+      }
+    ]
+  }
+]

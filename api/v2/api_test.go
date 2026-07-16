@@ -32,6 +32,9 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?accession_ids=GCF_000001405.40,GCA_000002115.2&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 2}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?db=small&accession_ids=GCA_009802015.1&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 45}
+	exTests = append(exTests, exTest)
 	service = "accessions/GCF_000001405.40"
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 3}

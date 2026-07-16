@@ -74,8 +74,8 @@
 #+begin_export latex
   We send queries to each endpoint testing their responses. The endpoints are
   categorized by their url hierarchy. Let's write down the groups and then test
-  all endpoints of each group. The root document is an exception, as it does not
-  belong to a group.
+  all endpoints of each group. The root document is an exception, as it does
+  not belong to a group.
 #+end_export
 #+begin_src go <<Construct tests, Pa. \ref{pa:api}>>=
   //<<Prepare queries, Pa. \ref{pa:api}>>
@@ -87,13 +87,12 @@
   //<<Test programs category, Pa. \ref{pa:api}>>
 #+end_src
 #+begin_export latex
-  A query is called by passing a URL to \ty{fetch} that is extended by
-  the name of the service, possible path paramters and or a query string,
+  A query is called by passing a URL to \ty{fetch} that is extended by the name
+  of the service, possible path paramters and or a query string, 
   \begin{verbatim}
-  url/service/?query
+    url/service/?query
   \end{verbatim}
-  We implement this pattern in a template to construct the extended
-  URLs.
+  We implement this pattern in a template to construct the extended URLs.
 #+end_export
 #+begin_src go <<Prepare queries, Pa. \ref{pa:api}>>=
   tmpl := "%s/%s%s"
@@ -114,7 +113,11 @@ We import \ty{fmt}.
   "fmt"
 #+end_src
 #+begin_export latex
-  There are two services services in the accessions category.
+  There are two services services in the accessions category. We are also going 
+  to test using different databases once or twice per category. There is a 
+  large database. It holds data on some animals, like cats, dogs, owls and 
+  humans. It contains some Ecoli taxa as well. The smaller database contains 
+  the (8407) taxa, which is the common frog, plus all it's ancestors.
 #+end_export
 #+begin_src go <<Test accessions category, Pa. \ref{pa:api}>>=
   //<<Test \ty{accessions}, Pa. \ref{pa:api}>>
@@ -130,6 +133,9 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?accession_ids=GCF_000001405.40,GCA_000002115.2&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 2}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?db=small&accession_ids=GCA_009802015.1&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 45}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   \ty{accession} provides a single entity of that same collection.
@@ -138,6 +144,10 @@ We import \ty{fmt}.
   service = "accessions/GCF_000001405.40"
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 3}
+  exTests = append(exTests, exTest)
+  service = "accessions/GCA_009802015.1"
+  u = fmt.Sprintf(tmpl, url, service, "?db=small&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 46}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
@@ -182,6 +192,9 @@ We import \ty{fmt}.
   exTests = append(exTests, exTest)
   u = fmt.Sprintf(tmpl, url, service, "?name=Canis&limit=3&offset=5&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 33}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?db=small&name=Frog&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 47}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
@@ -250,6 +263,10 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?field_composite=rank&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 39}
   exTests = append(exTests, exTest)
+  service = "taxa/8407/parent"
+  u = fmt.Sprintf(tmpl, url, service, "?db=small&field_composite=rank&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 48}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   \ty{subtree} is the last service of this category. We use it get the subtree
@@ -294,6 +311,9 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=338152,338153&limit=5&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 12}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?db=small&taxon_ids=8407&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 49}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   Now lets look at the most recent common ancestor of a couple of owl taxa.
@@ -318,6 +338,9 @@ We import \ty{fmt}.
   exTests = append(exTests, exTest)
   u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&limit=0&plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 38}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?db=small&start_id=8407&end_id=8292&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 50}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
@@ -351,6 +374,9 @@ We import \ty{fmt}.
   service = "programs/ants"
   u = fmt.Sprintf(tmpl, url, service, "?options=56312")
   exTest = ExTest{t: exec.Command(prog, u), r: 16}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small")
+  exTest = ExTest{t: exec.Command(prog, u), r: 51}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
@@ -563,6 +589,13 @@ We import \ty{fmt}.
 			[]string{},
 		)},
     r:20}
+  libTests = append(libTests, libTest)
+  libTest = LibTest{t: func() string {return util.SendGetRequest(
+			tu,
+			[]string{"frog"},
+			[]string{},
+		)},
+    r:52}
   libTests = append(libTests, libTest)
 #+end_src
 

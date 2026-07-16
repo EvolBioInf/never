@@ -118,13 +118,14 @@ The date and the version are injected at compile time, so like
 #+begin_export latex
 \section{\ty{SendGetRequest}}
   !The function \ty{SendGetRequest} takes as argument an address as a string
-  !and the program's options and extra arguments as string slices. It sends a
-  !get request using these values and returns the result.
+  !and the program's options and extra arguments as string slices, as well as
+  !miscellaneous arguments as a map. It sends a get request using these values
+  !and returns the result.
 
   Inside \ty{SendGetRequest} function,
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-  func SendGetRequest(address string, options, extraArgs []string) string {
+  func SendGetRequest(address string, options, extraArgs []string, miscArgs map[string]string) string {
     //<<Encode query, Pa. \ref{pa:uti}>>
     //<<Create \ty{get} request, Pa. \ref{pa:uti}>>
     //<<Execute request, Pa. \ref{pa:uti}>>
@@ -157,12 +158,14 @@ The date and the version are injected at compile time, so like
 #+end_src
 #+begin_export latex
   Now all we need to do is call \ty{urlEncodeSlice} for both the options and
-  the extra arguments.
+  the extra arguments... and encode the miscellaneous arguments further down 
+  the line.
 #+end_export
 #+begin_src go <<Encode query, Pa. \ref{pa:uti}>>=
   hasParam := new(bool)
   qOptions := urlEncodeSlice(options, "options", hasParam)
   qExtraArgs := urlEncodeSlice(extraArgs, "extra", hasParam)
+  //<<Encode misc args, Pa. \ref{pa:uti}>>
 #+end_src
 #+begin_export latex
   This requires us to import \ty{net/url} and \ty{strings}.
@@ -170,6 +173,16 @@ The date and the version are injected at compile time, so like
 #+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
   "net/url"
   "strings"
+#+end_src
+#+begin_export latex
+  We iterate over the \ty{miscArgs} encoding both the keys and values. 
+  Everything else is pretty much the same as encoding a slice.
+#+end_export
+#+begin_src go <<Encode misc args, Pa. \ref{pa:uti}>>=
+  var sb strings.Builder
+  for m, a := range miscArgs {
+
+  }
 #+end_src
 #+begin_export latex
   The \ty{net/http} package provides functions for creating requests.
