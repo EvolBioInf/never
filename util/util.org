@@ -140,20 +140,17 @@ The date and the version are injected at compile time, so like
   be encoded. The \ty{net/url} package provides a function for this.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-  func urlEncodeSlice(slc []string, paramName string, hasParam *bool) string {
-    var sb strings.Builder
+  func urlEncodeSlice(qb *strings.Builder, slc []string, paramName string) {
     for _, v := range slc {
-      if !(*hasParam) {
-        sb.WriteRune('?')
-        *hasParam = true
+      if qb.Len() == 0 {
+        qb.WriteRune('?')
       } else {
-        sb.WriteRune('&')
+        qb.WriteRune('&')
       }
-      sb.WriteString(paramName)
-        sb.WriteRune('=')
-      sb.WriteString(url.QueryEscape(v))
+      qb.WriteString(paramName)
+      qb.WriteRune('=')
+      qb.WriteString(url.QueryEscape(v))
     }
-    return sb.String()
   }
 #+end_src
 #+begin_export latex
@@ -162,9 +159,9 @@ The date and the version are injected at compile time, so like
   the line.
 #+end_export
 #+begin_src go <<Encode query, Pa. \ref{pa:uti}>>=
-  hasParam := new(bool)
-  qOptions := urlEncodeSlice(options, "options", hasParam)
-  qExtraArgs := urlEncodeSlice(extraArgs, "extra", hasParam)
+  qb := new(strings.Builder)
+  urlEncodeSlice(qb, options, "options")
+  urlEncodeSlice(qb, extraArgs, "extra")
   //<<Encode misc args, Pa. \ref{pa:uti}>>
 #+end_src
 #+begin_export latex
@@ -179,9 +176,15 @@ The date and the version are injected at compile time, so like
   Everything else is pretty much the same as encoding a slice.
 #+end_export
 #+begin_src go <<Encode misc args, Pa. \ref{pa:uti}>>=
-  var sb strings.Builder
   for m, a := range miscArgs {
-
+    if qb.Len() == 0 {
+      qb.WriteRune('?')
+    } else {
+      qb.WriteRune('&')
+    }
+    qb.WriteString(url.QueryEscape(m))
+    qb.WriteRune('=')
+    qb.WriteString(url.QueryEscape(a))
   }
 #+end_src
 #+begin_export latex
@@ -191,7 +194,7 @@ The date and the version are injected at compile time, so like
   the http verb manually.
 #+end_export
 #+begin_src go <<Create \ty{get} request, Pa. \ref{pa:uti}>>=
-  req, err := http.NewRequest(http.MethodGet, address+qOptions+qExtraArgs, nil)
+  req, err := http.NewRequest(http.MethodGet, address+qb.String(), nil)
   Check(err)
 #+end_src
 #+begin_export latex
@@ -226,7 +229,7 @@ The date and the version are injected at compile time, so like
   !result.
 #+end_export
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-  func SendPostRequest(address string, options, extraArgs []string, files []*os.File, stdin *os.File) string {
+  func SendPostRequest(address string, options, extraArgs []string, miscArgs map[string]string, files []*os.File, stdin *os.File) string {
     //<<Encode query, Pa. \ref{pa:uti}>>
     //<<Set \ty{post} form data, Pa. \ref{pa:uti}>>
     //<<Create \ty{post} request, Pa. \ref{pa:uti}>>
@@ -297,7 +300,7 @@ The date and the version are injected at compile time, so like
   as for the get request. The body
 #+end_export
 #+begin_src go <<Create \ty{post} request, Pa. \ref{pa:uti}>>=
-  req, err := http.NewRequest(http.MethodPost, address+qOptions+qExtraArgs, &b)
+  req, err := http.NewRequest(http.MethodPost, address+qb.String(), &b)
   Check(err)
 #+end_src
 #+begin_export latex

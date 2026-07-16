@@ -39,6 +39,10 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 3}
 	exTests = append(exTests, exTest)
+	service = "accessions/GCA_009802015.1"
+	u = fmt.Sprintf(tmpl, url, service, "?db=small&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 46}
+	exTests = append(exTests, exTest)
 	service = "databases"
 	u = fmt.Sprintf(tmpl, url, service, "")
 	exTest = ExTest{t: exec.Command(prog, u), r: 42}
@@ -58,6 +62,9 @@ func TestApi(t *testing.T) {
 	exTests = append(exTests, exTest)
 	u = fmt.Sprintf(tmpl, url, service, "?name=Canis&limit=3&offset=5&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 33}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?db=small&name=Frog&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 47}
 	exTests = append(exTests, exTest)
 	service = "taxa/9685"
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
@@ -104,6 +111,10 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?field_composite=rank&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 39}
 	exTests = append(exTests, exTest)
+	service = "taxa/8407/parent"
+	u = fmt.Sprintf(tmpl, url, service, "?db=small&field_composite=rank&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 48}
+	exTests = append(exTests, exTest)
 	service = "taxa/9605/subtree"
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 10}
@@ -119,6 +130,9 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=338152,338153&limit=5&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 12}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?db=small&taxon_ids=8407&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 49}
+	exTests = append(exTests, exTest)
 	service = "taxonomy/mrca"
 	u = fmt.Sprintf(tmpl, url, service, "?taxon_ids=56312,28725,8825&field_composite=default&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 13}
@@ -133,6 +147,9 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?start_id=56312&end_id=3078114&limit=0&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 38}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?db=small&start_id=8407&end_id=8292&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 50}
+	exTests = append(exTests, exTest)
 	service = "programs"
 	u = fmt.Sprintf(tmpl, url, service, "")
 	exTest = ExTest{t: exec.Command(prog, u), r: 15}
@@ -140,6 +157,9 @@ func TestApi(t *testing.T) {
 	service = "programs/ants"
 	u = fmt.Sprintf(tmpl, url, service, "?options=56312")
 	exTest = ExTest{t: exec.Command(prog, u), r: 16}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small")
+	exTest = ExTest{t: exec.Command(prog, u), r: 51}
 	exTests = append(exTests, exTest)
 	service = "programs/dree"
 	u = fmt.Sprintf(tmpl, url, service, "?options=-r&options=-n&options=3073808")
@@ -155,6 +175,7 @@ func TestApi(t *testing.T) {
 			fu,
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{"testing/eco7k.nwk"},
+			nil,
 			[]*os.File{e1},
 			nil,
 		)
@@ -170,6 +191,7 @@ func TestApi(t *testing.T) {
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{},
 			nil,
+			nil,
 			e2,
 		)
 	},
@@ -184,6 +206,7 @@ func TestApi(t *testing.T) {
 			[]string{"-t", "991910_"},
 			[]string{},
 			nil,
+			nil,
 			e3,
 		)
 	},
@@ -194,6 +217,7 @@ func TestApi(t *testing.T) {
 			fu,
 			[]string{},
 			[]string{},
+			nil,
 			nil,
 			nil,
 		)
@@ -207,6 +231,7 @@ func TestApi(t *testing.T) {
 			nu,
 			[]string{"-t", "9606", "-L", "complete"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 21}
@@ -219,6 +244,7 @@ func TestApi(t *testing.T) {
 			nu,
 			[]string{"-L", "complete"},
 			[]string{"testing/targets.txt"},
+			nil,
 			[]*os.File{t1},
 			nil,
 		)
@@ -234,6 +260,7 @@ func TestApi(t *testing.T) {
 			[]string{"-L", "complete"},
 			[]string{},
 			nil,
+			nil,
 			t2,
 		)
 	},
@@ -244,6 +271,7 @@ func TestApi(t *testing.T) {
 			nu,
 			[]string{},
 			[]string{},
+			nil,
 		)
 	},
 		r: 20}
@@ -253,6 +281,7 @@ func TestApi(t *testing.T) {
 			nu,
 			[]string{"-t", "9685", "-l"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 22}
@@ -262,6 +291,7 @@ func TestApi(t *testing.T) {
 			nu,
 			[]string{"-t", "9685", "-l", "-o"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 23}
@@ -271,6 +301,7 @@ func TestApi(t *testing.T) {
 			nu,
 			[]string{"-l", "-t", "9612,9615", "-T"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 24}
@@ -282,6 +313,7 @@ func TestApi(t *testing.T) {
 			ru,
 			[]string{"9612"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 25}
@@ -291,6 +323,7 @@ func TestApi(t *testing.T) {
 			ru,
 			[]string{"-L", "chromosome", "9612"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 26}
@@ -300,6 +333,7 @@ func TestApi(t *testing.T) {
 			ru,
 			[]string{"-t", "-L", "chromosome", "9612"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 27}
@@ -312,6 +346,7 @@ func TestApi(t *testing.T) {
 			ru,
 			[]string{"-g", "testing/myGenomeList.txt", "9612"},
 			[]string{},
+			nil,
 			[]*os.File{g1},
 			nil,
 		)
@@ -323,6 +358,7 @@ func TestApi(t *testing.T) {
 			ru,
 			[]string{},
 			[]string{},
+			nil,
 		)
 	},
 		r: 20}
@@ -334,6 +370,7 @@ func TestApi(t *testing.T) {
 			tu,
 			[]string{"-t", "9612"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 29}
@@ -343,6 +380,7 @@ func TestApi(t *testing.T) {
 			tu,
 			[]string{"homo sapiens"},
 			[]string{},
+			nil,
 		)
 	},
 		r: 30}
@@ -352,9 +390,20 @@ func TestApi(t *testing.T) {
 			tu,
 			[]string{},
 			[]string{},
+			nil,
 		)
 	},
 		r: 20}
+	libTests = append(libTests, libTest)
+	libTest = LibTest{t: func() string {
+		return util.SendGetRequest(
+			tu,
+			[]string{"rana"},
+			[]string{},
+			map[string]string{"db": "small"},
+		)
+	},
+		r: 52}
 	libTests = append(libTests, libTest)
 
 	for _, test := range exTests {
