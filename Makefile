@@ -32,12 +32,10 @@ clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done ; \
-	rm -rf main.go ; \
-	rm -rf main ; \
-	rm -rf bin
+	rm -rf main.go main bin testing/testdb ; \
 
 test: test_db main
-	./main -d testing/testdb -p 8008 --no-rate-limit & \
+	./main -d testing/testdb/ -p 8008 --no-rate-limit & \
 	SERVER_PID=$$! ; \
 	trap "kill $$SERVER_PID" EXIT ; \
 	sleep 1 ; \
@@ -45,7 +43,9 @@ test: test_db main
 		$(MAKE) -C $$dir test; \
 	done
 
-test_db: testing/testdb
+test_db: testing/testdb/db
 
-testing/testdb: testing/testdb_dump.sql
-	cd testing && sqlite3 testdb < testdb_dump.sql
+testing/testdb/db: testing/testdb_dump.sql
+	cd testing && \
+	mkdir -p testdb && \
+	sqlite3 testdb/db < testdb_dump.sql

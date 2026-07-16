@@ -8,7 +8,7 @@
 	\subsection*{Implementation}
 	The api backend provides the global RegisterRoutes function just
 	like every standalone package used within neverV2. It takes as arguments
-	a prefix for the routes and the filepath of the db file.
+	a prefix for the routes, the server's address and the databases.
 	\bpr{api}{pr:api}
 #+end_export
 
@@ -21,17 +21,37 @@
 	//<<Methods, Pa. \ref{pa:api}>>
 	//<<Variables, Pa. \ref{pa:api}>>
 	//<<Content types, Pa. \ref{pa:api}>>
-	func RegisterRoutes(pref, dbPath, serverAdr string) {
+	func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		//<<Register routes, Pa. \ref{pa:api}>>
 	}
 	//<<Functions, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	First off we declare the types. This is an easy task as they are already
-	defined within the openApi document. We leave out the \ty{Taxon} types for now
-	and define them in just a second. Every type also needs a \ty{Links} attribute
-	which is going to be explained later on.
+	We use the databases either directly or via their path. Lets write a type,
+	\ty{Database}, that can hold both values.
+#+end_export
+
+#+begin_src go <<Types, Pa. \ref{pa:api}>>=
+  type Database struct {
+    Path string
+    Db   *tdb.TaxonomyDB
+  }
+#+end_src
+
+#+begin_export latex
+	We need to import the \ty{tdb}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
+	"github.com/evolbioinf/neighbors/tdb"
+#+end_src
+
+#+begin_export latex
+	Now we should declare the datatypes conforming to the api specs models. 
+	We leave out the \ty{Taxon} types for now	and define them in just a second. 
+	Every type also needs a \ty{Links} attribute which is going to be explained
+	later on.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
@@ -178,25 +198,32 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	With the types declared we may begin implementing the \ty{RouteRegistration} function.
-	In this we define the Linkgraph and use it's nodes to register the endpoints.
-	Luckily the endpoints are already declared within the openApi document
-	But before pasting everything into \ty{RegisterRoutes}, we need to think
-	about how registration should work. It is reasonable to create a function that handles
-	route registration, making things easier for us in the long run. Say we want to
-	add a parameter or some specific handling to all our endpoints, we can just add
-	it to the registration helper. We call this function \ty{makeRoute}. The function
-	needs to take a node, the one to register, as well as a function \ty{fn}
-	that is executed when the path is called. \ty{fn} will be wrapped so that we may pass extra arguments.
-	However it needs to accept at least the http writer and request. The function may accept more
-	arguments, so we make it variadic. Those arguments need to passed from \ty{makeRoute}
-	to \ty{fn} somehow, so we make \ty{makeRoute} variadic as well.
+	With the types declared we may begin implementing the \ty{RouteRegistration}
+	function.	In this we define the Linkgraph and use it's nodes to register the 
+	endpoints. Luckily the endpoints are already declared within the openApi 
+	document. Before pasting everything into \ty{RegisterRoutes}, we need to 
+	think about how registration should work. It is reasonable to create a 
+	function that handles	route registration, making things easier for us in the
+	long run. Say we want to add a parameter or some specific handling to all our
+	endpoints, we can just add	it to the registration helper. We call this
+	function \ty{makeRoute}. The function needs to take a node, the one to 
+	register, as well as a function \ty{fn}	that is executed when the path is
+	called. \ty{fn} will be wrapped so that we may pass extra arguments. However
+	it needs to accept at least the http writer and request. The function may
+	accept more	arguments, like a database, so we make it	variadic. Those
+	arguments need to passed from \ty{makeRoute} to \ty{fn}	somehow, so we make
+	\ty{makeRoute} variadic	as well.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), args ...any) {
+	func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), dbs map[string]Database, args ...any) {
 		http.HandleFunc(node.Action + " " + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-			fn(w, r, node, args...)
+			var db Database
+			//<<Get correct database, Pa. \ref{pa:api}>>
+			var pArgs []any
+			pArgs = append(pArgs, db)
+			pArgs = append(pArgs, args...)
+			fn(w, r, node, pArgs...)
 		})
 	}
 #+end_src
@@ -210,6 +237,29 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
+	Every endpoint provides the \ty{db} parameter. In this we get the specified
+	database from the \ty{dbs} and pass it along to the functions. If no database
+	was	specified, we use \ty{latest}. We send a 404 (Not found) if there is no
+	database with that name.
+#+end_export
+
+#+begin_src go <<Get correct database, Pa. \ref{pa:api}>>=
+	if dbs != nil {
+		dbStr := r.URL.Query().Get("db")
+		if dbStr == "" {
+			dbStr = "latest"
+		}
+		var ok bool
+		db, ok = dbs[dbStr]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("No db under this name."))
+			return
+		}
+	}
+#+end_src
+
+#+begin_export latex
 	When writing a bad request response, we want to set the 400 (Bad Request)
 	HTTP response code and write some message for elaboration.
 #+end_export
@@ -219,31 +269,6 @@ type Node struct {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(text))
 	}
-#+end_src
-
-
-#+begin_export latex
-	All of the endpoints need to access the database.
-	So before registering the endpoints we open a connection to
-	the database using neighbors' tdb program. We will pass the connection to
-	all functions that need it.
-#+end_export
-
-#+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-	var neidb *tdb.TaxonomyDB
-	neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
-	if err != nil {
-		log.Fatal("apiV2: error while opening the database: ",  err.Error())
-	}
-#+end_src
-
-#+begin_export latex
-	We need to import the \ty{tdb} and \ty{log} packages.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"github.com/evolbioinf/neighbors/tdb"
-	"log"
 #+end_src
 
 #+begin_export latex
@@ -310,7 +335,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&rootDocL, rootDocument, neidb) // new
+	makeRoute(&rootDocL, rootDocument, nil) // new
 #+end_src
 
 #+begin_export latex
@@ -325,7 +350,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&accessionsL, accessions, neidb) // previously known as levels
+	makeRoute(&accessionsL, accessions, dbs) // previously known as levels
 #+end_src
 
 #+begin_export latex
@@ -340,7 +365,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&accessionL, accession, neidb) // new
+	makeRoute(&accessionL, accession, dbs) // new
 #+end_src
 
 #+begin_export latex
@@ -355,7 +380,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
+	makeRoute(&taxaL, taxa, dbs) // previously known as taxi
 #+end_src
 
 #+begin_export latex
@@ -370,7 +395,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(&taxonL, taxon, neidb, dbPath) // new
+	makeRoute(&taxonL, taxon, dbs) // new
 #+end_src
 
 #+begin_export latex
@@ -385,7 +410,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&childrenL, children, neidb) // previously just children
+	makeRoute(&childrenL, children, dbs) // previously just children
 #+end_src
 
 #+begin_export latex
@@ -400,11 +425,11 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&parentL, parent, neidb) // previously known as parent
+	makeRoute(&parentL, parent, dbs) // previously known as parent
 #+end_src
 
 #+begin_export latex
-	\ty{subtree} provides json formatted data.
+	\ty{subtree} provides a json formatted subtree.
 #+end_export
 
 #+begin_src go <<Initialize \ty{subtree}, Pa. \ref{pa:api}>>=
@@ -415,7 +440,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
+	makeRoute(&subtreeL, subtree, dbs) // previously just subtree
 #+end_src
 
 #+begin_export latex
@@ -430,7 +455,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxonomyL, taxonomy, neidb) // new
+	makeRoute(&taxonomyL, taxonomy, nil) // new
 #+end_src
 
 #+begin_export latex
@@ -445,7 +470,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
+	makeRoute(&taxonAccessionsL, taxonAccessions, dbs) // previously called accessions
 #+end_src
 
 #+begin_export latex
@@ -460,7 +485,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&mrcaL, mrca, neidb) // previously just mrca
+	makeRoute(&mrcaL, mrca, dbs) // previously just mrca
 #+end_src
 
 #+begin_export latex
@@ -475,7 +500,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&pathL, path, neidb) // previously just path
+	makeRoute(&pathL, path, dbs) // previously just path
 #+end_src
 
 #+begin_export latex
@@ -493,7 +518,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&programsDocL, programsDoc)
+	makeRoute(&programsDocL, programsDoc, nil)
 #+end_src
 
 #+begin_export latex
@@ -512,7 +537,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
+	makeRoute(&progAntsL, programEndpoint, dbs, "ants")
 #+end_src
 
 #+begin_export latex
@@ -528,7 +553,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
+	makeRoute(&progDreeL, programEndpoint, dbs, "dree")
 #+end_src
 
 #+begin_export latex
@@ -543,7 +568,7 @@ type Node struct {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
+	makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
 #+end_src
 
 #+begin_export latex
@@ -560,7 +585,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsGetL, programEndpoint, dbPath, "neighbors")
+	makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
 	progNeighborsPostL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
@@ -568,7 +593,7 @@ type Node struct {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsPostL, programEndpoint, dbPath, "neighbors")
+	makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
 #+end_src
 
 #+begin_export latex
@@ -584,7 +609,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksGetL, programEndpoint, dbPath, "ranks")
+	makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
 	progRanksPostL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
@@ -592,7 +617,7 @@ type Node struct {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
+	makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
 #+end_src
 
 #+begin_export latex
@@ -607,7 +632,7 @@ type Node struct {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
+	makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
 #+end_src
 
 #+begin_export latex
@@ -966,7 +991,7 @@ type Node struct {
 
 #+begin_export latex
 	Having implemented \ty{writeJsonOutput} we may use it to
-	write the links of \tty{rootDocument}.
+	write the links of \ty{rootDocument}.
 #+end_export
 
 #+begin_src go <<Write output \ty{rootDocument}, Pa. \ref{pa:api}>>=
@@ -1050,7 +1075,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get db from args, Pa. \ref{pa:api}>>=
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 #+end_src
 
 #+begin_export latex
@@ -1867,35 +1892,6 @@ type Node struct {
 	out.Links = links
 #+end_src
 
-#+begin_export latex
-	Now that we are done with processing the json request for \ty{taxon}, we
-	need to think about the plain text request. This is really similar to
-	\ty{taxa}'s program call. As with \ty{taxa}, we need to get the
-	databases path from the \ty{args} and then set the id as a label.
-#+end_export
-
-#+begin_src go <<Set taxi id args, Pa. \ref{pa:api}>>=
-	dbPath := args[1].(string)
-	// <<Get taxon id, Pa. \ref{pa:api}>>
-	taxiArgs := []string{"./taxi"}
-
-	taxiArgs = append(
-		taxiArgs,
-		taxIdStr,
-		dbPath,
-	)
-#+end_src
-
-#+begin_export latex
-	The taxon's id is still stored as a path parameter.
-	These program calls take strings as input only, so we
-	don't need to convert the path parameter.
-#+end_export
-
-#+begin_src go <<Get taxon id, Pa. \ref{pa:api}>>=
-	taxIdStr := r.PathValue("taxon_id")
-#+end_src
-
 
 
 #+begin_export latex
@@ -2564,7 +2560,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get dbPath and program name, Pa. \ref{pa:api}>>=
-	dbPath := args[0].(string)
+	dbPath := args[0].(Database).Path
 	progName := args[1].(string)
 #+end_src
 

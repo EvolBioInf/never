@@ -8,6 +8,12 @@ import (
 	"flag"
 	"os"
 
+	"errors"
+	"io/fs"
+	"slices"
+
+	"github.com/evolbioinf/neighbors/tdb"
+
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
@@ -51,20 +57,56 @@ type SyncMap struct {
 
 func main() {
 	certificate,
-		dbPath,
+		dbDirPath,
 		dateFilePath,
 		privateKey,
 		host,
 		port,
 		noRateLimit := ioHandling()
 
+	dbs := make(map[string]apiv2.Database)
+
+	entries, err := os.ReadDir(dbDirPath)
+	if err != nil {
+		log.Fatal("error while trying to read database directory", err.Error())
+	}
+	var fileInfos []fs.FileInfo
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			log.Fatal("error while trying to read info", err.Error())
+		}
+		fileInfos = append(fileInfos, info)
+	}
+	if len(fileInfos) == 0 {
+		log.Fatal(errors.New("No databases in provided directory."))
+	}
+	slices.SortFunc(fileInfos, func(a, b fs.FileInfo) int {
+		return b.ModTime().Compare(a.ModTime())
+	})
+
+	for i, inf := range fileInfos {
+		n := inf.Name()
+		path := dbDirPath + "/" + n
+		db, err := tdb.OpenTaxonomyDBcheck(path)
+		if err != nil {
+			log.Fatal(fmt.Sprintf("error while opening database %s: ", path), err.Error())
+		}
+		defer db.Close()
+		dbs[n] = apiv2.Database{Path: path, Db: db}
+		if i == 0 {
+			dbs["latest"] = apiv2.Database{Path: path, Db: db}
+		}
+
+	}
+
 	docsPref := "/docs"
 	apiPref := "/api"
 	docsV1Pref := docsPref + apiPref + "/v1"
 	docsV2Pref := docsPref + apiPref + "/v2"
 
-	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbPath, dateFilePath)
-	apiv2.RegisterRoutes(apiPref+"/v2", dbPath, host+":"+strconv.Itoa(port))
+	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
+	apiv2.RegisterRoutes(apiPref+"/v2", host+":"+strconv.Itoa(port), dbs)
 	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
 
 	vitaxFiles := http.FileServer(http.Dir("vitax"))
@@ -147,7 +189,6 @@ func main() {
 
 	handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
 
-	var err error
 	fmt.Printf("Starting server at %s:%d ...\n", host, port)
 	if host == "http://localhost" {
 		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
@@ -174,13 +215,12 @@ func ioHandling() (string, string, string, string, string, int, bool) {
 		"Starts the webserver at specified address with given port.")
 
 	cFlag := flag.String("c", "certificates/cert.pem", "certificate")
-	dFlag := flag.String("d", "neidb", "path to database from execution position")
+	dFlag := flag.String("d", "neidb", "path to database dir from execution position")
 	uFlag := flag.String("u", "updated.txt", "path to dateFile from execution position")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	oFlag := flag.String("o", "http://localhost", "host address")
 	pFlag := flag.Int("p", 8080, "port")
 	rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
-
 	vFlag := flag.Bool("v", false, "print progam info")
 
 	flag.Parse()

@@ -1,12 +1,11 @@
 package apiv2
 
 import (
+	"github.com/evolbioinf/neighbors/tdb"
+
 	"github.com/elnormous/contenttype"
 
 	"net/http"
-
-	"github.com/evolbioinf/neighbors/tdb"
-	"log"
 
 	"strings"
 
@@ -38,6 +37,11 @@ import (
 
 	"net"
 )
+
+type Database struct {
+	Path string
+	Db   *tdb.TaxonomyDB
+}
 
 type Accession struct {
 	Accession string `json:"accession"`
@@ -134,13 +138,7 @@ var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: 
 
 var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 
-func RegisterRoutes(pref, dbPath, serverAdr string) {
-	var neidb *tdb.TaxonomyDB
-	neidb, err := tdb.OpenTaxonomyDBcheck(dbPath)
-	if err != nil {
-		log.Fatal("apiV2: error while opening the database: ", err.Error())
-	}
-
+func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 	prefix = pref
 	serverAddress = serverAdr
 
@@ -151,7 +149,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&rootDocL, rootDocument, neidb) // new
+	makeRoute(&rootDocL, rootDocument, nil) // new
 
 	accessionsL := Node{
 		Links:    make(map[string][]Node),
@@ -160,7 +158,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&accessionsL, accessions, neidb) // previously known as levels
+	makeRoute(&accessionsL, accessions, dbs) // previously known as levels
 
 	accessionL := Node{
 		Links:    make(map[string][]Node),
@@ -169,7 +167,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&accessionL, accession, neidb) // new
+	makeRoute(&accessionL, accession, dbs) // new
 
 	taxaL := Node{
 		Links:    make(map[string][]Node),
@@ -178,7 +176,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxaL, taxa, neidb, dbPath) // previously known as taxi
+	makeRoute(&taxaL, taxa, dbs) // previously known as taxi
 
 	taxonL := Node{
 		Links:    make(map[string][]Node),
@@ -187,7 +185,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt, plainCt},
 	}
-	makeRoute(&taxonL, taxon, neidb, dbPath) // new
+	makeRoute(&taxonL, taxon, dbs) // new
 
 	childrenL := Node{
 		Links:    make(map[string][]Node),
@@ -196,7 +194,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&childrenL, children, neidb) // previously just children
+	makeRoute(&childrenL, children, dbs) // previously just children
 
 	parentL := Node{
 		Links:    make(map[string][]Node),
@@ -205,7 +203,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&parentL, parent, neidb) // previously known as parent
+	makeRoute(&parentL, parent, dbs) // previously known as parent
 
 	subtreeL := Node{
 		Links:    make(map[string][]Node),
@@ -214,7 +212,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&subtreeL, subtree, neidb, dbPath) // previously just subtree
+	makeRoute(&subtreeL, subtree, dbs) // previously just subtree
 
 	taxonomyL := Node{
 		Links:    make(map[string][]Node),
@@ -223,7 +221,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxonomyL, taxonomy, neidb) // new
+	makeRoute(&taxonomyL, taxonomy, nil) // new
 
 	taxonAccessionsL := Node{
 		Links:    make(map[string][]Node),
@@ -232,7 +230,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxonAccessionsL, taxonAccessions, neidb) // previously called accessions
+	makeRoute(&taxonAccessionsL, taxonAccessions, dbs) // previously called accessions
 
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
@@ -241,7 +239,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&mrcaL, mrca, neidb) // previously just mrca
+	makeRoute(&mrcaL, mrca, dbs) // previously just mrca
 
 	pathL := Node{
 		Links:    make(map[string][]Node),
@@ -250,7 +248,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&pathL, path, neidb) // previously just path
+	makeRoute(&pathL, path, dbs) // previously just path
 
 	programsDocL := Node{
 		Links:    make(map[string][]Node),
@@ -259,7 +257,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&programsDocL, programsDoc)
+	makeRoute(&programsDocL, programsDoc, nil)
 
 	progAntsL := Node{
 		Links:    make(map[string][]Node),
@@ -268,7 +266,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progAntsL, programEndpoint, dbPath, "ants")
+	makeRoute(&progAntsL, programEndpoint, dbs, "ants")
 
 	progDreeL := Node{
 		Links:    make(map[string][]Node),
@@ -277,7 +275,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progDreeL, programEndpoint, dbPath, "dree")
+	makeRoute(&progDreeL, programEndpoint, dbs, "dree")
 
 	progFintacL := Node{
 		Links:    make(map[string][]Node),
@@ -286,7 +284,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progFintacL, programEndpoint, dbPath, "fintac")
+	makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
 
 	progNeighborsGetL := Node{
 		Links:    make(map[string][]Node),
@@ -295,7 +293,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsGetL, programEndpoint, dbPath, "neighbors")
+	makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
 	progNeighborsPostL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
@@ -303,7 +301,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsPostL, programEndpoint, dbPath, "neighbors")
+	makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
 
 	progRanksGetL := Node{
 		Links:    make(map[string][]Node),
@@ -312,7 +310,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksGetL, programEndpoint, dbPath, "ranks")
+	makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
 	progRanksPostL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
@@ -320,7 +318,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodPost,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksPostL, programEndpoint, dbPath, "ranks")
+	makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
 
 	progTaxiL := Node{
 		Links:    make(map[string][]Node),
@@ -329,7 +327,7 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progTaxiL, programEndpoint, dbPath, "taxi")
+	makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
 
 	rootDocL.Links["service"] = append(rootDocL.Links["service"],
 		accessionsL,
@@ -399,9 +397,27 @@ func RegisterRoutes(pref, dbPath, serverAdr string) {
 	}
 
 }
-func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), args ...any) {
+func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), dbs map[string]Database, args ...any) {
 	http.HandleFunc(node.Action+" "+node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-		fn(w, r, node, args...)
+		var db Database
+		if dbs != nil {
+			dbStr := r.URL.Query().Get("db")
+			if dbStr == "" {
+				dbStr = "latest"
+			}
+			var ok bool
+			db, ok = dbs[dbStr]
+			if !ok {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("No db under this name."))
+				return
+			}
+		}
+
+		var pArgs []any
+		pArgs = append(pArgs, db)
+		pArgs = append(pArgs, args...)
+		fn(w, r, node, pArgs...)
 	})
 }
 
@@ -468,7 +484,7 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -609,7 +625,7 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -683,7 +699,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		name = "%" + name + "%"
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -871,7 +887,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -926,7 +942,7 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -1002,7 +1018,7 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -1058,7 +1074,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	taxIdStr := r.PathValue("taxon_id")
 	taxId, err := strconv.Atoi(taxIdStr)
@@ -1157,7 +1173,7 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -1271,7 +1287,7 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -1344,7 +1360,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 		return
 	}
 
-	neidb := args[0].(*tdb.TaxonomyDB)
+	neidb := args[0].(Database).Db
 
 	strPlain := r.URL.Query().Get("plain_data")
 	plain, err := strconv.ParseBool(strPlain)
@@ -1449,7 +1465,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		return
 	}
 
-	dbPath := args[0].(string)
+	dbPath := args[0].(Database).Path
 	progName := args[1].(string)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

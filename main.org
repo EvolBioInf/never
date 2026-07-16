@@ -28,6 +28,7 @@ import (
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   func main() {
     //<<Handle io, Pr. \ref{pr:main}>>
+    //<<Open databases, Pr. \ref{pr:main}>>
     //<<Register packages, Pr. \ref{pr:main}>>
     //<<Serve Vitax files, Pr. \ref{pr:main}>>
     //<<Define default route, Pr. \ref{pr:main}>>
@@ -37,17 +38,18 @@ import (
 #+end_src
 
 #+begin_export latex
-  Handling the input and output of this program should be done by a separate function.
-  Its easier to implement this before calling it in main, so we do that now.
-    We call this function \ty{ioHandling}. In this we prepare the log, implement a usage and parse
-  the call arguments. As we need to define the return tuple of this function in its head we need to
-  think about what arguments may be parsed and needed within the main function. Most importantly we
-  need be able to pass an address and a port for the server to run on. It would be nice if we could also
-  define a path for the HTTP/TLS files i.e. the certificate and the private key. Providing extra options
-  for the database path and the date file results in a more flexible setup.
-  It should be possible to toggle the rate limit for debugging and testing
-  purposes.
-  This results in five strings, an integer and a bool as a return tuple.
+  Handling the input and output of this program should be done by a separate 
+  function. It's easier to implement this before calling it in main, so we do
+  that now. We call this function \ty{ioHandling}. In this we prepare the log,
+  implement a usage and parse the call arguments. As we need to define the
+  return tuple of this function in its head we need to think about what
+  arguments may be parsed and needed within the main function. Most importantly
+  we need be able to pass an address and a port for the server to run on. It
+  would be nice if we could also define a path for the HTTPS/TLS files i.e. the
+  certificate and the private key. Providing extra options for the database 
+  directory path and the date file results in a more flexible setup. It should
+  be possible to toggle the rate limit for debugging and testing purposes. This
+  results in five strings, an integer and a bool as a return tuple.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
@@ -109,20 +111,20 @@ import (
 #+end_src
 
 #+begin_export latex
-  We've already defined what flags we want to use. Now we just need to declare them programmatically.
-  As an extra we should declare a version flag. If the flag is passed, we print the program's version and stop the program.
-  In every other case we return the remaining flags.
+  We've already defined what flags we want to use. Now we just need to declare
+  them programmatically. As an extra we should declare a version flag. If the
+  flag is passed, we print the program's version and stop the program. In every
+  other case we return the remaining flags.
 #+end_export
 
 #+begin_src go <<Parse flags, Pr. \ref{pr:main}>>=
   cFlag := flag.String("c", "certificates/cert.pem", "certificate")
-  dFlag := flag.String("d", "neidb", "path to database from execution position")
+  dFlag := flag.String("d", "neidb", "path to database dir from execution position")
   uFlag := flag.String("u", "updated.txt", "path to dateFile from execution position")
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
   oFlag := flag.String("o", "http://localhost", "host address")
   pFlag := flag.Int("p", 8080, "port")
   rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
-
   vFlag := flag.Bool("v", false, "print progam info")
 
   flag.Parse()
@@ -141,7 +143,7 @@ import (
 
 #+begin_src go <<Handle io, Pr. \ref{pr:main}>>=
 	certificate,
-  dbPath,
+  dbDirPath,
   dateFilePath,
   privateKey,
   host,
@@ -150,13 +152,110 @@ import (
 #+end_src
 
 #+begin_export latex
-  The packages we want to register each provide their own register function called \ty{registerRoutes}.
-  We provide a prefix to that url, in order to prevent url clashing. The packages don't and shouldn't know of each
-  others existance. So this task falls to the managing part of the software, which is this server.
-  Additionally to the prefix \ty{apiv2} needs to know the host and where the database is located. \ty{neverv1} receives
-  these arguments as well, but it gets two prefixes as the package is not divided into api and docs. It also needs to get
-  an extra filepath for the \ty{dateFile}. \ty{docsv2} needs to know whether it is being hosted locally and on what
-  port, so we need to provide data for that.
+  This server, mainly \ty{apiv2} allows accessing multiple databases. When 
+  executing \ty{main} we are provided with a directory which includes a set of
+  databases. We need to think of a structure for storing these databases and
+  their connections. \ty{apiv2} expects the databases to be stored in a map of
+  \ty{dbname -> tuple(path, database)}. Why not use this here as well.
+#+end_export
+
+#+begin_src go <<Open databases, Pr. \ref{pr:main}>>=
+  dbs := make(map[string]apiv2.Database)
+#+end_src
+
+#+begin_export latex
+  Opening the databases is now about iterating through the files of the 
+  provided directory and connecting to them. We call a deferred \ty{Close} on
+  each of them. The keys of the map should be the basename of each database
+  file. Lastly there should be an entry called latest, which always points to 
+  the latest database.
+#+end_export
+
+#+begin_src go <<Open databases, Pr. \ref{pr:main}>>=
+  //<<Get files, Pr. \ref{pr:main}>> 
+  for i, inf := range fileInfos {
+    //<<Connect to db, Pr. \ref{pr:main}>> 
+  }
+#+end_src
+
+#+begin_export latex
+  Our first step is to go through the provided dir and get all its entries.
+  We us \ty{ReadDir} for this. Then we iterate over those entries, adding them
+  to a list and get the file's information. This includes its name as well as
+  modification date. After iteration we sort all the information entries by
+  their modification date. This lets us easily determine the latest database.
+#+end_export
+
+#+begin_src go <<Get files, Pr. \ref{pr:main}>>=
+  entries, err := os.ReadDir(dbDirPath)
+  if err != nil {
+    log.Fatal("error while trying to read database directory", err.Error())
+  }
+  var fileInfos []fs.FileInfo
+  for _, e := range entries {
+    info, err := e.Info()
+    if err != nil {
+      log.Fatal("error while trying to read info", err.Error())
+    }
+    fileInfos = append(fileInfos, info)
+  }
+  if len(fileInfos) == 0 {
+    log.Fatal(errors.New("No databases in provided directory."))
+  }
+  slices.SortFunc(fileInfos, func(a, b fs.FileInfo) int {
+		return b.ModTime().Compare(a.ModTime())
+	})
+#+end_src
+
+#+begin_export latex
+  We import \ty{errors}, \ty{io/fs} and \ty{slices}.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "errors"
+  "io/fs"
+  "slices"
+#+end_src
+
+#+begin_export latex
+  Connecting to the database is rather simple. We define a path for each entry.
+  This is composed of the files name, prepended by the name of the database 
+  directory. The we open the connection and make a deferred \ty{Close} call. We
+  also provide an additional entry for the first database as \ty{latest}.
+#+end_export
+
+#+begin_src go <<Connect to db, Pr. \ref{pr:main}>>=
+  n := inf.Name()
+  path := dbDirPath + "/" + n
+ 	db, err := tdb.OpenTaxonomyDBcheck(path)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("error while opening database %s: ", path), err.Error())
+	}
+  defer db.Close()
+  dbs[n] = apiv2.Database{Path: path, Db: db}
+  if i == 0 {
+    dbs["latest"] = apiv2.Database{Path: path, Db: db}
+  }
+#+end_src
+
+#+begin_export latex
+  We import \ty{tdb}.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+	"github.com/evolbioinf/neighbors/tdb"
+#+end_src
+
+#+begin_export latex
+  The packages we want to register each provide their own register function
+  called \ty{registerRoutes}. We provide a prefix to that url, in order to
+  prevent url clashing. The packages don't and shouldn't know of each others
+  existance. So this task falls to the managing part of the software, which
+  is this server. Additionally to the prefix \ty{apiv2} needs to get the 
+  databases. \ty{neverv1} receives these the prefixes for api and 
+  documentation, the path to the database and a path to the datefile.
+  \ty{docsv2} gets its prefix and it needs to know whether it is being hosted
+  locally and on what port, so we need to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -165,8 +264,8 @@ import (
   docsV1Pref := docsPref + apiPref + "/v1"
   docsV2Pref := docsPref + apiPref + "/v2"
 
-	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbPath, dateFilePath)
-	apiv2.RegisterRoutes(apiPref + "/v2", dbPath, host+":"+strconv.Itoa(port))
+	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
+	apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
 	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
 #+end_src
 
@@ -501,7 +600,6 @@ import (
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
   handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
 
-	var err error
 	fmt.Printf("Starting server at %s:%d ...\n", host, port)
 	if host == "http://localhost" {
     err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
