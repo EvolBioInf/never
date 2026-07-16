@@ -50,7 +50,7 @@ func SetupLog() {
 }
 
 func handleFileOpen(path string, entry Writable) (*os.File, *csv.Writer) {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		panic(fmt.Sprintf("Could not open %s for logs: %s\n", path, err))
 	}

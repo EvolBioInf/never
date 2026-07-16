@@ -81,6 +81,7 @@
   //<<Prepare queries, Pa. \ref{pa:api}>>
   //<<Test root document, Pa. \ref{pa:api}>>
   //<<Test accessions category, Pa. \ref{pa:api}>>
+  //<<Test \ty{databases}, Pa. \ref{pa:api}>>
   //<<Test taxa category, Pa. \ref{pa:api}>>
   //<<Test taxonomy category, Pa. \ref{pa:api}>>
   //<<Test programs category, Pa. \ref{pa:api}>>
@@ -137,6 +138,23 @@ We import \ty{fmt}.
   service = "accessions/GCF_000001405.40"
   u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
   exTest = ExTest{t: exec.Command(prog, u), r: 3}
+  exTests = append(exTests, exTest)
+#+end_src
+#+begin_export latex
+  \ty{databases} is just a single endpoint without a category. All it does is 
+  list the available databases. We query it and test a limit and offset just to
+  be sure.
+#+end_export
+#+begin_src go <<Test \ty{databases}, Pa. \ref{pa:api}>>=
+  service = "databases"
+  u = fmt.Sprintf(tmpl, url, service, "")
+  exTest = ExTest{t: exec.Command(prog, u), r: 42}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 43}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?limit=1&offset=1&plain_data=true")
+  exTest = ExTest{t: exec.Command(prog, u), r: 44}
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex

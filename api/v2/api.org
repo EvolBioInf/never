@@ -299,6 +299,7 @@ type Node struct {
 	//<<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>
 	//<<Initialize \ty{accessions}, Pa. \ref{pa:api}>>
 	//<<Initialize \ty{accession}, Pa. \ref{pa:api}>>
+	//<<Initialize \ty{databases}, Pa. \ref{pa:api}>>
 	//<<Initialize \ty{taxa}, Pa. \ref{pa:api}>>
 	//<<Initialize \ty{taxon}, Pa. \ref{pa:api}>>
 	//<<Initialize \ty{children}, Pa. \ref{pa:api}>>
@@ -366,6 +367,26 @@ type Node struct {
 		Types:    []contenttype.MediaType{jsonCt},
 	}
 	makeRoute(&accessionL, accession, dbs) // new
+#+end_src
+
+#+begin_export latex
+	\ty{databases} is a bit confusing. It does not provide the \ty{db} query
+	parameter, but still needs to access the databases. To do this we are going
+	to provide \ty{nil} for the first param and dbs for the second. While this
+	might not be perfectly reasonable, it does ensure, that the endpoints gets
+	access to the databases without checking and potentially failing the \ty{db}
+	query parameter.
+#+end_export
+
+#+begin_src go <<Initialize \ty{databases}, Pa. \ref{pa:api}>>=
+	databasesL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "databases",
+		BasePath: prefix + "/databases",
+		Action:   http.MethodGet,
+		Types:    []contenttype.MediaType{jsonCt},
+	}
+	makeRoute(&databasesL, databases, nil, dbs) // new
 #+end_src
 
 #+begin_export latex
@@ -681,6 +702,7 @@ type Node struct {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"],
 		accessionsL,
 		accessionL,
+		databasesL,
 		taxaL,
 		taxonL,
 		childrenL,
@@ -1410,6 +1432,70 @@ type Node struct {
 	out := ResponseBody[Accession]{Data: data, Links: links}
 #+end_src
 
+
+#+begin_export latex
+	\subsection{accession}
+	The endpoint \ty{databases} responds with all the active databases, the user
+	may specify, when querying the endpoints.
+	This is \ty{databases}'s io:
+	Params:
+		Path:
+			none
+		Query:
+			offset     int
+			limit      int
+			plain_data bool
+		Writes:
+		 \ty{ResponseBody[ [] string ]}
+#+end_export
+
+#+begin_src go <<Functions, Pa. \ref{pa:api}>>=
+	func databases(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+		//<<Check content types, Pa. \ref{pa:api}>>
+		//<<Extract offset and limit, Pa. \ref{pa:api}>>
+		//<<Get plain param, Pa. \ref{pa:api}>>
+		//<<Write databases, Pa. \ref{pa:api}>>
+		//<<Write links \ty{databases}, Pa. \ref{pa:api}>>
+		//<<Write json output, Pa. \ref{pa:api}>>
+	}
+#+end_src
+
+#+begin_export latex
+	For writing the databases we'll basically print the keys of the database map.
+	We should, however, sort those keys before sending them. The map of databases
+	is passed to this functions as the \textbf{second} entry of the \ty{args} 
+	slice. We need to keep this in mind, when trying to access the databases.
+#+end_export
+
+#+begin_src go <<Write databases, Pa. \ref{pa:api}>>=
+	dbs := args[1].(map[string]Database)
+	names := make([]string, len(dbs))
+
+	i := 0
+	for n := range dbs {
+		names[i] = n 
+		i++
+	}
+	slices.Sort(names)
+	var out ResponseBody[[]string]
+	for i = offset; i < len(names) && (limit == -1 || i < offset + limit); i++ {
+		out.Data = append(out.Data, names[i])
+	}
+#+end_src
+
+#+begin_export latex
+	Databases does not provide a lot of links, it's just a self link and 
+	pagination links.
+#+end_export
+
+#+begin_src go <<Write links \ty{databases}, Pa. \ref{pa:api}>>=
+	if !plain {
+		var links []Link
+		//<<Add endpoint's self link, Pa. \ref{pa:api}>>
+		//<<Add pagination links, Pa. \ref{pa:api}>>
+		out.Links = links
+	}
+#+end_src
 
 
 #+begin_export latex
@@ -2801,7 +2887,7 @@ type Node struct {
 		stdin = string(b)
 	} else {
 		var tf *os.File
-		tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0644)
+		tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			writeServerError(w, "Error while opening temp file", "", err)
 			return

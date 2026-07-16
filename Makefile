@@ -43,9 +43,10 @@ test: test_db main
 		$(MAKE) -C $$dir test; \
 	done
 
-test_db: testing/testdb/db
+test_db: testing/testdb
 
-testing/testdb/db: testing/testdb_dump.sql
+testing/testdb: testing/testdb_small_dump.sql testing/testdb_large_dump.sql
 	cd testing && \
 	mkdir -p testdb && \
-	sqlite3 testdb/db < testdb_dump.sql
+	sqlite3 testdb/small < testdb_small_dump.sql && \
+	sqlite3 testdb/large < testdb_large_dump.sql

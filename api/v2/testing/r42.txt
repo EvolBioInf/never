@@ -1,0 +1,17 @@
+{
+  "data": [
+    "large",
+    "latest",
+    "small"
+  ],
+  "links": [
+    {
+      "rel": "self",
+      "href": "http://localhost:8008/api/v2/databases",
+      "action": "GET",
+      "types": [
+        "application/json;charset=utf-8"
+      ]
+    }
+  ]
+}

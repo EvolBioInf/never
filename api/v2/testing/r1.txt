@@ -26,6 +26,14 @@
     },
     {
       "rel": "service",
+      "href": "http://localhost:8008/api/v2/databases",
+      "action": "GET",
+      "types": [
+        "application/json;charset=utf-8"
+      ]
+    },
+    {
+      "rel": "service",
       "href": "http://localhost:8008/api/v2/taxa",
       "action": "GET",
       "types": [

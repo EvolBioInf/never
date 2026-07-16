@@ -36,6 +36,16 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 3}
 	exTests = append(exTests, exTest)
+	service = "databases"
+	u = fmt.Sprintf(tmpl, url, service, "")
+	exTest = ExTest{t: exec.Command(prog, u), r: 42}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 43}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?limit=1&offset=1&plain_data=true")
+	exTest = ExTest{t: exec.Command(prog, u), r: 44}
+	exTests = append(exTests, exTest)
 	service = "taxa"
 	u = fmt.Sprintf(tmpl, url, service, "?name=Canis+lupus+familiaris&exact=true&scientific=true&limit=1&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 4}

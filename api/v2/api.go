@@ -169,6 +169,15 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 	}
 	makeRoute(&accessionL, accession, dbs) // new
 
+	databasesL := Node{
+		Links:    make(map[string][]Node),
+		Name:     "databases",
+		BasePath: prefix + "/databases",
+		Action:   http.MethodGet,
+		Types:    []contenttype.MediaType{jsonCt},
+	}
+	makeRoute(&databasesL, databases, nil, dbs) // new
+
 	taxaL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "taxa",
@@ -332,6 +341,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 	rootDocL.Links["service"] = append(rootDocL.Links["service"],
 		accessionsL,
 		accessionL,
+		databasesL,
 		taxaL,
 		taxonL,
 		childrenL,
@@ -655,6 +665,52 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	}
 
 	out := ResponseBody[Accession]{Data: data, Links: links}
+
+	if plain {
+		writeJsonOutput(w, out.Data)
+	} else {
+		writeJsonOutput(w, out)
+	}
+
+}
+
+func databases(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Server does not provide any of the accepted content types."))
+		return
+	}
+
+	offset, limit := extractPaging(r)
+
+	strPlain := r.URL.Query().Get("plain_data")
+	plain, err := strconv.ParseBool(strPlain)
+	if strPlain != "" && err != nil {
+		writeBadRequestResp(w, "plain_data is not a bool.")
+		return
+	}
+
+	dbs := args[1].(map[string]Database)
+	names := make([]string, len(dbs))
+
+	i := 0
+	for n := range dbs {
+		names[i] = n
+		i++
+	}
+	slices.Sort(names)
+	var out ResponseBody[[]string]
+	for i = offset; i < len(names) && (limit == -1 || i < offset+limit); i++ {
+		out.Data = append(out.Data, names[i])
+	}
+
+	if !plain {
+		var links []Link
+		links = append(links, selfNode.makeLink("self", r.URL.String()))
+
+		out.Links = links
+	}
 
 	if plain {
 		writeJsonOutput(w, out.Data)
@@ -1576,7 +1632,7 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs 
 					stdin = string(b)
 				} else {
 					var tf *os.File
-					tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0644)
+					tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0600)
 					if err != nil {
 						writeServerError(w, "Error while opening temp file", "", err)
 						return
