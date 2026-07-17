@@ -419,7 +419,7 @@ func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ..
 			db, ok = dbs[dbStr]
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("No db under this name."))
+				w.Write([]byte("No db under this name.\n"))
 				return
 			}
 		}
@@ -433,7 +433,7 @@ func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ..
 
 func writeBadRequestResp(w http.ResponseWriter, text string) {
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(text))
+	w.Write([]byte(text + "\n"))
 }
 
 func makeOptionsRoute(nodes []Node) {
@@ -456,7 +456,7 @@ func rootDocument(w http.ResponseWriter, r *http.Request, selfNode *Node, args .
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -485,7 +485,7 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -603,9 +603,9 @@ func writeServerError(w http.ResponseWriter, internalMsg string, responseMsg str
 		})
 	w.WriteHeader(http.StatusInternalServerError)
 	if responseMsg != "" {
-		w.Write([]byte("An error occurred: " + responseMsg))
+		w.Write([]byte("An error occurred: " + responseMsg + "\n"))
 	} else {
-		w.Write([]byte("Internal server error."))
+		w.Write([]byte("Internal server error.\n"))
 	}
 }
 
@@ -631,7 +631,7 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -678,7 +678,7 @@ func databases(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -724,7 +724,7 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -939,7 +939,7 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -994,7 +994,7 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1070,7 +1070,7 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1126,7 +1126,7 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1203,7 +1203,7 @@ func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1225,7 +1225,7 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1339,7 +1339,7 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1412,7 +1412,7 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1494,7 +1494,7 @@ func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ..
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 
@@ -1552,7 +1552,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		}
 		if !ct.EqualsMIME(multipartCt) {
 			w.WriteHeader(http.StatusUnsupportedMediaType)
-			w.Write([]byte("Use multipart/form-data with POST requests."))
+			w.Write([]byte("Use multipart/form-data with POST requests.\n"))
 			return
 		} else {
 			stdinData, err = parseFormData(w, r, dir, callArgs)

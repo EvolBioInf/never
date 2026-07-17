@@ -253,7 +253,7 @@ type Node struct {
 		db, ok = dbs[dbStr]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No db under this name."))
+			w.Write([]byte("No db under this name.\n"))
 			return
 		}
 	}
@@ -267,7 +267,7 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
 	func writeBadRequestResp(w http.ResponseWriter, text string) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(text))
+		w.Write([]byte(text+"\n"))
 	}
 #+end_src
 
@@ -931,7 +931,7 @@ type Node struct {
 #+begin_src go <<React no match, Pa. \ref{pa:api}>>=
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types."))
+		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
 		return
 	}
 #+end_src
@@ -1221,9 +1221,9 @@ type Node struct {
 		})
 		w.WriteHeader(http.StatusInternalServerError)
 		if responseMsg != "" {
-			w.Write([]byte("An error occurred: " + responseMsg))
+			w.Write([]byte("An error occurred: " + responseMsg + "\n"))
 		} else {
-			w.Write([]byte("Internal server error."))
+			w.Write([]byte("Internal server error.\n"))
 		}
 	}
 #+end_src
@@ -2767,7 +2767,7 @@ type Node struct {
 		}
 		if !ct.EqualsMIME(multipartCt) {
 			w.WriteHeader(http.StatusUnsupportedMediaType)
-			w.Write([]byte("Use multipart/form-data with POST requests."))
+			w.Write([]byte("Use multipart/form-data with POST requests.\n"))
 			return
 		} else {
 			stdinData, err = parseFormData(w, r, dir, callArgs)
