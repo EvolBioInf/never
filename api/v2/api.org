@@ -2678,7 +2678,10 @@ type Node struct {
 	going to recreate this behaviour using the exploded query parameters 
 	\ty{options} and \ty{extra}. The values in \ty{extra} and \ty{options} might
 	be files, which we need to create later on. Adding those allows us to use 
-	both \ty{options} and \ty{extra} as if we were doing a normal program call. 
+	both \ty{options} and \ty{extra} as if we were doing a normal program call.
+	We also need to sift through the call argumens and remove any options that
+	might trigger further remote executions. These options might result in an
+	infinite recursion, if we fail to remove them.
 #+end_export
 
 #+begin_src go <<Set call arguments, Pa. \ref{pa:api}>>=
