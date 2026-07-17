@@ -1534,7 +1534,11 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	callArgs = append(callArgs, "../"+dbPath)
 
 	callArgs = append(callArgs, extra...)
-	callArgs = slices.DeleteFunc(callArgs, func(w string) bool { return w == "-r" || w == "--r" })
+	if slices.Contains(callArgs, "-r") || slices.Contains(callArgs, "--r") ||
+		slices.Contains(callArgs, "-D") || slices.Contains(callArgs, "--D") {
+		writeBadRequestResp(w, "Bad Request.\n")
+		return
+	}
 
 	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
 	err := os.MkdirAll(dir, os.ModePerm)

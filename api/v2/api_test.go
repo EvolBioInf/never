@@ -161,8 +161,32 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small")
 	exTest = ExTest{t: exec.Command(prog, u), r: 51}
 	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=-r")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=--r")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=-D&options=small")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=--D&options=small")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=-r")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=--r")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=-D")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
+	u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=--D")
+	exTest = ExTest{t: exec.Command(prog, u), r: 53}
+	exTests = append(exTests, exTest)
 	service = "programs/dree"
-	u = fmt.Sprintf(tmpl, url, service, "?options=-r&options=-n&options=3073808")
+	u = fmt.Sprintf(tmpl, url, service, "?options=-n&options=3073808")
 	exTest = ExTest{t: exec.Command(prog, u), r: 17}
 	exTests = append(exTests, exTest)
 	service = "programs/fintac"

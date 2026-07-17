@@ -2,19 +2,26 @@
 <script type="text/javascript">
   // This manages folding and expanding of the endpoint headers
   const onHashUpdate = ({ oldURL }) => {
+    // Get previous url fragment
     const hashIndex = oldURL?.lastIndexOf("#") ?? -1;
     const oldHash =
-      hashIndex !== -1 && oldURL?.length > hashIndex
-        ? oldURL.substring(hashIndex + 1)
-        : "";
+    hashIndex !== -1 && oldURL?.length > hashIndex
+    ? oldURL.substring(hashIndex + 1)
+    : "";
+    
+    // Get current/ new url fragment
     const newHash =
       window.location.hash.length > 1 ? window.location.hash.substring(1) : "";
 
+    // Define css ids of previously and newly click endpoint cards
     const oldBodyId = "body-" + oldHash;
     const newBodyId = "body-" + newHash;
-
+    
     const oldHeaderId = "header-" + oldHash;
-
+    
+    // Get the corresponding html elements and hide/ display them.
+    // We also set selected-header here, which slightly changes the colour 
+    // endpoint's color
     const oldEndpoint = document.getElementById(oldBodyId);
     if (oldEndpoint) {
       oldEndpoint.style.display = "none";
@@ -30,7 +37,8 @@
       newEndpoint.style.display = "flex";
     }
   };
-
+  
+  // Need to register the function in order for it to run...
   window.addEventListener("hashchange", onHashUpdate);
   window.onload = () => onHashUpdate({ oldURL: "" });
 </script>

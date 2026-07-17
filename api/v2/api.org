@@ -2679,16 +2679,23 @@ type Node struct {
 	\ty{options} and \ty{extra}. The values in \ty{extra} and \ty{options} might
 	be files, which we need to create later on. Adding those allows us to use 
 	both \ty{options} and \ty{extra} as if we were doing a normal program call.
-	We also need to sift through the call argumens and remove any options that
+	We also need to sift through the call argumens and check for any options that
 	might trigger further remote executions. These options might result in an
-	infinite recursion, if we fail to remove them.
+	infinite recursion. We send an error if the request contains of them. The 
+	options we need to be on the lookout for are \ty{r} and \ty{D}. Options may
+	be specified with one or two dashes as a prefix. We need to prevent passing 
+	either.
 #+end_export
 
 #+begin_src go <<Set call arguments, Pa. \ref{pa:api}>>=
 	callArgs := options
 	//<<Add database to args, Pa. \ref{pa:api}>>
 	callArgs = append(callArgs, extra...)
-	callArgs = slices.DeleteFunc(callArgs, func(w string) bool {return w == "-r" || w == "--r"})
+	if slices.Contains(callArgs, "-r") || slices.Contains(callArgs, "--r") ||
+		slices.Contains(callArgs, "-D") || slices.Contains(callArgs, "--D") {
+			writeBadRequestResp(w, "Bad Request.\n")
+			return
+		}
 #+end_src
 
 #+begin_export latex

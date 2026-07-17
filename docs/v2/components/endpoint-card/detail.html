@@ -56,6 +56,9 @@
         </button>
         <script>
           {
+            // Get html elements by their ids, of the button, pre-tag/ code 
+            // block and input. We just send a fetch using whatever data is 
+            // in the input.
             const button = document.getElementById(
               '{{toKebab "run" "example" .Name .Op.Verb}}',
             );

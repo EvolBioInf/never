@@ -368,7 +368,8 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
   \ty{ants} gets all the ancestors of a taxon. Let's look at the ancestors
-  of a crow.
+  of a crow. Let's also check whether we are handling \ty{-r} and \ty{-D} 
+  options correctly.
 #+end_export
 #+begin_src go <<Test \ty{ants}, Pa. \ref{pa:api}>>=
   service = "programs/ants"
@@ -378,13 +379,37 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small")
   exTest = ExTest{t: exec.Command(prog, u), r: 51}
   exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=-r")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=--r")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=-D&options=small")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=--D&options=small")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=-r")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=--r")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=-D")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=--D")
+  exTest = ExTest{t: exec.Command(prog, u), r: 53}
+  exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
   Lets draw a tree of Telluraves using the \ty{dree} endpoint.
 #+end_export
 #+begin_src go <<Test \ty{dree}, Pa. \ref{pa:api}>>=
   service = "programs/dree"
-  u = fmt.Sprintf(tmpl, url, service, "?options=-r&options=-n&options=3073808")
+  u = fmt.Sprintf(tmpl, url, service, "?options=-n&options=3073808")
   exTest = ExTest{t: exec.Command(prog, u), r: 17}
   exTests = append(exTests, exTest)
 #+end_src
