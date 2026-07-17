@@ -1536,7 +1536,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	callArgs = append(callArgs, extra...)
 	if slices.Contains(callArgs, "-r") || slices.Contains(callArgs, "--r") ||
 		slices.Contains(callArgs, "-D") || slices.Contains(callArgs, "--D") {
-		writeBadRequestResp(w, "Bad Request.\n")
+		writeBadRequestResp(w, "Bad Request.")
 		return
 	}
 

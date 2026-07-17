@@ -379,28 +379,28 @@ We import \ty{fmt}.
   u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small")
   exTest = ExTest{t: exec.Command(prog, u), r: 51}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=-r")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&options=-r")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=--r")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&options=--r")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=-D&options=small")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&options=-D&options=small")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=small&options=--D&options=small")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&options=--D&options=small")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=-r")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&extra=-r")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=--r")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&extra=--r")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=-D")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&extra=-D")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
-  u = fmt.Sprintf(tmpl, url, service, "?options=8407&db=smallD&extra=--D")
+  u = fmt.Sprintf(tmpl, url, service, "?options=8407&extra=--D")
   exTest = ExTest{t: exec.Command(prog, u), r: 53}
   exTests = append(exTests, exTest)
 #+end_src
