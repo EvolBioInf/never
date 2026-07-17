@@ -34,7 +34,7 @@ clean:
 	done ; \
 	rm -rf main.go main bin testing/testdb ; \
 
-test: test_db main
+test: test_db all
 	./main -d testing/testdb/ -p 8008 --no-rate-limit & \
 	SERVER_PID=$$! ; \
 	trap "kill $$SERVER_PID" EXIT ; \

@@ -409,6 +409,7 @@ We import \ty{fmt}.
 			fu,
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{"testing/eco7k.nwk"},
+      nil,
       []*os.File{e1},
 			nil,
 		)},
@@ -422,6 +423,7 @@ We import \ty{fmt}.
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{},
       nil,
+      nil,
 			e2,
 		)},
     r: 18}
@@ -434,6 +436,7 @@ We import \ty{fmt}.
 			[]string{"-t", "991910_"},
 			[]string{},
       nil,
+      nil,
 			e3,
 		)},
     r: 19}
@@ -442,6 +445,7 @@ We import \ty{fmt}.
 			fu,
 			[]string{},
 			[]string{},
+      nil,
       nil,
 			nil,
 		)},
@@ -460,6 +464,7 @@ We import \ty{fmt}.
 			nu,
 			[]string{"-t", "9606", "-L", "complete"},
 			[]string{},
+      nil,
 		)},
     r: 21}
   libTests = append(libTests, libTest)
@@ -470,6 +475,7 @@ We import \ty{fmt}.
 			nu,
 			[]string{"-L", "complete"},
 			[]string{"testing/targets.txt"},
+			nil,
       []*os.File{t1},
 			nil,
 		)},
@@ -483,6 +489,7 @@ We import \ty{fmt}.
 			[]string{"-L", "complete"},
 			[]string{},
       nil,
+      nil,
 			t2,
 		)},
     r: 21}
@@ -491,6 +498,7 @@ We import \ty{fmt}.
 			nu,
 			[]string{},
 			[]string{},
+      nil,
 		)},
     r: 20}
   libTests = append(libTests, libTest)
@@ -498,6 +506,7 @@ We import \ty{fmt}.
 			nu,
 			[]string{"-t", "9685", "-l"},
 			[]string{},
+      nil,
 		)},
     r: 22}
   libTests = append(libTests, libTest)
@@ -505,6 +514,7 @@ We import \ty{fmt}.
 			nu,
 			[]string{"-t", "9685", "-l", "-o"},
 			[]string{},
+      nil,
 		)},
     r: 23}
   libTests = append(libTests, libTest)
@@ -512,6 +522,7 @@ We import \ty{fmt}.
 			nu,
 			[]string{"-l", "-t", "9612,9615", "-T"},
 			[]string{},
+      nil,
 		)},
     r: 24}
   libTests = append(libTests, libTest)
@@ -526,6 +537,7 @@ We import \ty{fmt}.
 			ru,
 			[]string{"9612"},
 			[]string{},
+      nil,
 		)},
     r: 25}
   libTests = append(libTests, libTest)
@@ -533,6 +545,7 @@ We import \ty{fmt}.
 			ru,
 			[]string{"-L", "chromosome", "9612"},
 			[]string{},
+      nil,
 		)},
     r: 26}
   libTests = append(libTests, libTest)
@@ -540,6 +553,7 @@ We import \ty{fmt}.
 			ru,
 			[]string{"-t", "-L", "chromosome", "9612"},
 			[]string{},
+      nil,
 		)},
     r:27}
   libTests = append(libTests, libTest)
@@ -550,6 +564,7 @@ We import \ty{fmt}.
 			ru,
 			[]string{"-g", "testing/myGenomeList.txt", "9612"},
 			[]string{},
+      nil,
       []*os.File{g1},
 			nil,
 		)},
@@ -559,6 +574,7 @@ We import \ty{fmt}.
 			ru,
 			[]string{},
 			[]string{},
+      nil,
 		)},
     r:20}
   libTests = append(libTests, libTest)
@@ -573,6 +589,7 @@ We import \ty{fmt}.
 			tu,
 			[]string{"-t", "9612"},
 			[]string{},
+      nil,
 		)},
     r: 29}
   libTests = append(libTests, libTest)
@@ -580,6 +597,7 @@ We import \ty{fmt}.
 			tu,
 			[]string{"homo sapiens"},
 			[]string{},
+      nil,
 		)},
     r: 30}
   libTests = append(libTests, libTest)
@@ -587,15 +605,17 @@ We import \ty{fmt}.
 			tu,
 			[]string{},
 			[]string{},
+      nil,
 		)},
     r:20}
   libTests = append(libTests, libTest)
   libTest = LibTest{t: func() string {return util.SendGetRequest(
 			tu,
-			[]string{"frog"},
+			[]string{"rana"},
 			[]string{},
+      map[string]string{"db":"small"},
 		)},
-    r:52}
+    r: 52}
   libTests = append(libTests, libTest)
 #+end_src
 
