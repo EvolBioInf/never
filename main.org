@@ -292,10 +292,11 @@ import (
 	apiPref := "/api"
   docsV1Pref := docsPref + apiPref + "/v1"
   docsV2Pref := docsPref + apiPref + "/v2"
+  isLocal := host == "http://localhost"
 
 	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
 	apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
-	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
+	docsv2.RegisterRoutes(docsV2Pref, isLocal, port)
 #+end_src
 
 #+begin_export latex
@@ -574,12 +575,14 @@ import (
 #+end_src
 
 #+begin_export latex
-  We are working with a custom syncMap - the \ty{sync.Map} advises against it's usage unless encoutering
-  two specific scenarios - which requires locking the mutex when reading or writing. Locking for a
-  write might suffice, but I believe the go spec does not specify whethere a read operation is thread-
-  safe. We'd need to lock the map for the next step anyways, as calling the \ty{Allow} function
-  entails a state change within the limiter, which wouldn't be thread safe. So we lock the mutex
-  get the specific limiter, or add if this is the user's first request, and check it.
+  We are working with a custom syncMap - the \ty{sync.Map} advises against it's
+  usage unless encoutering two specific scenarios - which requires locking the
+  mutex when reading or writing. Locking for a write might suffice, but I
+  believe the go spec does not specify whethere a read operation is thread-
+  safe. We'd need to lock the map for the next step anyways, as calling the
+  \ty{Allow} function entails a state change within the limiter, which wouldn't
+  be thread safe. So we lock the mutex get the specific limiter, or add if this
+  is the user's first request, and check it.
 #+end_export
 
 #+begin_src go <<Check user limiter, Pr. \ref{pr:main}>>=
@@ -609,11 +612,12 @@ import (
 #+end_src
 
 #+begin_export latex
-  Now we are ready to start the server. If no host was provided we serve everything locally using http.
-  If a host was specified, we serve at that address using HTTPS/TLS. In either case we should report where we
-  are serving. We read errros provided by the serve function. If the error is a server closed error, we may shutdown gracefully,
-  otherwise we log a fatal error.
-  But we need to import \ty{fmt} and \ty{log} first.
+  Now we are ready to start the server. If no host was provided we serve
+  everything locally using http. If a host was specified, we serve at that
+  address using HTTPS/TLS. In either case we should report where we are
+  serving. We read errros provided by the serve function. If the error is a
+  server closed error, we may shutdown gracefully, otherwise we log a fatal
+  error. But we need to import \ty{fmt} and \ty{log} first.
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
@@ -622,23 +626,116 @@ import (
 #+end_src
 
 #+begin_export latex
-  Now lets get into starting the server. Here we also need to define the middleware chain as a context.
-  We also stop the logging process when we stop the server.
+  Now lets get into starting the server. Here we need to define the
+  middleware chain first. Then there is the server object, which needs
+  creating. Running the server is the next step. Lastly we need to take care of
+  shutting down the server. This entails checking if a termination signal was
+  send, passing it down to the server and do some logging.
+
+
+
+  In order to do so, we run the server in a subroutine
+  and block until we get a terminate signal. After receiving the signal, we
+  pass it along to the server and allow it to hadle it's shutdown. We might
+  want to add a log entry stating, that the server was shut down.
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
   handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
+  //<<Determine server address, Pr. \ref{pr:main}>>
+  //<<Create server, Pr. \ref{pr:main}>>
+  //<<Run server, Pr. \ref{pr:main}>>
+  //<<Block until term signal, Pr. \ref{pr:main}>>
+  //<<Pass timed shutdown, Pr. \ref{pr:main}>>
+  //<<Log shutdown, Pr. \ref{pr:main}>>
+#+end_src
 
-	fmt.Printf("Starting server at %s:%d ...\n", host, port)
-	if host == "http://localhost" {
-    err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
-	} else {
-		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
+#+begin_export latex
+  The server address is just the port, when running locally, while it's the
+  full string when deploying.
+#+end_export
+
+#+begin_src go <<Determine server address, Pr. \ref{pr:main}>>=
+  var addr string
+  if isLocal {
+    addr = fmt.Sprintf(":%d", port)
+  } else {
+    addr = fmt.Sprintf("%s:%d", host, port)
+  }
+#+end_src
+
+#+begin_export latex
+  With the address and the chain of handlers declared, we are ready to create
+  the server object.
+#+end_export
+
+#+begin_src go <<Create server, Pr. \ref{pr:main}>>=
+  s := http.Server{
+		Addr:    addr,
+		Handler: handlerChain,
 	}
+#+end_src
 
-	if err != http.ErrServerClosed {
-		log.Fatal(err)
-	}
+#+begin_export latex
+  The server is ready to run. We should do this inside a subroutine. This
+  allows us to listen to signals.
+#+end_export
 
+#+begin_src go <<Run server, Pr. \ref{pr:main}>>=
+  go func() {
+	  fmt.Printf("Starting server at %s:%d ...\n", host, port)
+	  if isLocal {
+      err = s.ListenAndServe()
+	  } else {
+	  	err = s.ListenAndServeTLS(certificate, privateKey)
+	  }
+  }()
+#+end_src
+
+#+begin_export latex
+  There are two signals we want to listen and act on. The first one is
+  \ty{sigterm}. It is send by the os, when it wants to gracefully stop a
+  process. \ty{sigint} is sent when the user presses ty{ctrl + c}.
+#+end_export
+
+#+begin_src go <<Block until term signal, Pr. \ref{pr:main}>>=
+  term, c := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+  defer c()
+	<-term.Done()
+#+end_src
+
+#+begin_export latex
+  We need to import \ty{context}, \ty{os/signal} and \ty{syscall}
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+	"context"
+	"os/signal"
+	"syscall"
+#+end_src
+
+#+begin_export latex
+  If there was a shutdown signal, we create a timed context and pass it on
+  to the server.
+#+end_export
+
+#+begin_src go <<Pass timed shutdown, Pr. \ref{pr:main}>>=
 	fmt.Println("...Stopping server")
+  ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+  defer cancel()
+  err = s.Shutdown(ctx)
+#+end_src
+
+#+begin_export latex
+  Logging is a good idea here. We add an entry for a failed shutdown and the
+  graceful one.
+#+end_export
+
+#+begin_src go <<Log shutdown, Pr. \ref{pr:main}>>=
+  if err != nil {
+	  util.LogInfoDef(util.InfoEntry{Description: "Server shutdown with error: " + err.Error()})
+  } else {
+	  util.LogInfoDef(util.InfoEntry{Description: "Server shutdown gracefully"})
+  }
+	fmt.Println("Shutdown complete")
 #+end_src

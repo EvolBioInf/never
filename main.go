@@ -33,6 +33,10 @@ import (
 
 	"fmt"
 	"log"
+
+	"context"
+	"os/signal"
+	"syscall"
 )
 
 type CustomResponseWriter struct {
@@ -117,10 +121,11 @@ func main() {
 	apiPref := "/api"
 	docsV1Pref := docsPref + apiPref + "/v1"
 	docsV2Pref := docsPref + apiPref + "/v2"
+	isLocal := host == "http://localhost"
 
 	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
 	apiv2.RegisterRoutes(apiPref+"/v2", host+":"+strconv.Itoa(port), dbs)
-	docsv2.RegisterRoutes(docsV2Pref, host == "http://localhost", port)
+	docsv2.RegisterRoutes(docsV2Pref, isLocal, port)
 
 	vitaxFiles := http.FileServer(http.Dir("vitax"))
 	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
@@ -201,19 +206,43 @@ func main() {
 	}
 
 	handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
-
-	fmt.Printf("Starting server at %s:%d ...\n", host, port)
-	if host == "http://localhost" {
-		err = http.ListenAndServe(fmt.Sprintf(":%d", port), handlerChain)
+	var addr string
+	if isLocal {
+		addr = fmt.Sprintf(":%d", port)
 	} else {
-		err = http.ListenAndServeTLS(fmt.Sprintf("%s:%d", host, port), certificate, privateKey, handlerChain)
+		addr = fmt.Sprintf("%s:%d", host, port)
 	}
 
-	if err != http.ErrServerClosed {
-		log.Fatal(err)
+	s := http.Server{
+		Addr:    addr,
+		Handler: handlerChain,
 	}
+
+	go func() {
+		fmt.Printf("Starting server at %s:%d ...\n", host, port)
+		if isLocal {
+			err = s.ListenAndServe()
+		} else {
+			err = s.ListenAndServeTLS(certificate, privateKey)
+		}
+	}()
+
+	term, c := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer c()
+	<-term.Done()
 
 	fmt.Println("...Stopping server")
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	err = s.Shutdown(ctx)
+
+	if err != nil {
+		util.LogInfoDef(util.InfoEntry{Description: "Server shutdown with error: " + err.Error()})
+	} else {
+		util.LogInfoDef(util.InfoEntry{Description: "Server shutdown gracefully"})
+	}
+	fmt.Println("Shutdown complete")
+
 }
 
 func ioHandling() (string, string, string, string, string, int, bool) {
