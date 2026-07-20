@@ -48,8 +48,8 @@
 #+end_src
 
 #+begin_export latex
-	Now we should declare the datatypes conforming to the api specs models. 
-	We leave out the \ty{Taxon} types for now	and define them in just a second. 
+	Now we should declare the datatypes conforming to the api specs models.
+	We leave out the \ty{Taxon} types for now	and define them in just a second.
 	Every type also needs a \ty{Links} attribute which is going to be explained
 	later on.
 #+end_export
@@ -83,14 +83,14 @@ type TaxonAccession struct {
 #+end_src
 
 #+begin_export latex
-	The \ty{Taxon} types are a bit special. They are subtypes of each other, 
+	The \ty{Taxon} types are a bit special. They are subtypes of each other,
 	which we would usually solve using union types or partials. Sadly Go does not
 	provide those. So instead of using six different types and handling those
-	separately, we are going to write one big type and use \ty{omitempty} on 
-	almost anything. When using them later on, we only set the necessary 
+	separately, we are going to write one big type and use \ty{omitempty} on
+	almost anything. When using them later on, we only set the necessary
 	attributes and leave out the others. \ty{omitempty} leaves out any attribute
 	containing a zero-value. This means an attribute like \ty{IsLeaf} is always
-	left out for nodes. This is undesirable. We can avert this problem using 
+	left out for nodes. This is undesirable. We can avert this problem using
 	pointers. This looks worse, but changes the the zero-value of the attributes,
 	meaning we may specify empty names or non leaves and print them accordingly.
 #+end_export
@@ -199,14 +199,14 @@ type Node struct {
 
 #+begin_export latex
 	With the types declared we may begin implementing the \ty{RouteRegistration}
-	function.	In this we define the Linkgraph and use it's nodes to register the 
-	endpoints. Luckily the endpoints are already declared within the openApi 
-	document. Before pasting everything into \ty{RegisterRoutes}, we need to 
-	think about how registration should work. It is reasonable to create a 
+	function.	In this we define the Linkgraph and use it's nodes to register the
+	endpoints. Luckily the endpoints are already declared within the openApi
+	document. Before pasting everything into \ty{RegisterRoutes}, we need to
+	think about how registration should work. It is reasonable to create a
 	function that handles	route registration, making things easier for us in the
 	long run. Say we want to add a parameter or some specific handling to all our
 	endpoints, we can just add	it to the registration helper. We call this
-	function \ty{makeRoute}. The function needs to take a node, the one to 
+	function \ty{makeRoute}. The function needs to take a node, the one to
 	register, as well as a function \ty{fn}	that is executed when the path is
 	called. \ty{fn} will be wrapped so that we may pass extra arguments. However
 	it needs to accept at least the http writer and request. The function may
@@ -722,18 +722,18 @@ type Node struct {
 		progTaxiL,
 	)
 	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
-	taxaL.Links["service"] = append(taxaL.Links["service"], 
+	taxaL.Links["service"] = append(taxaL.Links["service"],
 		taxonL,
 		childrenL,
 		parentL,
 		subtreeL,
 	)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"], 
+	taxonomyL.Links["service"] = append(taxonomyL.Links["service"],
 		taxonAccessionsL,
 		mrcaL,
 		pathL,
 	)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"], 
+	programsDocL.Links["service"] = append(programsDocL.Links["service"],
 		progAntsL,
 		progDreeL,
 		progFintacL,
@@ -1463,7 +1463,7 @@ type Node struct {
 #+begin_export latex
 	For writing the databases we'll basically print the keys of the database map.
 	We should, however, sort those keys before sending them. The map of databases
-	is passed to this functions as the \textbf{second} entry of the \ty{args} 
+	is passed to this functions as the \textbf{second} entry of the \ty{args}
 	slice. We need to keep this in mind, when trying to access the databases.
 #+end_export
 
@@ -1473,7 +1473,7 @@ type Node struct {
 
 	i := 0
 	for n := range dbs {
-		names[i] = n 
+		names[i] = n
 		i++
 	}
 	slices.Sort(names)
@@ -1484,7 +1484,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	Databases does not provide a lot of links, it's just a self link and 
+	Databases does not provide a lot of links, it's just a self link and
 	pagination links.
 #+end_export
 
@@ -2625,9 +2625,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	Before doing anything we should check whether the request contains any 
+	Before doing anything we should check whether the request contains any
 	input. If there are neither options, nor extra arguments and no data in
-	the body, we should respond with an error. 
+	the body, we should respond with an error.
 #+end_export
 
 #+begin_src go <<Check for input, Pa. \ref{pa:api}>>=
@@ -2671,19 +2671,19 @@ type Node struct {
 
 #+begin_export latex
 	The arguments we are going to use for calling the program are stored in the
-	query parameters \ty{options} and \ty{extra}. The cli programs follow a 
-	certain structure for call parameters. They begin with a set of options 
-	specified using \ty{flag}, then the database is passed followed by optional 
+	query parameters \ty{options} and \ty{extra}. The cli programs follow a
+	certain structure for call parameters. They begin with a set of options
+	specified using \ty{flag}, then the database is passed followed by optional
 	files. For some programs \ty{stdin} may be used instead of the files. We are
-	going to recreate this behaviour using the exploded query parameters 
+	going to recreate this behaviour using the exploded query parameters
 	\ty{options} and \ty{extra}. The values in \ty{extra} and \ty{options} might
-	be files, which we need to create later on. Adding those allows us to use 
+	be files, which we need to create later on. Adding those allows us to use
 	both \ty{options} and \ty{extra} as if we were doing a normal program call.
 	We also need to sift through the call argumens and check for any options that
 	might trigger further remote executions. These options might result in an
-	infinite recursion. We send an error if the request contains of them. The 
+	infinite recursion. We send an error if the request contains of them. The
 	options we need to be on the lookout for are \ty{r} and \ty{D}. Options may
-	be specified with one or two dashes as a prefix. We need to prevent passing 
+	be specified with one or two dashes as a prefix. We need to prevent passing
 	either.
 #+end_export
 
@@ -2701,14 +2701,14 @@ type Node struct {
 #+begin_export latex
 	We add the database path between options and extras as an argument. This is
 	the same for all programs except \ty{fintac}. In \ty{fintac} the database is
-	part of the options. This means we pass it with the corresponding switch 
+	part of the options. This means we pass it with the corresponding switch
 	\ty{-H}.
 #+end_export
 
 #+begin_src go <<Add database to args, Pa. \ref{pa:api}>>=
 	if progName == "fintac" {
 		callArgs = append(callArgs, "-H")
-	} 
+	}
 	callArgs = append(callArgs, "../"+dbPath)
 #+end_src
 
@@ -2716,14 +2716,15 @@ type Node struct {
 	We are calling the program using the \ty{os/exec} package using the
 	previously defined context. Program calls may contain file references. We
 	don't want files of different users to clash, so each command and thus its
-	files are executed within a temporary directory. We use a timestamp as its
-	name, which should be unique. The directory and its contents are removed
-	after execution. Handling files entails creating the necessary temporary 
-	files and taking care of the data provided via \ty{stdin}. 
+	files are executed within a temporary directory. We use a random text to
+	guarantee uniqueness for the directories name as its. The directory and its
+	contents are removed after execution. Handling files entails creating the
+	necessary temporary files and taking care of the data provided via
+	\ty{stdin}.
 #+end_export
 
 #+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
+	dir := rand.Text()
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		writeServerError(w, "Failed to open directory.", err.Error(), err)
@@ -2740,15 +2741,16 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{os/exec}.
+	We need to import \ty{os/exec} and \ty{crypto/rand}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
 	"os/exec"
+	"crypto/rand"
 #+end_src
 
 #+begin_export latex
-	If a request is sent in \ty{multipart/form-data} we can assume that, there 
+	If a request is sent in \ty{multipart/form-data} we can assume that, there
 	are files to check. \ty{multipart/form-data} is a common content type. Let's
 	create a variable which defines this content type for use.
 #+end_export
@@ -2760,8 +2762,8 @@ type Node struct {
 #+begin_export latex
 	We define that a \ty{post} request has to have \ty{multipart} as a
 	content type. If it does not, the request should have been of type \ty{get}.
-	Then we inspect the form data using \ty{parseFormData}, which we need to 
-	implement in a moment. This returns \ty{stdin}'s content. We may use it as 
+	Then we inspect the form data using \ty{parseFormData}, which we need to
+	implement in a moment. This returns \ty{stdin}'s content. We may use it as
 	the commands \ty{stdin}.
 #+end_export
 
@@ -2787,7 +2789,7 @@ type Node struct {
 
 #+begin_export latex
 	Accessing the data of a multipart form request, requires a parsing step. In
-	this the data is checked for syntactical correctness and loaded into 
+	this the data is checked for syntactical correctness and loaded into
 	memory. We may define the amount space we are willing to allocate for this
 	data. I've decided on 3MB, the remaining data will be stored on the disk.
 	We return a 400 (Bad Request) if the data is malformed.
@@ -2834,8 +2836,8 @@ type Node struct {
 
 #+begin_export latex
 	The \ty{neighbors} programs take a variety of parameters as input. Most don't
-	depend on anything, but some, like filenames, depend environmental 
-	surroundings. For this reason we are going to create all the files, using 
+	depend on anything, but some, like filenames, depend environmental
+	surroundings. For this reason we are going to create all the files, using
 	and exchange their local names for new ones - this prevents problems cause by
 	relative paths - and store them in the temporary directory. We are going to
 	extract \ty{stdin} as well and return. If all the files are present during
@@ -2855,7 +2857,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	The map of files we are iterating over, provides a slice of pointers to file 
+	The map of files we are iterating over, provides a slice of pointers to file
 	headers. We expect that each key provides exactly one file. This means every
 	has it's own field. Accessing that file allows opening it. We read the data
 	to a byte slice and store it in a file or \ty{stdin}.
@@ -2885,10 +2887,10 @@ type Node struct {
 
 #+begin_export latex
 	We store the file's data in a new file using the same name as before, but if
-	it's name was \ty{stdin} we store it in the return variable \ty{stdin} 
+	it's name was \ty{stdin} we store it in the return variable \ty{stdin}
 	instead. When writing data to local files, we first need to create that file.
-	We use the previously defined directory and then specify the filename, as 
-	well as the unix permission bits. After opening, we may finally write the 
+	We use the previously defined directory and then specify the filename, as
+	well as the unix permission bits. After opening, we may finally write the
 	data and close the file afterwards.
 #+end_export
 
@@ -2931,11 +2933,11 @@ type Node struct {
 		if j != 0 && (arg == h.Filename || arg == filename) {
 			callArgs[j] = strconv.Itoa(i)
 		}
-	} 
+	}
 #+end_src
 
 #+begin_export latex
-	A complete name including path segments is stripped when calling 
+	A complete name including path segments is stripped when calling
 	\ty{r.ParseMultipartForm}. \ty{h.Filename} is just the file's base name.
 	However, the header is untouched by this, meaning we can parse the content
 	disposition, where the files complete name is stored, manually. Accessing
@@ -2963,9 +2965,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-	After doing all of this file handling, all that is left to do is, set the 
-	pipes for input and output of the command. Then we are done with prepping the 
-	program's environment. 
+	After doing all of this file handling, all that is left to do is, set the
+	pipes for input and output of the command. Then we are done with prepping the
+	program's environment.
 #+end_export
 
 #+begin_src go <<Set pipes, Pa. \ref{pa:api}>>=
@@ -2994,7 +2996,7 @@ type Node struct {
 		RequestIp:     ip,
 		RequestUrl:    r.URL.String(),
 		RequestMethod: r.Method,
-		Description:   
+		Description:
 			"Data in stdin: " + strconv.FormatBool(dataInStdin) +
 			" | Program call: " + cmd.String(),
 	})

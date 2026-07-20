@@ -25,6 +25,7 @@ import (
 	"context"
 	"time"
 
+	"crypto/rand"
 	"os/exec"
 
 	"sort"
@@ -1540,7 +1541,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		return
 	}
 
-	dir := strconv.FormatInt(time.Now().UnixNano(), 10)
+	dir := rand.Text()
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		writeServerError(w, "Failed to open directory.", err.Error(), err)

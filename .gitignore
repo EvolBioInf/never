@@ -38,4 +38,6 @@ prog/
 vitax/
 
 testing/testdb/
+testing/testdb
 certificates/
+databases/
