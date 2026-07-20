@@ -14,6 +14,8 @@ import (
 
 	"github.com/evolbioinf/neighbors/tdb"
 
+	"bytes"
+
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
@@ -85,16 +87,27 @@ func main() {
 		return b.ModTime().Compare(a.ModTime())
 	})
 
-	for i, inf := range fileInfos {
+	for _, inf := range fileInfos {
 		n := inf.Name()
 		path := dbDirPath + "/" + n
+		f, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		fileHeader := []byte{0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00}
+		h := make([]byte, 16)
+		f.Read(h)
+		if !bytes.Equal(h, fileHeader) {
+			continue
+		}
+
 		db, err := tdb.OpenTaxonomyDBcheck(path)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("error while opening database %s: ", path), err.Error())
 		}
 		defer db.Close()
 		dbs[n] = apiv2.Database{Path: path, Db: db}
-		if i == 0 {
+		if len(dbs) == 1 {
 			dbs["latest"] = apiv2.Database{Path: path, Db: db}
 		}
 
