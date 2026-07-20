@@ -11,7 +11,7 @@ all: main $(SUBDIRS)
 main: main.go
 	go build -ldflags "-X github.com/evolbioinf/never/util.version=$(version) -X github.com/evolbioinf/never/util.date=$(date)" main.go && \
 	mkdir -p bin && \
-	cp main bin/never 
+	cp main bin/never
 
 main.go: main.org $(SUBDIRS)
 	if [ "$(nw)" != "" ]; then\
