@@ -223,6 +223,7 @@ type Node struct {
 			var pArgs []any
 			pArgs = append(pArgs, db)
 			pArgs = append(pArgs, args...)
+			//<<Set cors header, Pa. \ref{pa:api}>>
 			fn(w, r, node, pArgs...)
 		})
 	}
@@ -257,6 +258,21 @@ type Node struct {
 			return
 		}
 	}
+#+end_src
+
+#+begin_export latex
+	The cors header is necessary to allow independent frontend development.
+	Different clients might want to create their own frontend developed and
+	deployed independently of never. This cors allow all header allows other
+	developers to do so. It does not pose security risks for our api, as we
+	are providing publicly available data only. Anyone may read never's data,
+	there is no authentication or credential checking before request processing.
+	If authentication, security cookis, session states or anything else along
+	those lines will be introduced, this header needs to be reevaluated.
+#+end_export
+
+#+begin_src go <<Get correct database, Pa. \ref{pa:api}>>=
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 #+end_src
 
 #+begin_export latex
