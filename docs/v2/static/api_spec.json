@@ -31,6 +31,10 @@
     {
       "name": "Program",
       "description": "Endpoints executing programs"
+    },
+    {
+      "name": "Misc",
+      "description": "Miscellaneous endpoints"
     }
   ],
   "paths": {
@@ -171,7 +175,7 @@
         "operationId": "get_services",
         "parameters": [],
         "description": "Get a list of the api's services",
-        "tags": ["Accession", "Taxon"]
+        "tags": ["Misc"]
       }
     },
     "/accessions": {
@@ -282,6 +286,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -314,6 +321,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Get accessions and their levels filtered by accession IDs"
@@ -390,6 +400,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -401,6 +414,9 @@
         "parameters": [
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Get accession and it's level"
@@ -417,6 +433,45 @@
           "description": "Accession to look up"
         }
       ]
+    },
+    "/databases": {
+      "get": {
+        "summary": "Get active databases",
+        "tags": ["Misc"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "examples": {
+                  "Example": {
+                    "value": ["latest", "2026-07", "2026-06"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-databases",
+        "description": "Get active databases",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/offset"
+          }
+        ]
+      }
     },
     "/taxa": {
       "get": {
@@ -612,6 +667,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -658,6 +716,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Get basic taxon data for taxa with the given name"
@@ -783,6 +844,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -798,6 +862,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -904,6 +971,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -925,6 +995,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -1044,6 +1117,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -1059,6 +1135,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -1259,6 +1338,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -1280,6 +1362,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -1524,6 +1609,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -1554,6 +1642,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       },
@@ -1673,6 +1764,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -1703,6 +1797,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -2052,6 +2149,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "406": {
             "description": "Not Acceptable"
           },
@@ -2093,6 +2193,9 @@
           },
           {
             "$ref": "#/components/parameters/plain_data"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -2190,6 +2293,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2209,6 +2315,9 @@
             "in": "query",
             "name": "options",
             "description": "Program options"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Executes the neighbors program ants remotely",
@@ -2235,6 +2344,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2254,6 +2366,9 @@
             "in": "query",
             "name": "options",
             "description": "Program options"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Executes the neighbors program dree remotely",
@@ -2281,6 +2396,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2316,6 +2434,9 @@
             "in": "query",
             "name": "extra",
             "description": "Names of files"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -2339,6 +2460,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2358,6 +2482,9 @@
             "in": "query",
             "name": "options",
             "description": "Program options"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Executes the program neighbors remotely",
@@ -2382,6 +2509,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2417,6 +2547,9 @@
             "in": "query",
             "name": "extra",
             "description": "Names of files"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -2440,6 +2573,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2459,6 +2595,9 @@
             "in": "query",
             "name": "options",
             "description": "Program options"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Executes the neighbors program ranks remotely",
@@ -2484,6 +2623,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2504,6 +2646,9 @@
             "in": "query",
             "name": "options",
             "description": "Program options"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ]
       }
@@ -2527,6 +2672,9 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2546,6 +2694,9 @@
             "in": "query",
             "name": "options",
             "description": "Program options"
+          },
+          {
+            "$ref": "#/components/parameters/db"
           }
         ],
         "description": "Executes the neighbors program taxi remotely",
@@ -2790,6 +2941,16 @@
           "type": "boolean"
         },
         "description": "Reduce response to the data property and remove all hyper refereces"
+      },
+      "db": {
+        "name": "db",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "default": "latest"
+        },
+        "description": "Defines which database should be queried"
       }
     }
   },

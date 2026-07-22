@@ -583,7 +583,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 	examplePath = strings.ReplaceAll(examplePath, "{", "")
   examplePath = strings.ReplaceAll(examplePath, "}", "")
-
+  // <<Remove trailing slashes, Pa. \ref{pa:docs}>>
   // <<Append query parameters, Pa. \ref{pa:docs}>>
 
 #+end_src
@@ -596,6 +596,14 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   if local {
     examplePath = fmt.Sprintf("http://localhost:%d/api/v2", port)
   }
+#+end_src
+
+#+begin_export latex
+  The example paths should not contain trailing slashes.
+#+end_export
+
+#+begin_src go <<Remove trailing slashes, Pa. \ref{pa:docs}>>=
+  examplePath, _ = strings.CutSuffix(examplePath, "/")
 #+end_src
 
 #+begin_export latex

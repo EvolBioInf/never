@@ -202,6 +202,7 @@ func retrieveData(local bool, port int) Content {
 
 			examplePath = strings.ReplaceAll(examplePath, "{", "")
 			examplePath = strings.ReplaceAll(examplePath, "}", "")
+			examplePath, _ = strings.CutSuffix(examplePath, "/")
 
 			sb := new(strings.Builder)
 			for _, param := range queryParams {
