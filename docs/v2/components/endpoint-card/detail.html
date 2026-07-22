@@ -28,6 +28,7 @@
       </div>
       {{end}}
     </div>
+    {{if eq .Op.Verb "POST"}}
     <div class="request-params">
       <h3>Request Body</h3>
       <div class="single-argument">
@@ -37,6 +38,7 @@
         <p>{{.Op.RequestBody.Description}}</p>
       </div>
     </div>
+    {{end}}
   </div>
   <div class="responses">
     <div class="response-upper">

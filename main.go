@@ -257,7 +257,7 @@ func ioHandling() (string, string, string, string, string, int, bool) {
 		"Starts the webserver at specified address with given port.")
 
 	cFlag := flag.String("c", "certificates/cert.pem", "certificate")
-	dFlag := flag.String("d", "neidb", "path to database dir from execution position")
+	dFlag := flag.String("d", "databases", "path to database dir from execution position")
 	uFlag := flag.String("u", "updated.txt", "path to dateFile from execution position")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	oFlag := flag.String("o", "http://localhost", "host address")

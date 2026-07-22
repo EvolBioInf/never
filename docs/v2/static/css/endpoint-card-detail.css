@@ -137,3 +137,17 @@
   padding-left: 6px;
   margin-bottom: 8px;
 }
+
+input[type="file"]::file-selector-button {
+  background: var(--secondary-color);
+  color: var(--primary-color);
+  border: none;
+  border-radius: 6px;
+  padding: 1rem 2rem;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
+  border: 1px solid color-mix(in srgb, var(--secondary-color), white 30%);
+  background-color: color-mix(in srgb, var(--secondary-color), white 30%);
+}

@@ -38,12 +38,12 @@
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
   func RegisterRoutes(prefix string, local bool, port int) {
-    // <<Create template, Pa. \ref{pa:docs}>>
-    // <<Add template functions, Pa. \ref{pa:docs}>>
-    // <<Read HTML files, Pa. \ref{pa:docs}>>
-    // <<Retrieve Data, Pa. \ref{pa:docs}>>
-    // <<Handle base route, Pa. \ref{pa:docs}>>
-    // <<Handle static files, Pa. \ref{pa:docs}>>
+    //<<Create template, Pa. \ref{pa:docs}>>
+    //<<Add template functions, Pa. \ref{pa:docs}>>
+    //<<Read HTML files, Pa. \ref{pa:docs}>>
+    //<<Retrieve Data, Pa. \ref{pa:docs}>>
+    //<<Handle base route, Pa. \ref{pa:docs}>>
+    //<<Handle static files, Pa. \ref{pa:docs}>>
   }
 #+end_src
 
@@ -87,8 +87,8 @@
     "sub": func(a, b int) int {
       return a - b
     },
-    // <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>
-    // <<Create dict from args, Pa. \ref{pa:docs}>>
+    //<<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>
+    //<<Create dict from args, Pa. \ref{pa:docs}>>
   })
 #+end_export
 
@@ -297,8 +297,8 @@ type Response struct {
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
   func retrieveData(local bool, port int) Content {
-    // <<Create Model from library, Pa. \ref{pa:docs}>>
-    // <<Parse data to Content, Pa. \ref{pa:docs}>>
+    //<<Create Model from library, Pa. \ref{pa:docs}>>
+    //<<Parse data to Content, Pa. \ref{pa:docs}>>
   }
 #+end_src
 
@@ -340,8 +340,8 @@ type Response struct {
     ServerURL:   docModel.Model.Servers[0].URL,
   }
 
-  // <<Parse Tags, Pa. \ref{pa:docs}>>
-  // <<Parse Paths, Pa. \ref{pa:docs}>>
+  //<<Parse Tags, Pa. \ref{pa:docs}>>
+  //<<Parse Paths, Pa. \ref{pa:docs}>>
   return content
 #+end_src
 
@@ -563,9 +563,9 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	  queryParams := extractParameters(operation.Parameters)
 	  newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
 
-    // <<Parse request body, Pa. \ref{pa:docs}>>
-    // <<Construct example, Pa. \ref{pa:docs}>>
-    // <<Parse Responses, Pa. \ref{pa:docs}>>
+    //<<Parse request body, Pa. \ref{pa:docs}>>
+    //<<Construct example, Pa. \ref{pa:docs}>>
+    //<<Parse Responses, Pa. \ref{pa:docs}>>
   	newPath.Operations = append(newPath.Operations, newOperation)
   }
 #+end_src
@@ -598,7 +598,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_src go <<Construct example, Pa. \ref{pa:docs}>>=
 	examplePath := content.ServerURL
 
-  // <<Opt. make local, Pa. \ref{pa:docs}>>
+  //<<Opt. make local, Pa. \ref{pa:docs}>>
 
   examplePath += newPath.Name
 
@@ -608,8 +608,8 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 	examplePath = strings.ReplaceAll(examplePath, "{", "")
   examplePath = strings.ReplaceAll(examplePath, "}", "")
-  // <<Remove trailing slashes, Pa. \ref{pa:docs}>>
-  // <<Append query parameters, Pa. \ref{pa:docs}>>
+  //<<Remove trailing slashes, Pa. \ref{pa:docs}>>
+  //<<Append query parameters, Pa. \ref{pa:docs}>>
 
 #+end_src
 
@@ -687,7 +687,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	for strCode, response := range operation.Responses.Codes.FromOldest() {
     //<<Get response info, Pa. \ref{pa:docs}>>
     if !response.Content.IsZero() {
-		// <<Act on response code, Pa. \ref{pa:docs}>>
+		//<<Act on response code, Pa. \ref{pa:docs}>>
 		}
 
   	newOperation.Responses = append(newOperation.Responses, newResponse)
@@ -737,8 +737,8 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	  newResponse.Mime = mime
 	  if newResponse.Code == 200 && contentValue != nil {
         newOperation.AcceptHeader = append(newOperation.AcceptHeader, mime)
-        // <<Parse response schema, Pa. \ref{pa:docs}>>
-        // <<Parse response example, Pa. \ref{pa:docs}>>
+        //<<Parse response schema, Pa. \ref{pa:docs}>>
+        //<<Parse response example, Pa. \ref{pa:docs}>>
 	  }
   }
 #+end_src
@@ -983,7 +983,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 			panic(fmt.Sprintf("cannot marshal example: %e", err))
 		}
 
-    // <<Unwrap response example, Pa. \ref{pa:docs}>>
+    //<<Unwrap response example, Pa. \ref{pa:docs}>>
 	}
 #+end_src
 
