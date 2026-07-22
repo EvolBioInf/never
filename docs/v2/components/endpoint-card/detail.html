@@ -28,24 +28,33 @@
       </div>
       {{end}}
     </div>
+    <div class="request-params">
+      <h3>Request Body</h3>
+      <div class="single-argument">
+        <p>Content-Type</p>
+        <p>{{.Op.RequestBody.Mime}}</p>
+        <p>Description</p>
+        <p>{{.Op.RequestBody.Description}}</p>
+      </div>
+    </div>
   </div>
   <div class="responses">
     <div class="response-upper">
       <div class="example-request-header">
-        <select
-          name="accept-header"
-          id='{{toKebab "run" "example" "select" .Name .Op.Verb}}'
-        >
-          {{range $index, $item := .Op.AcceptHeader}}
-          <option value="{{$item}}">{{ $item }}</option>
-          {{end}}
-        </select>
+        {{if eq .Op.Verb "POST"}}
+        <input
+          id='{{toKebab "input" "example" "file" .Name .Op.Verb}}'
+          name="input-file"
+          type="file"
+          multiple
+        />
+        {{end}}
       </div>
       <div class="response-example">
         <input
           type="text"
           class="input-example"
-          id='{{toKebab "input" "example" .Name .Op.Verb}}'
+          id='{{toKebab "input" "example" "url" .Name .Op.Verb}}'
           value="{{.Op.ExampleRequest}}"
         />
         <button
@@ -56,8 +65,8 @@
         </button>
         <script>
           {
-            // Get html elements by their ids, of the button, pre-tag/ code 
-            // block and input. We just send a fetch using whatever data is 
+            // Get html elements by their ids, of the button, pre-tag/ code
+            // block and input. We just send a fetch using whatever data is
             // in the input.
             const button = document.getElementById(
               '{{toKebab "run" "example" .Name .Op.Verb}}',
@@ -67,17 +76,24 @@
                 '{{toKebab "response" .Name .Op.Verb}}',
               );
               pre.innerHTML = "Loading...";
-              const input = document.getElementById(
-                '{{toKebab "input" "example" .Name .Op.Verb}}',
+              const urlInput = document.getElementById(
+                '{{toKebab "input" "example" "url" .Name .Op.Verb}}',
               );
 
-              const select = document.getElementById(
-                '{{toKebab "run" "example" "select" .Name .Op.Verb}}',
-              );
+              let formData;
+              if ("{{ .Op.Verb }}" === "POST") {
+                const fileInput = document.getElementById(
+                  '{{toKebab "input" "example" "file" .Name .Op.Verb}}',
+                );
+                formData = new FormData();
+                for (const file of fileInput.files) {
+                  formData.append(file.name, file);
+                }
+              }
 
-              fetch(input.value, {
+              fetch(urlInput.value, {
                 method: "{{ .Op.Verb }}",
-                headers: { Accept: select.value },
+                ...(!!formData && { body: formData }),
               })
                 .then((response) => response.text())
                 .then((data) => (pre.innerHTML = data));

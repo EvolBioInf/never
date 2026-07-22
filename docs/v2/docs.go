@@ -47,6 +47,7 @@ type Operation struct {
 	Tags            []string
 	PathParameters  []Parameter
 	QueryParameters []Parameter
+	RequestBody     RequestBody
 	Responses       []Response
 	ExampleRequest  string
 	ExampleResponse string
@@ -63,6 +64,11 @@ type Parameter struct {
 	Example     string
 	Explode     bool
 	Schema      string
+}
+
+type RequestBody struct {
+	Description string
+	Mime        string
 }
 
 type Response struct {
@@ -187,6 +193,13 @@ func retrieveData(local bool, port int) Content {
 
 			queryParams := extractParameters(operation.Parameters)
 			newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
+
+			rb := operation.RequestBody
+			if rb != nil && rb.Content != nil {
+				bd := rb.Description
+				ct := rb.Content.First().Key()
+				newOperation.RequestBody = RequestBody{Description: bd, Mime: ct}
+			}
 
 			examplePath := content.ServerURL
 

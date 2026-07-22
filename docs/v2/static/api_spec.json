@@ -2412,13 +2412,13 @@
               "type": "array",
               "items": {
                 "type": "string"
-              }
+              },
+              "example": ["-t", "991910_", "-u", "562_"]
             },
             "style": "form",
             "explode": true,
             "in": "query",
             "name": "options",
-            "example": ["-t", "991910_", "-u", "562_"],
             "description": "Program options"
           },
           {
@@ -2433,12 +2433,23 @@
             "explode": true,
             "in": "query",
             "name": "extra",
-            "description": "Names of files"
+            "description": "Names of files. These need to match the filenames of the multipart/form-data exactly"
           },
           {
             "$ref": "#/components/parameters/db"
           }
-        ]
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          },
+          "description": "The request body provides the files named in the query parameters. It is essential, that the files' names given in the request body and in the query match."
+        }
       }
     },
     "/programs/neighbors": {
@@ -2551,7 +2562,18 @@
           {
             "$ref": "#/components/parameters/db"
           }
-        ]
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          },
+          "description": "The request body provides the files named in the query parameters. It is essential, that the files' names given in the request body and in the query match."
+        }
       }
     },
     "/programs/ranks": {
@@ -2650,7 +2672,18 @@
           {
             "$ref": "#/components/parameters/db"
           }
-        ]
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          },
+          "description": "The request body provides the files named in the query parameters. It is essential, that the files' names given in the request body and in the query match."
+        }
       }
     },
     "/programs/taxi": {

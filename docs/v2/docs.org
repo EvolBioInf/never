@@ -226,6 +226,7 @@ type Operation struct {
 	Tags            []string
 	PathParameters  []Parameter
 	QueryParameters []Parameter
+	RequestBody     RequestBody
 	Responses       []Response
 	ExampleRequest  string
 	ExampleResponse string
@@ -242,6 +243,11 @@ type Parameter struct {
 	Example     string
 	Explode     bool
 	Schema      string
+}
+
+type RequestBody struct {
+	Description string
+	Mime        string
 }
 
 type Response struct {
@@ -557,9 +563,28 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	  queryParams := extractParameters(operation.Parameters)
 	  newOperation.QueryParameters = append(newOperation.QueryParameters, queryParams...)
 
+    // <<Parse request body, Pa. \ref{pa:docs}>>
     // <<Construct example, Pa. \ref{pa:docs}>>
     // <<Parse Responses, Pa. \ref{pa:docs}>>
   	newPath.Operations = append(newPath.Operations, newOperation)
+  }
+#+end_src
+
+#+begin_export latex
+  We reduce parsing the request's body to reading a few fields. The body may
+  be made up of lots of complex content types and further examples, but we are 
+  not using those. As defined above, all we are looking for are a description,
+  which is a string and a mime type. There are just a few endpoints supporting
+  request bodies. This means we need to check the body's existence before 
+  parsing it.
+#+end_export
+
+#+begin_src go <<Parse request body, Pa. \ref{pa:docs}>>=
+  rb := operation.RequestBody
+  if rb != nil && rb.Content != nil {
+    bd :=	rb.Description
+    ct := rb.Content.First().Key()
+    newOperation.RequestBody = RequestBody{Description: bd, Mime: ct}
   }
 #+end_src
 
