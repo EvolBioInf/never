@@ -1,17 +1,28 @@
 .category-header {
   cursor: pointer;
-  width: 12rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
   display: flex;
-  border-bottom: 3px solid var(--secondary-color);
+  border-bottom: 2px solid var(--secondary-color);
+  margin-bottom: 1rem;
+  padding-right: 10px;
+  align-content: center;
   gap: 1rem;
+  width: 10%;
+  transition: width 0.3s ease;
+}
+
+.category-header-collapsed {
+  width: 100%;
 }
 
 .category-header h3 {
-  align-self: center;
+  margin-bottom: 8px;
 }
 
 .category-header .category-header-arrow {
-  align-self: center;
+  transform: scaleY(-1);
+  transition: transform 0.3s ease;
+}
+
+.category-header-collapsed .category-header-arrow {
+  transform: scaleY(1);
 }

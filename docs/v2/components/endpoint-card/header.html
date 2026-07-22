@@ -27,13 +27,20 @@
   document.getElementById('{{ toKebab "header" .Name .Op.Verb}}').onclick = (
     event,
   ) => {
-    event.preventDefault();
     const id = "{{toKebab .Name .Op.Verb}}";
+    // Stop signal propagation
+    event.preventDefault();
+    // Get url before change
+    const oldURL = window.location.href;
+    
     if (window.location.hash === "#" + id) {
-      location.href = "#";
+      // Silently update to avoid auto-scrolling by browser
+      history.pushState(null, "", "#")
     } else {
-      location.href = "#" + id;
+      history.pushState(null, "", "#" + id)
     }
+    // Manually send change event, because silent update is too silent
+    window.dispatchEvent(new HashChangeEvent("hashchange", {oldURL}))
   };
 </script>
 {{end}}

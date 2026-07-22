@@ -69,4 +69,10 @@ polyline {
 .header-arrow {
   justify-self: center;
   align-self: center;
+  transform: scaleY(1);
+  transition: transform 0.3s ease;
+}
+
+.selected-header .header-arrow {
+  transform: scaleY(-1);
 }

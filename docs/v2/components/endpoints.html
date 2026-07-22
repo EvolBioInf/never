@@ -1,4 +1,4 @@
-{{define "components/categories/categories"}}
+{{define "components/endpoints"}}
 <script type="text/javascript">
   // This manages folding and expanding of the endpoint headers
   const onHashUpdate = ({ oldURL }) => {
@@ -18,6 +18,7 @@
     const newBodyId = "body-" + newHash;
     
     const oldHeaderId = "header-" + oldHash;
+    const newHeaderId = "header-" + newHash;
     
     // Get the corresponding html elements and hide/ display them.
     // We also set selected-header here, which slightly changes the colour 
@@ -31,10 +32,27 @@
     if (oldHeader) {
       oldHeader.classList.remove("selected-header");
     }
+    
+    const newHeader = document.getElementById(newHeaderId);
+    if (newHeader) {
+      newHeader.classList.add("selected-header");
+    }
 
-    const newEndpoint = document.getElementById(newBodyId);
-    if (newEndpoint) {
-      newEndpoint.style.display = "flex";
+    const newEndpointBody = document.getElementById(newBodyId);
+    if (newEndpointBody) {
+      newEndpointBody.style.display = "flex";      
+      
+      // Whenever we expand one of the endpoints, we need to make sure,
+      // that the endpoint's category is expanded as well. 
+      const category = newEndpointBody.closest(".category")
+      if (category) {
+        category.style.display = "";
+      }
+
+      const endpoint = newEndpointBody.closest(".endpoint-card")
+      if (endpoint) {
+        endpoint.scrollIntoView()
+      }
     }
   };
   
@@ -51,6 +69,22 @@
     {{end}}
   {{end}}
 {{end}}
-{{$Paths := .Paths}} {{range .Tags}} 
-  {{template "components/categories/category" (dict "Paths" $Paths "Tag" .)}} {{end}} 
+{{$Paths := .Paths}} 
+  {{range .Tags}} 
+    {{template "components/categories/category" (dict "Paths" $Paths "Tag" .)}} 
+    <script>
+      {
+        const header = document.getElementById('{{toKebab "category" "header" .Name}}') 
+        const endpoints = document.getElementById('{{toKebab "category" "endpoints" .Name}}') 
+        header.onclick = (({target}) => {
+          if (!endpoints.style.display) {
+            endpoints.style.display = "none";
+          } else {
+            endpoints.style.display = "";
+          }
+          header.classList.toggle("category-header-collapsed")
+        })
+      }
+    </script>
+  {{end}} 
 {{end}}
