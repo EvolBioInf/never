@@ -271,7 +271,7 @@ type Node struct {
 	those lines will be introduced, this header needs to be reevaluated.
 #+end_export
 
-#+begin_src go <<Get correct database, Pa. \ref{pa:api}>>=
+#+begin_src go <<Set cors header, Pa. \ref{pa:api}>>=
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 #+end_src
 

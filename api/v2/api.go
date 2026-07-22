@@ -425,11 +425,10 @@ func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ..
 			}
 		}
 
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
 		var pArgs []any
 		pArgs = append(pArgs, db)
 		pArgs = append(pArgs, args...)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		fn(w, r, node, pArgs...)
 	})
