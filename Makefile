@@ -50,3 +50,6 @@ testing/testdb: testing/testdb_small_dump.sql testing/testdb_large_dump.sql
 	mkdir -p testdb && \
 	sqlite3 testdb/small < testdb_small_dump.sql && \
 	sqlite3 testdb/large < testdb_large_dump.sql
+
+doc:
+	make -C doc

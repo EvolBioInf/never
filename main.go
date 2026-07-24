@@ -125,7 +125,7 @@ func main() {
 
 	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
 	apiv2.RegisterRoutes(apiPref+"/v2", host+":"+strconv.Itoa(port), dbs)
-	docsv2.RegisterRoutes(docsV2Pref, isLocal, port)
+	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 
 	vitaxFiles := http.FileServer(http.Dir("vitax"))
 	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
@@ -250,7 +250,8 @@ func ioHandling() (string, string, string, string, string, int, bool) {
 
 	clio.Usage(
 		"-o 10.254.1.21 -p 443",
-		"This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
+		"This is the webserver never. It hosts the neighbors' REST API"+
+			"versions 1 and 2, "+
 			"as well as their respective documentation. "+
 			"New packages may be added in a similar fashion as seen "+
 			"in the main function.",

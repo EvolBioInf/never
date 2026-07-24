@@ -37,13 +37,14 @@
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
-  func RegisterRoutes(prefix string, local bool, port int) {
+  func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
     //<<Create template, Pa. \ref{pa:docs}>>
     //<<Add template functions, Pa. \ref{pa:docs}>>
     //<<Read HTML files, Pa. \ref{pa:docs}>>
     //<<Retrieve Data, Pa. \ref{pa:docs}>>
     //<<Handle base route, Pa. \ref{pa:docs}>>
     //<<Handle static files, Pa. \ref{pa:docs}>>
+    //<<Handle database files, Pa. \ref{pa:docs}>>
   }
 #+end_src
 
@@ -205,6 +206,7 @@ type Content struct {
 	ApiVersion  string
 	ServerURL   string
   Prefix      string
+  DbDirPath 	string
 	Title       string
 	Tags        []Tag
 	Paths       []Path
@@ -270,13 +272,14 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  We might aswell provide the assigned prefix, so the html pages may use them 
-  for dynamic linking.
+  We might aswell provide the assigned prefix and the path to the databases, so
+  the html pages may use them for dynamic linking.
 #+end_export
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
   content := retrieveData(local, port)
   content.Prefix = prefix
+  content.DbDirPath = dbDirPath
 #+end_src
 
 #+begin_export latex
@@ -1037,13 +1040,17 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  We are now done retrieving the data. Which means we can start adding handlers.
-  The documentation frontend is a one pager. This means we only serve one route
-  and the HTML, CSS and JS takes care of all the rest.
+  We are now done retrieving the data. Which means we can start adding 
+  handlers. The most important route is for the documentation itself. This
+  documentation uses static files and links to the database directory. We need
+  to server those later on as well.
 #+end_export
 
 #+begin_src go <<Handle base route, Pa. \ref{pa:docs}>>=
-	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
+	http.HandleFunc(prefix, 
+    func(w http.ResponseWriter, r *http.Request) { 
+      defaultHandler(tmpl, &content, w, r)
+    })
 #+end_src
 
 #+begin_export latex
@@ -1067,7 +1074,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   As already mentioned the frontend relies on static files. Those are mostly 
-  style sheets. Serving those requires a fileserver. We again use \ty{emebd} to
+  style sheets. Serving those requires a fileserver. We again use \ty{embed} to
   keep file access when using binaries. To improve url readability and conform
   to the given prefix we make use of the stripprefix function, when registering
   the handler.
@@ -1076,5 +1083,16 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
   // The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
   // The path before that are the ones I may use within the browser to ask for these files from the file server.
-  http.Handle(prefix+"/static/", http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
+  http.Handle(prefix+"/static/", 
+    http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
+#+end_src
+
+#+begin_export latex
+  We use another fileserver for for serving the databases. We don't need to 
+  embed those, as the user defines the path, when calling \ty{never}.
+#+end_export
+
+#+begin_src go <<Handle database files, Pa. \ref{pa:docs}>>=
+  http.Handle(prefix + "/" + dbDirPath,
+    http.StripPrefix(prefix + "/" + dbDirPath, http.FileServer(http.Dir(dbDirPath))))
 #+end_src

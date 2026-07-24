@@ -61,8 +61,8 @@ import (
 #+end_src
 
 #+begin_export latex
-  Preparing the log can be easily done via the \ty{util} package. But for this we need to import the
-  package first.
+  Preparing the log can be easily done via the \ty{util} package. But for this
+    we need to import the package first.
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
@@ -87,15 +87,17 @@ import (
 
 #+begin_export latex
   This usage function expects three arguments. One is an example call, then a
-  description of what the program is and does. Lastly a summary of what the example call results in.
+  description of what the program is and does. Lastly a summary of what the 
+  example call results in.
 #+end_export
 
 #+begin_src go <<Set usage, Pr. \ref{pr:main}>>=
   clio.Usage(
     "-o 10.254.1.21 -p 443",
-    "This is the webserver never. It hosts the neighbors' REST API versions 1 and 2, "+
-      "as well as their respective documentation. "+
-      "New packages may be added in a similar fashion as seen "+
+    "This is the webserver never. It hosts the neighbors' REST API" +
+      "versions 1 and 2, " +
+      "as well as their respective documentation. " +
+      "New packages may be added in a similar fashion as seen " +
       "in the main function.",
     "Starts the webserver at specified address with given port.")
 #+end_src
@@ -179,11 +181,12 @@ import (
 #+end_src
 
 #+begin_export latex
-  Our first step is to go through the provided dir and get all its entries.
-  We us \ty{ReadDir} for this. Then we iterate over those entries, adding them
-  to a list and get the file's information. This includes its name as well as
-  modification date. After iteration we sort all the information entries by
-  their modification date. This lets us easily determine the latest database.
+  Our first step is to go through the provided directory and get all its
+  entries. We us \ty{ReadDir} for this. Then we iterate over those entries,
+  adding them to a list and get the file's information. This includes its name
+  as well as modification date. After iteration we sort all the information
+  entries by their modification date. This lets us easily determine the latest
+  database.
 #+end_export
 
 #+begin_src go <<Get files, Pr. \ref{pr:main}>>=
@@ -277,14 +280,17 @@ import (
 
 #+begin_export latex
   The packages we want to register each provide their own register function
-  called \ty{registerRoutes}. We provide a prefix to that url, in order to
-  prevent url clashing. The packages don't and shouldn't know of each others
-  existance. So this task falls to the managing part of the software, which
-  is this server. Additionally to the prefix \ty{apiv2} needs to get the
-  databases. \ty{neverv1} receives these the prefixes for api and
-  documentation, the path to the database and a path to the datefile.
-  \ty{docsv2} gets its prefix and it needs to know whether it is being hosted
-  locally and on what port, so we need to provide data for that.
+  called \ty{registerRoutes}. The packages don't and shouldn't know of each 
+  others existance. So this task falls to the managing part of the software, 
+  which is this server. The first step to ensure that this works is preventing
+  url clashes. While the packages should not know of each other they also 
+  should not register to the same routes. We prevent clashes by passing an url
+  prefix to each of them. Additionally to the prefix \ty{apiv2} needs to get
+  the databases. \ty{neverv1} receives prefixes both for the api and its
+  documentation. We further pass the path to the latest database and a path to
+  the datefile. \ty{docsv2} gets its prefix. It also needs to know whether it 
+  is being hosted locally and on what port, so we need to provide data for
+  that. Lastly, we need to provide the directory to the databases.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -296,17 +302,7 @@ import (
 
 	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
 	apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
-	docsv2.RegisterRoutes(docsV2Pref, isLocal, port)
-#+end_src
-
-#+begin_export latex
-  The Vitax files are located in directory \ty{vitax}. We make them
-  available by registering a file server to that directory.
-#+end_export
-
-#+begin_src go <<Serve Vitax files, Pr. \ref{pr:main}>>=
-  vitaxFiles := http.FileServer(http.Dir("vitax"))
-  http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
+	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 #+end_src
 
 #+begin_export latex
@@ -320,6 +316,17 @@ import (
 	"net/http"
   "strconv"
 #+end_src
+
+#+begin_export latex
+  The Vitax files are located in directory \ty{vitax}. We make them
+  available by registering a file server to that directory.
+#+end_export
+
+#+begin_src go <<Serve Vitax files, Pr. \ref{pr:main}>>=
+  vitaxFiles := http.FileServer(http.Dir("vitax"))
+  http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
+#+end_src
+
 
 #+begin_export latex
   Whenever the server is called without any route it should redirect to the most current docs. At the moment

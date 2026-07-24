@@ -26,6 +26,7 @@ type Content struct {
 	ApiVersion  string
 	ServerURL   string
 	Prefix      string
+	DbDirPath   string
 	Title       string
 	Tags        []Tag
 	Paths       []Path
@@ -86,7 +87,7 @@ var componentsFS embed.FS
 //go:embed static/*
 var staticFS embed.FS
 
-func RegisterRoutes(prefix string, local bool, port int) {
+func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 	fmt.Println("docsV2: Creating template")
 	tmpl := template.New("app")
 
@@ -140,12 +141,20 @@ func RegisterRoutes(prefix string, local bool, port int) {
 
 	content := retrieveData(local, port)
 	content.Prefix = prefix
+	content.DbDirPath = dbDirPath
 
-	http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) { defaultHandler(tmpl, &content, w, r) })
+	http.HandleFunc(prefix,
+		func(w http.ResponseWriter, r *http.Request) {
+			defaultHandler(tmpl, &content, w, r)
+		})
 
 	// The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
 	// The path before that are the ones I may use within the browser to ask for these files from the file server.
-	http.Handle(prefix+"/static/", http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
+	http.Handle(prefix+"/static/",
+		http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
+
+	http.Handle(prefix+"/"+dbDirPath,
+		http.StripPrefix(prefix+"/"+dbDirPath, http.FileServer(http.Dir(dbDirPath))))
 }
 
 func retrieveData(local bool, port int) Content {
