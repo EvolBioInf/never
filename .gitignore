@@ -41,3 +41,5 @@ testing/testdb/
 testing/testdb
 certificates/
 databases/
+
+scripts/archive.log
