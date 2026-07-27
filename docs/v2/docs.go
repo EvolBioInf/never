@@ -155,8 +155,8 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 	http.Handle(prefix+"/static/",
 		http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 
-	http.Handle(prefix+"/"+dbDirPath,
-		http.StripPrefix(prefix+"/"+dbDirPath, http.FileServer(http.Dir(dbDirPath))))
+	p := prefix + "/" + dbDirPath + "/"
+	http.Handle(p, http.StripPrefix(p, http.FileServer(http.Dir(dbDirPath))))
 }
 
 func retrieveData(local bool, port int) Content {
