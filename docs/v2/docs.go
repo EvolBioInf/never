@@ -28,6 +28,7 @@ type Content struct {
 	Prefix      string
 	DbDirPath   string
 	Title       string
+	Local       bool
 	Tags        []Tag
 	Paths       []Path
 }
@@ -142,6 +143,7 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 	content := retrieveData(local, port)
 	content.Prefix = prefix
 	content.DbDirPath = dbDirPath
+	content.Local = local
 
 	http.HandleFunc(prefix,
 		func(w http.ResponseWriter, r *http.Request) {

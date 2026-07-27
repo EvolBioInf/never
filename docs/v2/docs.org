@@ -208,6 +208,7 @@ type Content struct {
   Prefix      string
   DbDirPath 	string
 	Title       string
+  Local       bool
 	Tags        []Tag
 	Paths       []Path
 }
@@ -273,13 +274,16 @@ type Response struct {
 
 #+begin_export latex
   We might aswell provide the assigned prefix and the path to the databases, so
-  the html pages may use them for dynamic linking.
+  the html pages may use them for dynamic linking. Same goes for the database
+  directory and local hosting options. All of them change the documentation's 
+  links.
 #+end_export
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
   content := retrieveData(local, port)
   content.Prefix = prefix
   content.DbDirPath = dbDirPath
+  content.Local = local
 #+end_src
 
 #+begin_export latex

@@ -50,7 +50,11 @@
           <a href=https://www.ncbi.nlm.nih.gov>NCBI</a>
             to build a custom database. The compressed files we used for the construction of the
           databases as well as the much larger sqlite databases may be downloaded from
+          {{if .Local}}
+          <a href="{{.Prefix}}/{{.DbDirPath}}">here</a>.
+          {{else}}
           <a href="https://neighbors.evolbio.mpg.de/{{.Prefix}}/{{.DbDirPath}}">here</a>.
+          {{end}}
           <br />
           
           Our REST API for querying this database is implemented in
