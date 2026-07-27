@@ -1,9 +1,10 @@
 #+begin_export latex
-  This is the entry point for \ty{never} the webserver for the \ty{neighbors} package.
-  This webserver hosts the first iteration of \ty{never} \ty{api/v1}, the second iteration
-  and its docs, as well as \ty{Vitax}. The idea of this program is to build a basic server structure
-  that allows other packages to be registered to it. To begin implementing the server start off with a
-  basic program layout.
+  This is the entry point for \ty{never} the webserver for the \ty{neighbors}
+  package. This webserver hosts the first iteration of \ty{never} \ty{api/v1},
+  the second iteration and its docs, as well as \ty{Vitax}. The idea of this
+  program is to build a basic server structure that allows other packages to be
+  registered to it. To begin implementing the server start off with a basic
+  program layout.
 #+end_export
 
 #+begin_src go <<main.go>>=
@@ -295,7 +296,7 @@ import (
   While this semantically fits really well, it is quite flaky. There is an
   automatic update system, rebuilding the database every night. Some existing
   databases get archived both manually and automatically. Furthermore depending
-  on whether databases are linked into the database directory or copied inot it
+  on whether databases are linked into the database directory or copied into it
   influences their modification time as well. All of this shows, that the
   modification time is not totally reliable. Because of that, we use the
   current \ty{latest} databses as a fallback only. We overwrite the \ty{latest}
@@ -328,10 +329,10 @@ import (
   which is this server. The first step to ensure that this works is preventing
   url clashes. While the packages should not know of each other they also
   should not register to the same routes. We prevent clashes by passing an url
-  prefix to each of them. Additionally to the prefix \ty{apiv2} needs to get
-  the databases. \ty{neverv1} receives prefixes both for the api and its
+  prefix to each of them. Additionally to the prefix apiv2 needs to get
+  the databases. neverv1 receives prefixes both for the api and its
   documentation. We further pass the path to the latest database and a path to
-  the datefile. \ty{docsv2} gets its prefix. It also needs to know whether it
+  the datefile. docsv2 gets its prefix. It also needs to know whether it
   is being hosted locally and on what port, so we need to provide data for
   that. Lastly, we need to provide the directory to the databases.
 #+end_export
@@ -343,13 +344,15 @@ import (
   docsV2Pref := docsPref + apiPref + "/v2"
   isLocal := host == "http://localhost"
 
-  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
+  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path,
+    dateFilePath)
   apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
   docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 #+end_src
 
 #+begin_export latex
-  We also need to import the registerd packages, as well as \ty{net/http} and \ty{strconv}
+  We also need to import the registerd packages, as well as \ty{net/http} and
+  \ty{strconv}.
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
@@ -371,9 +374,12 @@ import (
 #+end_src
 
 #+begin_export latex
-  Whenever the server is called without any route it should redirect to the most current docs. At the moment
-  this is \ty{docsv2}. We do this in a well mannered fashion by using http redirect and setting the correct http status, which is 303.
-  Go changed its url matching strategies with version 1.22. Using \ty{\{$\}} at the end of a string defines that it should match exactly and only this string.
+  Whenever the server is called without any route it should redirect to the
+  most current docs. At the moment this is docsv2. We do this in a well
+  mannered fashion by using http redirect and setting the correct http status,
+  which is 303. Go changed its url matching strategies with version 1.22. Using
+  \ty{\{$\}} at the end of a string defines that it should match exactly and
+  only this string.
 #+end_export
 
 #+begin_src go <<Define default route, Pr. \ref{pr:main}>>=
@@ -383,12 +389,14 @@ import (
 #+end_src
 
 #+begin_export latex
-  Creating the middleware is a step in which we define functions that are called for all requests handled
-  by this server. Whether their logic is applied to a specific route is up to the layer of the middleware.
-  One layer of this middleware is made up of a function that takes and returns a \ty{http.Handler}.
-  Each layer adds some processing capabilities. The first layer for example is for rate limiting.
-  Another layer is for logging requests and responses. We define the functions in the scope of
-  the main function in order to get access to local variables, like paths and limiters.
+  Creating the middleware is a step in which we define functions that are
+  called for all requests handled by this server. Whether their logic is
+  applied to a specific route is up to the layer of the middleware. One layer
+  of this middleware is made up of a function that takes and returns a
+  \ty{http.Handler}. Each layer adds some processing capabilities. The first
+  layer for example is for rate limiting. Another layer is for logging requests
+  and responses. We define the functions in the scope of the main function in
+  order to get access to local variables, like paths and limiters.
 #+end_export
 
 #+begin_src go <<Create middleware, Pr. \ref{pr:main}>>=
@@ -599,28 +607,29 @@ import (
 #+end_src
 
 #+begin_export latex
-  First we check whether the requested url is rate limited, i.e. apiv1 or apiv2. We immediately
-  call the next handler, if the url is no rate limited. If it is we check the general and user
-  limiters. We first check the general limiter, as checking the user limiters requires more
-  processing power. If the general limiter allows processing we check the user limiter. If both
-  limiters allow processing we call the next handler. We write an error response if either limiter
-  denies processing.
+  First we check whether the requested url is rate limited, i.e. apiv1 or
+  apiv2. We immediately call the next handler, if the url is no rate limited.
+  If it is we check the general and user limiters. We first check the general
+  limiter, as checking the user limiters requires more processing power. If the
+  general limiter allows processing we check the user limiter. If both limiters
+  allow processing we call the next handler. We write an error response if
+  either limiter denies processing.
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
-      allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
-      if !allowed {
-        if generalLimiter.Allow() {
-          //<<Check user limiter, Pr. \ref{pr:main}>>
-        }
-      }
+  allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
+  if !allowed {
+    if generalLimiter.Allow() {
+      //<<Check user limiter, Pr. \ref{pr:main}>>
+    }
+  }
 
-      if !allowed {
-        w.WriteHeader(http.StatusTooManyRequests)
-        w.Write([]byte("Exceeded rate limit\n"))
-      } else {
-        next.ServeHTTP(w, r)
-      }
+  if !allowed {
+    w.WriteHeader(http.StatusTooManyRequests)
+    w.Write([]byte("Exceeded rate limit\n"))
+  } else {
+    next.ServeHTTP(w, r)
+  }
 #+end_src
 
 #+begin_export latex
@@ -748,7 +757,8 @@ import (
 #+end_export
 
 #+begin_src go <<Block until term signal, Pr. \ref{pr:main}>>=
-  term, c := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+  term, c := signal.NotifyContext(context.Background(),
+    syscall.SIGTERM, syscall.SIGINT)
   defer c()
   <-term.Done()
 #+end_src
