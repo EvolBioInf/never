@@ -47,13 +47,14 @@ import (
   we need be able to pass an address and a port for the server to run on. It
   would be nice if we could also define a path for the HTTPS/TLS files i.e. the
   certificate and the private key. Providing extra options for the database
-  directory path and the date file results in a more flexible setup. It should
-  be possible to toggle the rate limit for debugging and testing purposes. This
-  results in five strings, an integer and a bool as a return tuple.
+  directory path, a default among the databases of the directory and the date
+  file results in a more flexible setup. It should be possible to toggle the
+  rate limit for debugging and testing purposes. This results in six strings,
+  an integer and a boolean as a return tuple.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-  func ioHandling() (string, string, string, string, string, int, bool) {
+  func ioHandling() (string, string, string, string, string, string, int, bool) {
     //<<Prepare log, Pr. \ref{pr:main}>>
     //<<Set usage, Pr. \ref{pr:main}>>
     //<<Parse flags, Pr. \ref{pr:main}>>
@@ -82,12 +83,12 @@ import (
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"github.com/evolbioinf/clio"
+  "github.com/evolbioinf/clio"
 #+end_src
 
 #+begin_export latex
   This usage function expects three arguments. One is an example call, then a
-  description of what the program is and does. Lastly a summary of what the 
+  description of what the program is and does. Lastly a summary of what the
   example call results in.
 #+end_export
 
@@ -121,8 +122,12 @@ import (
 
 #+begin_src go <<Parse flags, Pr. \ref{pr:main}>>=
   cFlag := flag.String("c", "certificates/cert.pem", "certificate")
-  dFlag := flag.String("d", "databases", "path to database dir from execution position")
-  uFlag := flag.String("u", "updated.txt", "path to dateFile from execution position")
+  dFlag := flag.String("d", "databases", "path to database directory" +
+    "relative to current working directory")
+  ddFlag := flag.String("D", "neidb", "base name of the database that" +
+    "should be used by default.")
+  uFlag := flag.String("u", "updated.txt", "path to dateFile" +
+    "relative to current working directory")
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
   oFlag := flag.String("o", "http://localhost", "host address")
   pFlag := flag.Int("p", 8080, "port")
@@ -136,16 +141,18 @@ import (
     os.Exit(0)
   }
 
-  return *cFlag, *dFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
+  return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
 #+end_src
 
 #+begin_export latex
-  Having implemented \ty{ioHandling} we know how to call it and what it returns. So let's do that.
+  Having implemented \ty{ioHandling} we know how to call it and what it
+  returns. So let's do that.
 #+end_export
 
 #+begin_src go <<Handle io, Pr. \ref{pr:main}>>=
-	certificate,
+  certificate,
   dbDirPath,
+  defaultDb,
   dateFilePath,
   privateKey,
   host,
@@ -178,6 +185,7 @@ import (
   for _, inf := range fileInfos {
     //<<Connect to db, Pr. \ref{pr:main}>>
   }
+  //<<Update latest db, Pr. \ref{pr:main}>>
 #+end_src
 
 #+begin_export latex
@@ -206,8 +214,8 @@ import (
     log.Fatal(errors.New("No databases in provided directory."))
   }
   slices.SortFunc(fileInfos, func(a, b fs.FileInfo) int {
-		return b.ModTime().Compare(a.ModTime())
-	})
+    return b.ModTime().Compare(a.ModTime())
+  })
 #+end_src
 
 #+begin_export latex
@@ -222,19 +230,22 @@ import (
 
 #+begin_export latex
   Connecting to the database is rather simple. We define a path for each entry.
-  This is composed of the files name, prepended by the name of the database
+  This is composed of the file's name, prepended by the name of the database
   directory. The we open the connection and make a deferred \ty{Close} call. We
-  also provide an additional entry for the first database as \ty{latest}.
+  also provide an additional entry for the first database as \ty{latest}. This
+  is best done right after adding the first database. For this reason we check
+  the map's size rather than loop indices.
 #+end_export
 
 #+begin_src go <<Connect to db, Pr. \ref{pr:main}>>=
   n := inf.Name()
   path := dbDirPath + "/" + n
   //<<Check if is db, Pr. \ref{pr:main}>>
- 	db, err := tdb.OpenTaxonomyDBcheck(path)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("error while opening database %s: ", path), err.Error())
-	}
+  db, err := tdb.OpenTaxonomyDBcheck(path)
+  if err != nil {
+    log.Fatal(fmt.Sprintf("error while opening database %s: ", path),
+      err.Error())
+  }
   defer db.Close()
   dbs[n] = apiv2.Database{Path: path, Db: db}
   if len(dbs) == 1 {
@@ -247,7 +258,7 @@ import (
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"github.com/evolbioinf/neighbors/tdb"
+  "github.com/evolbioinf/neighbors/tdb"
 #+end_src
 
 #+begin_export latex
@@ -262,7 +273,8 @@ import (
   if err != nil {
     continue
   }
-  fileHeader := []byte{0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00}
+  fileHeader := []byte{0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f,
+    0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00}
   h := make([]byte, 16)
   f.Read(h)
   if !bytes.Equal(h, fileHeader) {
@@ -275,34 +287,65 @@ import (
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"bytes"
+  "bytes"
+#+end_src
+
+#+begin_export latex
+  We already added an entry for the latest db based on modification times.
+  While this semantically fits really well, it is quite flaky. There is an
+  automatic update system, rebuilding the database every night. Some existing
+  databases get archived both manually and automatically. Furthermore depending
+  on whether databases are linked into the database directory or copied inot it
+  influences their modification time as well. All of this shows, that the
+  modification time is not totally reliable. Because of that, we use the
+  current \ty{latest} databses as a fallback only. We overwrite the \ty{latest}
+  entry, if the user provided a different db.
+#+end_export
+
+#+begin_src go <<Update latest db, Pr. \ref{pr:main}>>=
+  d, ok := dbs[defaultDb]
+  if ok {
+    dbs["latest"] = d
+  } else {
+		fmt.Printf("Could not find provided default db: %s, "+
+			"falling back to %s (%s) instead.\n", defaultDb,
+      filepath.Base(dbs["latest"].Path), dbs["latest"].Path)
+  }
+#+end_src
+
+#+begin_export latex
+  We import \ty{path/filepath}.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "path/filepath"
 #+end_src
 
 #+begin_export latex
   The packages we want to register each provide their own register function
-  called \ty{registerRoutes}. The packages don't and shouldn't know of each 
-  others existance. So this task falls to the managing part of the software, 
+  called \ty{registerRoutes}. The packages don't and shouldn't know of each
+  others existance. So this task falls to the managing part of the software,
   which is this server. The first step to ensure that this works is preventing
-  url clashes. While the packages should not know of each other they also 
+  url clashes. While the packages should not know of each other they also
   should not register to the same routes. We prevent clashes by passing an url
   prefix to each of them. Additionally to the prefix \ty{apiv2} needs to get
   the databases. \ty{neverv1} receives prefixes both for the api and its
   documentation. We further pass the path to the latest database and a path to
-  the datefile. \ty{docsv2} gets its prefix. It also needs to know whether it 
+  the datefile. \ty{docsv2} gets its prefix. It also needs to know whether it
   is being hosted locally and on what port, so we need to provide data for
   that. Lastly, we need to provide the directory to the databases.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
   docsPref := "/docs"
-	apiPref := "/api"
+  apiPref := "/api"
   docsV1Pref := docsPref + apiPref + "/v1"
   docsV2Pref := docsPref + apiPref + "/v2"
   isLocal := host == "http://localhost"
 
-	neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
-	apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
-	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
+  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
+  apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
+  docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 #+end_src
 
 #+begin_export latex
@@ -311,9 +354,9 @@ import (
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
   neverv1 "github.com/evolbioinf/never/api/v1/never"
-	apiv2 "github.com/evolbioinf/never/api/v2"
-	docsv2 "github.com/evolbioinf/never/docs/v2"
-	"net/http"
+  apiv2 "github.com/evolbioinf/never/api/v2"
+  docsv2 "github.com/evolbioinf/never/docs/v2"
+  "net/http"
   "strconv"
 #+end_src
 
@@ -327,7 +370,6 @@ import (
   http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src
 
-
 #+begin_export latex
   Whenever the server is called without any route it should redirect to the most current docs. At the moment
   this is \ty{docsv2}. We do this in a well mannered fashion by using http redirect and setting the correct http status, which is 303.
@@ -335,9 +377,9 @@ import (
 #+end_export
 
 #+begin_src go <<Define default route, Pr. \ref{pr:main}>>=
-	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
-	})
+  http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
+    http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
+  })
 #+end_src
 
 #+begin_export latex
@@ -379,14 +421,14 @@ import (
 #+end_export
 
 #+begin_src go <<Write logger middleware, Pr. \ref{pr:main}>>=
-	middlewareLogger := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  middlewareLogger := func(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
       bef := time.Now().UnixMilli()
       //<<Pass on request, Pr. \ref{pr:main}>>
       af := time.Now().UnixMilli()
       //<<Log request, Pr. \ref{pr:main}>>
-		})
-	}
+    })
+  }
 #+end_src
 
 #+begin_export latex
@@ -478,12 +520,12 @@ import (
 
 #+begin_src go <<Retrieve remote ip, Pr. \ref{pr:main}>>=
   ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		util.LogWarningDef(
+  if err != nil {
+    util.LogWarningDef(
       util.WarningEntry{
         Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
     })
-	}
+  }
 #+end_src
 
 #+begin_export latex
@@ -495,7 +537,7 @@ import (
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"golang.org/x/time/rate"
+  "golang.org/x/time/rate"
 #+end_src
 
 #+begin_export latex
@@ -507,7 +549,7 @@ import (
 #+end_export
 
 #+begin_src go <<Create limiter middleware, Pr. \ref{pr:main}>>=
-	generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
+  generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
   //<<Declare per user limiter, Pr. \ref{pr:main}>>
   //<<Write limiter middleware, Pr. \ref{pr:main}>>
 #+end_src
@@ -550,10 +592,10 @@ import (
 
 #+begin_src go <<Write limiter middleware, Pr. \ref{pr:main}>>=
   middlewareLimiter := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
       //<<Check condition, Pr. \ref{pr:main}>>
-		})
-	}
+    })
+  }
 #+end_src
 
 #+begin_export latex
@@ -566,19 +608,19 @@ import (
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
-			allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
-			if !allowed {
-				if generalLimiter.Allow() {
+      allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
+      if !allowed {
+        if generalLimiter.Allow() {
           //<<Check user limiter, Pr. \ref{pr:main}>>
-				}
-			}
+        }
+      }
 
-			if !allowed {
-				w.WriteHeader(http.StatusTooManyRequests)
-				w.Write([]byte("Exceeded rate limit\n"))
-			} else {
-				next.ServeHTTP(w, r)
-			}
+      if !allowed {
+        w.WriteHeader(http.StatusTooManyRequests)
+        w.Write([]byte("Exceeded rate limit\n"))
+      } else {
+        next.ServeHTTP(w, r)
+      }
 #+end_src
 
 #+begin_export latex
@@ -593,20 +635,20 @@ import (
 #+end_export
 
 #+begin_src go <<Check user limiter, Pr. \ref{pr:main}>>=
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
-	}
+  ip, _, err := net.SplitHostPort(r.RemoteAddr)
+  if err != nil {
+    fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
+  }
 
-	userLimiters.mu.Lock()
-	lim, ok := userLimiters.ma[ip]
-	if !ok {
-		lim = rate.NewLimiter(rate.Limit(10), 25)
-		userLimiters.ma[ip] = lim
-	}
+  userLimiters.mu.Lock()
+  lim, ok := userLimiters.ma[ip]
+  if !ok {
+    lim = rate.NewLimiter(rate.Limit(10), 25)
+    userLimiters.ma[ip] = lim
+  }
 
-	allowed = lim.Allow()
-	userLimiters.mu.Unlock()
+  allowed = lim.Allow()
+  userLimiters.mu.Unlock()
 #+end_src
 
 #+begin_export latex
@@ -614,8 +656,8 @@ import (
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"strings"
-	"net"
+  "strings"
+  "net"
 #+end_src
 
 #+begin_export latex
@@ -678,9 +720,9 @@ import (
 
 #+begin_src go <<Create server, Pr. \ref{pr:main}>>=
   s := http.Server{
-		Addr:    addr,
-		Handler: handlerChain,
-	}
+    Addr:    addr,
+    Handler: handlerChain,
+  }
 #+end_src
 
 #+begin_export latex
@@ -690,12 +732,12 @@ import (
 
 #+begin_src go <<Run server, Pr. \ref{pr:main}>>=
   go func() {
-	  fmt.Printf("Starting server at %s:%d ...\n", host, port)
-	  if isLocal {
+    fmt.Printf("Starting server at %s:%d ...\n", host, port)
+    if isLocal {
       err = s.ListenAndServe()
-	  } else {
-	  	err = s.ListenAndServeTLS(certificate, privateKey)
-	  }
+    } else {
+      err = s.ListenAndServeTLS(certificate, privateKey)
+    }
   }()
 #+end_src
 
@@ -708,7 +750,7 @@ import (
 #+begin_src go <<Block until term signal, Pr. \ref{pr:main}>>=
   term, c := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
   defer c()
-	<-term.Done()
+  <-term.Done()
 #+end_src
 
 #+begin_export latex
@@ -716,9 +758,9 @@ import (
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-	"context"
-	"os/signal"
-	"syscall"
+  "context"
+  "os/signal"
+  "syscall"
 #+end_src
 
 #+begin_export latex
@@ -727,7 +769,7 @@ import (
 #+end_export
 
 #+begin_src go <<Pass timed shutdown, Pr. \ref{pr:main}>>=
-	fmt.Println("...Stopping server")
+  fmt.Println("...Stopping server")
   ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
   defer cancel()
   err = s.Shutdown(ctx)
@@ -740,9 +782,9 @@ import (
 
 #+begin_src go <<Log shutdown, Pr. \ref{pr:main}>>=
   if err != nil {
-	  util.LogInfoDef(util.InfoEntry{Description: "Server shutdown with error: " + err.Error()})
+    util.LogInfoDef(util.InfoEntry{Description: "Server shutdown with error: " + err.Error()})
   } else {
-	  util.LogInfoDef(util.InfoEntry{Description: "Server shutdown gracefully"})
+    util.LogInfoDef(util.InfoEntry{Description: "Server shutdown gracefully"})
   }
-	fmt.Println("Shutdown complete")
+  fmt.Println("Shutdown complete")
 #+end_src

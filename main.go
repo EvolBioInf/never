@@ -16,6 +16,8 @@ import (
 
 	"bytes"
 
+	"path/filepath"
+
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
@@ -64,6 +66,7 @@ type SyncMap struct {
 func main() {
 	certificate,
 		dbDirPath,
+		defaultDb,
 		dateFilePath,
 		privateKey,
 		host,
@@ -98,7 +101,8 @@ func main() {
 		if err != nil {
 			continue
 		}
-		fileHeader := []byte{0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00}
+		fileHeader := []byte{0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f,
+			0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00}
 		h := make([]byte, 16)
 		f.Read(h)
 		if !bytes.Equal(h, fileHeader) {
@@ -107,7 +111,8 @@ func main() {
 
 		db, err := tdb.OpenTaxonomyDBcheck(path)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("error while opening database %s: ", path), err.Error())
+			log.Fatal(fmt.Sprintf("error while opening database %s: ", path),
+				err.Error())
 		}
 		defer db.Close()
 		dbs[n] = apiv2.Database{Path: path, Db: db}
@@ -115,6 +120,14 @@ func main() {
 			dbs["latest"] = apiv2.Database{Path: path, Db: db}
 		}
 
+	}
+	d, ok := dbs[defaultDb]
+	if ok {
+		dbs["latest"] = d
+	} else {
+		fmt.Printf("Could not find provided default db: %s, "+
+			"falling back to %s (%s) instead.\n", defaultDb,
+			filepath.Base(dbs["latest"].Path), dbs["latest"].Path)
 	}
 
 	docsPref := "/docs"
@@ -245,7 +258,7 @@ func main() {
 
 }
 
-func ioHandling() (string, string, string, string, string, int, bool) {
+func ioHandling() (string, string, string, string, string, string, int, bool) {
 	util.PrepLog("never")
 
 	clio.Usage(
@@ -258,8 +271,12 @@ func ioHandling() (string, string, string, string, string, int, bool) {
 		"Starts the webserver at specified address with given port.")
 
 	cFlag := flag.String("c", "certificates/cert.pem", "certificate")
-	dFlag := flag.String("d", "databases", "path to database dir from execution position")
-	uFlag := flag.String("u", "updated.txt", "path to dateFile from execution position")
+	dFlag := flag.String("d", "databases", "path to database directory"+
+		"relative to current working directory")
+	ddFlag := flag.String("D", "neidb", "base name of the database that"+
+		"should be used by default.")
+	uFlag := flag.String("u", "updated.txt", "path to dateFile"+
+		"relative to current working directory")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	oFlag := flag.String("o", "http://localhost", "host address")
 	pFlag := flag.Int("p", 8080, "port")
@@ -273,6 +290,6 @@ func ioHandling() (string, string, string, string, string, int, bool) {
 		os.Exit(0)
 	}
 
-	return *cFlag, *dFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
+	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
 
 }
