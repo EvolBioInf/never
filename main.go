@@ -136,7 +136,8 @@ func main() {
 	docsV2Pref := docsPref + apiPref + "/v2"
 	isLocal := host == "http://localhost"
 
-	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbs["latest"].Path, dateFilePath)
+	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbs["latest"].Path,
+		dateFilePath)
 	apiv2.RegisterRoutes(apiPref+"/v2", host+":"+strconv.Itoa(port), dbs)
 	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 
@@ -218,7 +219,27 @@ func main() {
 		})
 	}
 
-	handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
+	go func(ul *SyncMap) {
+		for {
+			time.Sleep(5 * time.Minute)
+			userLimiters.mu.Lock()
+			fmt.Println(ul.ma)
+			for k := range userLimiters.ma {
+				delete(userLimiters.ma, k)
+			}
+			fmt.Println(ul.ma)
+			userLimiters.mu.Unlock()
+		}
+	}(&userLimiters)
+
+	middlewareTimeout := func(next http.Handler, d time.Duration) http.Handler {
+		return http.TimeoutHandler(next, d, "Request timed out.\n")
+	}
+
+	handlerChain := middlewareTimeout(
+		middlewareLimiter(
+			middlewareLogger(http.DefaultServeMux)),
+		15*time.Second)
 	var addr string
 	if isLocal {
 		addr = fmt.Sprintf(":%d", port)
@@ -240,7 +261,8 @@ func main() {
 		}
 	}()
 
-	term, c := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	term, c := signal.NotifyContext(context.Background(),
+		syscall.SIGTERM, syscall.SIGINT)
 	defer c()
 	<-term.Done()
 

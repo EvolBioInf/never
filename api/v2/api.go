@@ -22,9 +22,6 @@ import (
 
 	"slices"
 
-	"context"
-	"time"
-
 	"crypto/rand"
 	"os/exec"
 
@@ -134,8 +131,16 @@ var root Node
 var prefix string
 var serverAddress string
 
-var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+var jsonCt = contenttype.MediaType{
+	Type:       "application",
+	Subtype:    "json",
+	Parameters: contenttype.Parameters{"charset": "utf-8"},
+}
+var plainCt = contenttype.MediaType{
+	Type:       "text",
+	Subtype:    "plain",
+	Parameters: contenttype.Parameters{"charset": "utf-8"},
+}
 
 var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 
@@ -240,7 +245,8 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&taxonAccessionsL, taxonAccessions, dbs) // previously called accessions
+	// previously called accessions
+	makeRoute(&taxonAccessionsL, taxonAccessions, dbs)
 
 	mrcaL := Node{
 		Links:    make(map[string][]Node),
@@ -361,7 +367,10 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		progRanksPostL,
 		progTaxiL,
 	)
-	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
+	accessionsL.Links["service"] = append(
+		accessionsL.Links["service"],
+		accessionL,
+	)
 	taxaL.Links["service"] = append(taxaL.Links["service"],
 		taxonL,
 		childrenL,
@@ -384,17 +393,26 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		progTaxiL,
 	)
 
-	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
+	accessionsL.Links["entities"] = append(
+		accessionsL.Links["entities"],
+		accessionL,
+	)
 	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
 	childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
 	subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
 	pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
 
-	accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
+	accessionL.Links["part-of"] = append(
+		accessionL.Links["part-of"],
+		accessionsL,
+	)
 	taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
 
 	mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
-	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
+	childrenL.Links["all descendants"] = append(
+		childrenL.Links["all descendants"],
+		subtreeL,
+	)
 	root = rootDocL
 
 	services := root.Links["service"]
@@ -408,30 +426,37 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 	}
 
 }
-func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), dbs map[string]Database, args ...any) {
-	http.HandleFunc(node.Action+" "+node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-		var db Database
-		if dbs != nil {
-			dbStr := r.URL.Query().Get("db")
-			if dbStr == "" {
-				dbStr = "latest"
-			}
-			var ok bool
-			db, ok = dbs[dbStr]
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("No db under this name.\n"))
-				return
-			}
-		}
+func makeRoute(
+	node *Node,
+	fn func(http.ResponseWriter, *http.Request, *Node, ...any),
+	dbs map[string]Database, args ...any) {
 
-		var pArgs []any
-		pArgs = append(pArgs, db)
-		pArgs = append(pArgs, args...)
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+	http.HandleFunc(
+		node.Action+" "+node.BasePath,
+		func(w http.ResponseWriter, r *http.Request) {
 
-		fn(w, r, node, pArgs...)
-	})
+			var db Database
+			if dbs != nil {
+				dbStr := r.URL.Query().Get("db")
+				if dbStr == "" {
+					dbStr = "latest"
+				}
+				var ok bool
+				db, ok = dbs[dbStr]
+				if !ok {
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("No db under this name.\n"))
+					return
+				}
+			}
+
+			var pArgs []any
+			pArgs = append(pArgs, db)
+			pArgs = append(pArgs, args...)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+
+			fn(w, r, node, pArgs...)
+		})
 }
 
 func writeBadRequestResp(w http.ResponseWriter, text string) {
@@ -440,26 +465,35 @@ func writeBadRequestResp(w http.ResponseWriter, text string) {
 }
 
 func makeOptionsRoute(nodes []Node) {
-	http.HandleFunc("OPTIONS "+nodes[0].BasePath, func(w http.ResponseWriter, r *http.Request) {
-		methods := []string{"OPTIONS"}
-		for _, node := range nodes {
-			methods = append(methods, node.Action)
-			if node.Action == "GET" {
-				methods = append(methods, "HEAD")
-			}
-		}
+	http.HandleFunc(
+		"OPTIONS "+nodes[0].BasePath,
+		func(w http.ResponseWriter, r *http.Request) {
 
-		w.Header().Set("Allow", strings.Join(methods, ", "))
-		w.WriteHeader(http.StatusNoContent)
-	})
+			methods := []string{"OPTIONS"}
+			for _, node := range nodes {
+				methods = append(methods, node.Action)
+				if node.Action == "GET" {
+					methods = append(methods, "HEAD")
+				}
+			}
+
+			w.Header().Set("Allow", strings.Join(methods, ", "))
+			w.WriteHeader(http.StatusNoContent)
+		})
 }
 
-func rootDocument(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+func rootDocument(
+	w http.ResponseWriter,
+	r *http.Request,
+	selfNode *Node,
+	args ...any) {
+
 	out := ResponseBody[*any]{}
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -484,11 +518,18 @@ func writeJsonOutput(w http.ResponseWriter, out any) {
 	w.Write(buf.Bytes())
 }
 
-func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+func accessions(
+	w http.ResponseWriter,
+	r *http.Request,
+	selfNode *Node,
+	args ...any,
+) {
+
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -520,7 +561,12 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 		accession := accessions[i]
 		level, err := neidb.Level(accession)
 		if err != nil {
-			writeServerError(w, "fn accessions - Error while accessing neidb.Level", "", err)
+			writeServerError(
+				w,
+				"fn accessions - Error while accessing neidb.Level",
+				"",
+				err,
+			)
 			return
 		}
 		acc := Accession{Accession: accession, Level: level}
@@ -556,7 +602,12 @@ func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...
 
 }
 
-func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
+func checkParams(
+	w http.ResponseWriter,
+	r *http.Request,
+	args ...string,
+) bool {
+
 	for _, arg := range args {
 		p := r.URL.Query().Get(arg)
 		if p == "" {
@@ -634,7 +685,8 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -681,7 +733,8 @@ func databases(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -727,7 +780,8 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -942,7 +996,8 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -997,7 +1052,8 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1073,7 +1129,8 @@ func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any)
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1129,7 +1186,8 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1206,7 +1264,8 @@ func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1228,7 +1287,8 @@ func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1342,7 +1402,8 @@ func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1415,7 +1476,8 @@ func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1497,7 +1559,8 @@ func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ..
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
+		w.Write([]byte("Server does not provide any of the accepted" +
+			"content types.\n"))
 		return
 	}
 
@@ -1527,8 +1590,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	dbPath := args[0].(Database).Path
 	progName := args[1].(string)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+	ctx := r.Context()
 
 	callArgs := options
 	if progName == "fintac" {

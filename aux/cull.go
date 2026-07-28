@@ -12,7 +12,8 @@ import (
 )
 
 func main() {
-	dbDir := "../never/databases/"
+	neverRoot := "/home/cloud/dbs/neidb/web"
+	dbDir := neverRoot + "/databases/"
 
 	// Read directory
 	entries, err := os.ReadDir(dbDir)
@@ -49,7 +50,7 @@ func main() {
 		func(f fs.FileInfo) bool { return !isDb(dbDir + f.Name()) })
 
 	// Filter by whitelist
-	f, err := os.Open(dbDir + "whitelist")
+	f, err := os.Open(neverRoot + "/whitelist")
 	if err != nil {
 		log.Fatal(errors.New("Could not open db whitelist."))
 	}

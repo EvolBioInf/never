@@ -1,35 +1,35 @@
 #+begin_export latex
-	\section{api}
-	\ty{api} is the backend application for neverV2.
-	It implements all the endpoints defined in the
-	openApi document. The underlying logic will closely
-	resemble neverv1, as the backends don't differ too much.
+  \section{api}
+  \ty{api} is the backend application for neverV2.
+  It implements all the endpoints defined in the
+  openApi document. The underlying logic will closely
+  resemble neverv1, as the backends don't differ too much.
 
-	\subsection*{Implementation}
-	The api backend provides the global RegisterRoutes function just
-	like every standalone package used within neverV2. It takes as arguments
-	a prefix for the routes, the server's address and the databases.
-	\bpr{api}{pr:api}
+  \subsection*{Implementation}
+  The api backend provides the global RegisterRoutes function just
+  like every standalone package used within neverV2. It takes as arguments
+  a prefix for the routes, the server's address and the databases.
+  \bpr{api}{pr:api}
 #+end_export
 
 #+begin_src go <<api.go>>=
-	package apiv2
-	import (
-		//<<Imports, Pa. \ref{pa:api}>>
-	)
-	//<<Types, Pa. \ref{pa:api}>>
-	//<<Methods, Pa. \ref{pa:api}>>
-	//<<Variables, Pa. \ref{pa:api}>>
-	//<<Content types, Pa. \ref{pa:api}>>
-	func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
-		//<<Register routes, Pa. \ref{pa:api}>>
-	}
-	//<<Functions, Pa. \ref{pa:api}>>
+  package apiv2
+  import (
+    //<<Imports, Pa. \ref{pa:api}>>
+  )
+  //<<Types, Pa. \ref{pa:api}>>
+  //<<Methods, Pa. \ref{pa:api}>>
+  //<<Variables, Pa. \ref{pa:api}>>
+  //<<Content types, Pa. \ref{pa:api}>>
+  func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
+    //<<Register routes, Pa. \ref{pa:api}>>
+  }
+  //<<Functions, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	We use the databases either directly or via their path. Lets write a type,
-	\ty{Database}, that can hold both values.
+  We use the databases either directly or via their path. Lets write a type,
+  \ty{Database}, that can hold both values.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
@@ -40,3004 +40,3077 @@
 #+end_src
 
 #+begin_export latex
-	We need to import the \ty{tdb}.
+  We need to import the \ty{tdb}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"github.com/evolbioinf/neighbors/tdb"
+  "github.com/evolbioinf/neighbors/tdb"
 #+end_src
 
 #+begin_export latex
-	Now we should declare the datatypes conforming to the api specs models.
-	We leave out the \ty{Taxon} types for now	and define them in just a second.
-	Every type also needs a \ty{Links} attribute which is going to be explained
-	later on.
+  Now we should declare the datatypes conforming to the api specs models.
+  We leave out the \ty{Taxon} types for now	and define them in just a second.
+  Every type also needs a \ty{Links} attribute which is going to be explained
+  later on.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Accession struct {
-	Accession string `json:"accession"`
-	Level     string `json:"level"`
-	Links     []Link `json:"links,omitempty"`
+  Accession string `json:"accession"`
+  Level     string `json:"level"`
+  Links     []Link `json:"links,omitempty"`
 }
 type GenomeCount struct {
-	Level string `json:"level"`
-	Count int    `json:"count"`
-	Links []Link `json:"links,omitempty"`
+  Level string `json:"level"`
+  Count int    `json:"count"`
+  Links []Link `json:"links,omitempty"`
 }
 type Rank struct {
-	TaxId int    `json:"tax_id"`
-	Rank  string `json:"rank"`
-	Links []Link `json:"links,omitempty"`
+  TaxId int    `json:"tax_id"`
+  Rank  string `json:"rank"`
+  Links []Link `json:"links,omitempty"`
 }
 type Image struct {
-	Id          int    `json:"id"`
-	Url         string `json:"url"`
-	Attribution string `json:"attribution"`
+  Id          int    `json:"id"`
+  Url         string `json:"url"`
+  Attribution string `json:"attribution"`
 }
 type TaxonAccession struct {
-	TaxId      int         `json:"tax_id"`
-	Accessions []Accession `json:"accessions"`
-	Links      []Link      `json:"links,omitempty"`
+  TaxId      int         `json:"tax_id"`
+  Accessions []Accession `json:"accessions"`
+  Links      []Link      `json:"links,omitempty"`
 }
 #+end_src
 
 #+begin_export latex
-	The \ty{Taxon} types are a bit special. They are subtypes of each other,
-	which we would usually solve using union types or partials. Sadly Go does not
-	provide those. So instead of using six different types and handling those
-	separately, we are going to write one big type and use \ty{omitempty} on
-	almost anything. When using them later on, we only set the necessary
-	attributes and leave out the others. \ty{omitempty} leaves out any attribute
-	containing a zero-value. This means an attribute like \ty{IsLeaf} is always
-	left out for nodes. This is undesirable. We can avert this problem using
-	pointers. This looks worse, but changes the the zero-value of the attributes,
-	meaning we may specify empty names or non leaves and print them accordingly.
+  The \ty{Taxon} types are a bit special. They are subtypes of each other,
+  which we would usually solve using union types or partials. Sadly Go does not
+  provide those. So instead of using six different types and handling those
+  separately, we are going to write one big type and use \ty{omitempty} on
+  almost anything. When using them later on, we only set the necessary
+  attributes and leave out the others. \ty{omitempty} leaves out any attribute
+  containing a zero-value. This means an attribute like \ty{IsLeaf} is always
+  left out for nodes. This is undesirable. We can avert this problem using
+  pointers. This looks worse, but changes the the zero-value of the attributes,
+  meaning we may specify empty names or non leaves and print them accordingly.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
-	type Taxon struct {
-		TaxId          int           `json:"tax_id"`
-		Parent         *int           `json:"parent,omitempty"`
-		IsLeaf         *bool          `json:"is_leaf,omitempty"`
-		Name           *string        `json:"name,omitempty"`
-		CommonName     *string        `json:"common_name,omitempty"`
-		Rank           *string        `json:"rank,omitempty"`
-		RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
-		RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
-		Images         []Image       `json:"images,omitempty"`
-		Links          []Link        `json:"links,omitempty"`
-	}
+  type Taxon struct {
+    TaxId          int           `json:"tax_id"`
+    Parent         *int           `json:"parent,omitempty"`
+    IsLeaf         *bool          `json:"is_leaf,omitempty"`
+    Name           *string        `json:"name,omitempty"`
+    CommonName     *string        `json:"common_name,omitempty"`
+    Rank           *string        `json:"rank,omitempty"`
+    RawGenomeCount []GenomeCount `json:"raw_genome_counts,omitempty"`
+    RecGenomeCount []GenomeCount `json:"rec_genome_counts,omitempty"`
+    Images         []Image       `json:"images,omitempty"`
+    Links          []Link        `json:"links,omitempty"`
+  }
 #+end_src
 
 #+begin_export latex
-	These are the types we could infer from the api specification. All of them have some semantical
-	meaning in regards of the resources we provide via the api. To really make this API a REST API it
-	needs to be hypermedia driven. Therefore each type representing a resource needs to get a \ty{Links}
-	attribute. This allows entities to offer further queries against themselves. The top level response
-	needs to offer links as well. For this reason we wrap the response into a type with a \ty{Data} field and
-	a \ty{Links} field. The \ty{Link} itself is made of four properties: a relation, a hyper reference, which
-	is essentially the actual link, an action, otherwise called http method and the content types provided
-	by the link. This schema for links is part of Microsofts REST API guidelines.
+  These are the types we could infer from the api specification. All of them
+  have some semantical meaning in regards of the resources we provide via the
+  api. To really make this API a REST API it needs to be hypermedia driven.
+  Therefore each type representing a resource needs to get a \ty{Links}
+  attribute. This allows entities to offer further queries against themselves.
+  The top level response needs to offer links as well. For this reason we wrap
+  the response into a type with a \ty{Data} field and	a \ty{Links} field. The
+  \ty{Link} itself is made of four properties: a relation, a hyper reference,
+  which	is essentially the actual link, an action, otherwise called http method
+  and the content types provided by the link. This schema for links is part of
+  Microsofts REST API guidelines.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type ResponseBody[T any] struct {
-	Data  T      `json:"data,omitempty"`
-	Links []Link `json:"links,omitempty"`
+  Data  T      `json:"data,omitempty"`
+  Links []Link `json:"links,omitempty"`
 }
 type Link struct {
-	Rel    string   `json:"rel"`
-	Href   string   `json:"href"`
-	Action string   `json:"action"`
-	Types  []string `json:"types"`
+  Rel    string   `json:"rel"`
+  Href   string   `json:"href"`
+  Action string   `json:"action"`
+  Types  []string `json:"types"`
 }
 #+end_src
 
 #+begin_export latex
-	Handling all of these links is a tedious task. So creating a data structure for working
-	with them seems necessary. I thought of a link graph as a well suited structure.
-	This link graph is composed of nodes, like any other graph. Each node represents a
-	callable endpoint with a template URI. These nodes again contain information about
-	the http method and content types. The \ty{Links} attribute is what allows these
-	nodes to turn into a graph. This attribute is a map mapping strings to a list of nodes.
-	The string is used to model the relation for a set of nodes. We need a set or list of nodes
-	for each relation, as some might use the same name, think of the root document for instance.
-	Its whole purpose is to provide the links to all services. The relation to each of them is the
-	same: "service".
+  Handling all of these links is a tedious task. So creating a data structure
+  for working with them seems necessary. I thought of a link graph as a well
+  suited structure.	This link graph is composed of nodes, like any other graph.
+  Each node represents a callable endpoint with a template URI. These nodes
+  again contain information about the http method and content types. The
+  \ty{Links} attribute is what allows these nodes to turn into a graph. This
+  attribute is a map mapping strings to a list of nodes. The string is used to
+  model the relation for a set of nodes. We need a set or list of nodes	for
+  each relation, as some might use the same name, think of the root document
+  for instance.	Its whole purpose is to provide the links to all services. The
+  relation to each of them is the	same: "service".
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:api}>>=
 type Node struct {
-	Links    map[string][]Node
-	Name     string
-	BasePath string
-	Action   string
-	Types    []contenttype.MediaType
+  Links    map[string][]Node
+  Name     string
+  BasePath string
+  Action   string
+  Types    []contenttype.MediaType
 }
 #+end_src
 
 #+begin_export latex
-	We are using the \ty{contenttype} package for the \ty{Types} here.
-	Which means we need to import it. This package is rfc7231 compliant
-	and is going to help us in terms of content negotiation.
+  We are using the \ty{contenttype} package for the \ty{Types} here.
+  Which means we need to import it. This package is rfc7231 compliant
+  and is going to help us in terms of content negotiation.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"github.com/elnormous/contenttype"
+  "github.com/elnormous/contenttype"
 #+end_src
 
 #+begin_export latex
-	With this imported we might as well define the o content types we are going
-	to use. As they will be used frequently and should not be redefined over
-	the course of this document, we will save them as global variables.
+  With this imported we might as well define the o content types we are going
+  to use. As they will be used frequently and should not be redefined over
+  the course of this document, we will save them as global variables.
 #+end_export
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
-	var jsonCt = contenttype.MediaType{Type: "application", Subtype: "json", Parameters: contenttype.Parameters{"charset": "utf-8"}}
-	var plainCt = contenttype.MediaType{Type: "text", Subtype: "plain", Parameters: contenttype.Parameters{"charset": "utf-8"}}
+  var jsonCt = contenttype.MediaType{
+    Type: "application",
+    Subtype: "json",
+    Parameters: contenttype.Parameters{"charset": "utf-8"},
+    }
+  var plainCt = contenttype.MediaType{
+    Type: "text",
+    Subtype: "plain",
+    Parameters: contenttype.Parameters{"charset": "utf-8"},
+   }
 #+end_src
 
 #+begin_export latex
-	We also need some way of entering he graph. The root document is a perfect
-	fit for this.
+  We also need some way of entering he graph. The root document is a perfect
+  fit for this.
 #+end_export
 
 #+begin_src go <<Variables, Pa. \ref{pa:api}>>=
-	var root Node
+  var root Node
 #+end_src
 
 #+begin_export latex
-	Let's also declare a global variable for the route prefix, as well
-	as the servers actual address.
+  Let's also declare a global variable for the route prefix, as well
+  as the servers actual address.
 #+end_export
 
 #+begin_src go <<Variables, Pa. \ref{pa:api}>>=
-	var prefix string
-	var serverAddress string
+  var prefix string
+  var serverAddress string
 #+end_src
 
 #+begin_export latex
-	With the types declared we may begin implementing the \ty{RouteRegistration}
-	function.	In this we define the Linkgraph and use it's nodes to register the
-	endpoints. Luckily the endpoints are already declared within the openApi
-	document. Before pasting everything into \ty{RegisterRoutes}, we need to
-	think about how registration should work. It is reasonable to create a
-	function that handles	route registration, making things easier for us in the
-	long run. Say we want to add a parameter or some specific handling to all our
-	endpoints, we can just add	it to the registration helper. We call this
-	function \ty{makeRoute}. The function needs to take a node, the one to
-	register, as well as a function \ty{fn}	that is executed when the path is
-	called. \ty{fn} will be wrapped so that we may pass extra arguments. However
-	it needs to accept at least the http writer and request. The function may
-	accept more	arguments, like a database, so we make it	variadic. Those
-	arguments need to passed from \ty{makeRoute} to \ty{fn}	somehow, so we make
-	\ty{makeRoute} variadic	as well.
+  With the types declared we may begin implementing the \ty{RouteRegistration}
+  function.	In this we define the Linkgraph and use it's nodes to register the
+  endpoints. Luckily the endpoints are already declared within the openApi
+  document. Before pasting everything into \ty{RegisterRoutes}, we need to
+  think about how registration should work. It is reasonable to create a
+  function that handles	route registration, making things easier for us in the
+  long run. Say we want to add a parameter or some specific handling to all our
+  endpoints, we can just add	it to the registration helper. We call this
+  function \ty{makeRoute}. The function needs to take a node, the one to
+  register, as well as a function \ty{fn}	that is executed when the path is
+  called. \ty{fn} will be wrapped so that we may pass extra arguments. However
+  it needs to accept at least the http writer and request. The function may
+  accept more	arguments, like a database, so we make it	variadic. Those
+  arguments need to passed from \ty{makeRoute} to \ty{fn}	somehow, so we make
+  \ty{makeRoute} variadic	as well.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func makeRoute(node *Node, fn func(http.ResponseWriter, *http.Request, *Node, ...any), dbs map[string]Database, args ...any) {
-		http.HandleFunc(node.Action + " " + node.BasePath, func(w http.ResponseWriter, r *http.Request) {
-			var db Database
-			//<<Get correct database, Pa. \ref{pa:api}>>
-			var pArgs []any
-			pArgs = append(pArgs, db)
-			pArgs = append(pArgs, args...)
-			//<<Set cors header, Pa. \ref{pa:api}>>
-			fn(w, r, node, pArgs...)
-		})
-	}
+  func makeRoute(
+    node *Node,
+    fn func(http.ResponseWriter, *http.Request, *Node, ...any),
+    dbs map[string]Database, args ...any) {
+
+    http.HandleFunc(
+      node.Action + " " + node.BasePath,
+      func(w http.ResponseWriter, r *http.Request) {
+
+      var db Database
+      //<<Get correct database, Pa. \ref{pa:api}>>
+      var pArgs []any
+      pArgs = append(pArgs, db)
+      pArgs = append(pArgs, args...)
+      //<<Set cors header, Pa. \ref{pa:api}>>
+      fn(w, r, node, pArgs...)
+    })
+  }
 #+end_src
 
 #+begin_export latex
-	We import the \ty{net/http} package.
+  We import the \ty{net/http} package.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"net/http"
+  "net/http"
 #+end_src
 
 #+begin_export latex
-	Every endpoint provides the \ty{db} parameter. In this we get the specified
-	database from the \ty{dbs} and pass it along to the functions. If no database
-	was	specified, we use \ty{latest}. We send a 404 (Not found) if there is no
-	database with that name.
+  Every endpoint provides the \ty{db} parameter. In this we get the specified
+  database from the \ty{dbs} and pass it along to the functions. If no database
+  was	specified, we use \ty{latest}. We send a 404 (Not found) if there is no
+  database with that name.
 #+end_export
 
 #+begin_src go <<Get correct database, Pa. \ref{pa:api}>>=
-	if dbs != nil {
-		dbStr := r.URL.Query().Get("db")
-		if dbStr == "" {
-			dbStr = "latest"
-		}
-		var ok bool
-		db, ok = dbs[dbStr]
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No db under this name.\n"))
-			return
-		}
-	}
+  if dbs != nil {
+    dbStr := r.URL.Query().Get("db")
+    if dbStr == "" {
+      dbStr = "latest"
+    }
+    var ok bool
+    db, ok = dbs[dbStr]
+    if !ok {
+      w.WriteHeader(http.StatusNotFound)
+      w.Write([]byte("No db under this name.\n"))
+      return
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	The cors header is necessary to allow independent frontend development.
-	Different clients might want to create their own frontend developed and
-	deployed independently of never. This cors allow all header allows other
-	developers to do so. It does not pose security risks for our api, as we
-	are providing publicly available data only. Anyone may read never's data,
-	there is no authentication or credential checking before request processing.
-	If authentication, security cookis, session states or anything else along
-	those lines will be introduced, this header needs to be reevaluated.
+  The cors header is necessary to allow independent frontend development.
+  Different clients might want to create their own frontend developed and
+  deployed independently of never. This cors allow all header allows other
+  developers to do so. It does not pose security risks for our api, as we
+  are providing publicly available data only. Anyone may read never's data,
+  there is no authentication or credential checking before request processing.
+  If authentication, security cookis, session states or anything else along
+  those lines will be introduced, this header needs to be reevaluated.
 #+end_export
 
 #+begin_src go <<Set cors header, Pa. \ref{pa:api}>>=
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+  w.Header().Set("Access-Control-Allow-Origin", "*")
 #+end_src
 
 #+begin_export latex
-	When writing a bad request response, we want to set the 400 (Bad Request)
-	HTTP response code and write some message for elaboration.
+  When writing a bad request response, we want to set the 400 (Bad Request)
+  HTTP response code and write some message for elaboration.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func writeBadRequestResp(w http.ResponseWriter, text string) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(text+"\n"))
-	}
+  func writeBadRequestResp(w http.ResponseWriter, text string) {
+    w.WriteHeader(http.StatusBadRequest)
+    w.Write([]byte(text+"\n"))
+  }
 #+end_src
 
 #+begin_export latex
-	This is a good time to write the prefix and server address to our global variable.
+  This is a good time to write the prefix and server address to our global
+  variable.
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-	prefix = pref
-	serverAddress = serverAdr
+  prefix = pref
+  serverAddress = serverAdr
 #+end_src
 
 #+begin_export latex
-	This leaves us with the writing the link graph and the actual registration of the
-	endpoints.
+  This leaves us with the writing the link graph and the actual registration of
+  the endpoints.
 #+end_export
 
 #+begin_src go <<Register routes, Pa. \ref{pa:api}>>=
-	//<<Initialize nodes and make routes, Pa. \ref{pa:api}>>
-	//<<Link nodes, Pa. \ref{pa:api}>>
-	//<<Add \ty{OPTIONS} routes \ty{path}, Pa. \ref{pa:api}>>
+  //<<Initialize nodes and make routes, Pa. \ref{pa:api}>>
+  //<<Link nodes, Pa. \ref{pa:api}>>
+  //<<Add \ty{OPTIONS} routes \ty{path}, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	We know all the endpoints as they are defined in the openApi document.
+  We know all the endpoints as they are defined in the openApi document.
 #+end_export
 
 #+begin_src go <<Initialize nodes and make routes, Pa. \ref{pa:api}>>=
-	//<<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{accessions}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{accession}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{databases}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{taxa}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{taxon}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{children}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{parent}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{taxonAccessions}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{mrca}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{path}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{programs}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{progDree}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{progNeighbors}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>
-	//<<Initialize \ty{progTaxi}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{accessions}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{accession}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{databases}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxa}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxon}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{children}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{parent}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{subtree}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{taxonAccessions}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{mrca}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{path}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{programs}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progDree}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progNeighbors}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>
+  //<<Initialize \ty{progTaxi}, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	The initialization is going to follow a very similar scheme for each endpoint.
-	First we define its node with an empty map of links. We write down the endpoints path and
-	http attributes, then we call \ty{makeRoute} using the node we just wrote. \ty{makeRoute}
-	takes a function as a second argument, which handles the endpoint. These functions are yet
-	to be implemented. For now we just write down some well fitting names and implement them later.
-	There are a few common http attributes, that we are going to be using for a lot of the nodes.
-	We should write them into variables, which makes house keeping easier in the long run.
+  The initialization is going to follow a very similar scheme for each endpoint.
+  First we define its node with an empty map of links. We write down the
+  endpoints path and http attributes, then we call \ty{makeRoute} using the
+  node we just wrote. \ty{makeRoute} takes a function as a second argument,
+  which handles the endpoint. These functions are yet to be implemented. For
+  now we just write down some well fitting names and implement them later.
+  There are a few common http attributes, that we are going to be using for a
+  lot of the nodes.	We should write them into variables, which makes house
+  keeping easier in the long run.
 #+end_export
 
 #+begin_src go <<Initialize \ty{rootDocument}, Pa. \ref{pa:api}>>=
-	rootDocL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "rootDocument",
-		BasePath: prefix,
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&rootDocL, rootDocument, nil) // new
+  rootDocL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "rootDocument",
+    BasePath: prefix,
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&rootDocL, rootDocument, nil) // new
 #+end_src
 
 #+begin_export latex
-	Let's register \ty{accessions}.
+  Let's register \ty{accessions}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{accessions}, Pa. \ref{pa:api}>>=
-	accessionsL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "accessions",
-		BasePath: prefix + "/accessions",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&accessionsL, accessions, dbs) // previously known as levels
+  accessionsL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "accessions",
+    BasePath: prefix + "/accessions",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&accessionsL, accessions, dbs) // previously known as levels
 #+end_src
 
 #+begin_export latex
-	\ty{accession} is almost the same as before.
+  \ty{accession} is almost the same as before.
 #+end_export
 
 #+begin_src go <<Initialize \ty{accession}, Pa. \ref{pa:api}>>=
-	accessionL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "accession",
-		BasePath: prefix + "/accessions/{accession_id}",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&accessionL, accession, dbs) // new
+  accessionL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "accession",
+    BasePath: prefix + "/accessions/{accession_id}",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&accessionL, accession, dbs) // new
 #+end_src
 
 #+begin_export latex
-	\ty{databases} is a bit confusing. It does not provide the \ty{db} query
-	parameter, but still needs to access the databases. To do this we are going
-	to provide \ty{nil} for the first param and dbs for the second. While this
-	might not be perfectly reasonable, it does ensure, that the endpoints gets
-	access to the databases without checking and potentially failing the \ty{db}
-	query parameter.
+  \ty{databases} is a bit confusing. It does not provide the \ty{db} query
+  parameter, but still needs to access the databases. To do this we are going
+  to provide \ty{nil} for the first param and dbs for the second. While this
+  might not be perfectly reasonable, it does ensure, that the endpoints gets
+  access to the databases without checking and potentially failing the \ty{db}
+  query parameter.
 #+end_export
 
 #+begin_src go <<Initialize \ty{databases}, Pa. \ref{pa:api}>>=
-	databasesL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "databases",
-		BasePath: prefix + "/databases",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&databasesL, databases, nil, dbs) // new
+  databasesL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "databases",
+    BasePath: prefix + "/databases",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&databasesL, databases, nil, dbs) // new
 #+end_src
 
 #+begin_export latex
-	\ty{taxa} provides two differen media types as responses.
+  \ty{taxa} provides two differen media types as responses.
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxa}, Pa. \ref{pa:api}>>=
-	taxaL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "taxa",
-		BasePath: prefix + "/taxa",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&taxaL, taxa, dbs) // previously known as taxi
+  taxaL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "taxa",
+    BasePath: prefix + "/taxa",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&taxaL, taxa, dbs) // previously known as taxi
 #+end_src
 
 #+begin_export latex
-	\ty{taxon} is a subservice of \ty{taxa}.
+  \ty{taxon} is a subservice of \ty{taxa}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxon}, Pa. \ref{pa:api}>>=
-	taxonL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "taxon",
-		BasePath: prefix + "/taxa/{taxon_id}",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt, plainCt},
-	}
-	makeRoute(&taxonL, taxon, dbs) // new
+  taxonL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "taxon",
+    BasePath: prefix + "/taxa/{taxon_id}",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt, plainCt},
+  }
+  makeRoute(&taxonL, taxon, dbs) // new
 #+end_src
 
 #+begin_export latex
-	As is \ty{children}.
+  As is \ty{children}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{children}, Pa. \ref{pa:api}>>=
-	childrenL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "children",
-		BasePath: prefix + "/taxa/{taxon_id}/children",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&childrenL, children, dbs) // previously just children
+  childrenL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "children",
+    BasePath: prefix + "/taxa/{taxon_id}/children",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&childrenL, children, dbs) // previously just children
 #+end_src
 
 #+begin_export latex
-	\ty{parent} is yet another subservice of \ty{taxa}. It again responds with taxon entities.
+  \ty{parent} is yet another subservice of \ty{taxa}. It again responds with
+  taxon entities.
 #+end_export
 
 #+begin_src go <<Initialize \ty{parent}, Pa. \ref{pa:api}>>=
-	parentL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "parent",
-		BasePath: prefix + "/taxa/{taxon_id}/parent",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&parentL, parent, dbs) // previously known as parent
+  parentL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "parent",
+    BasePath: prefix + "/taxa/{taxon_id}/parent",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&parentL, parent, dbs) // previously known as parent
 #+end_src
 
 #+begin_export latex
-	\ty{subtree} provides a json formatted subtree.
+  \ty{subtree} provides a json formatted subtree.
 #+end_export
 
 #+begin_src go <<Initialize \ty{subtree}, Pa. \ref{pa:api}>>=
-	subtreeL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "subtree",
-		BasePath: prefix + "/taxa/{taxon_id}/subtree",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&subtreeL, subtree, dbs) // previously just subtree
+  subtreeL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "subtree",
+    BasePath: prefix + "/taxa/{taxon_id}/subtree",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&subtreeL, subtree, dbs) // previously just subtree
 #+end_src
 
 #+begin_export latex
-	\ty{taxonomy} is a new service. With this we are finally done registering subservices of \ty{taxa}.
+  \ty{taxonomy} is a new service. With this we are finally done registering
+  subservices of \ty{taxa}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxonomy}, Pa. \ref{pa:api}>>=
-	taxonomyL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "taxonomy",
-		BasePath: prefix + "/taxonomy",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&taxonomyL, taxonomy, nil) // new
+  taxonomyL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "taxonomy",
+    BasePath: prefix + "/taxonomy",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&taxonomyL, taxonomy, nil) // new
 #+end_src
 
 #+begin_export latex
-	\ty{taxonAccessions} is a subservice of \ty{taxonomy} providing json output.
+  \ty{taxonAccessions} is a subservice of \ty{taxonomy} providing json output.
 #+end_export
 
 #+begin_src go <<Initialize \ty{taxonAccessions}, Pa. \ref{pa:api}>>=
-	taxonAccessionsL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "taxonAccessions",
-		BasePath: prefix + "/taxonomy/accessions",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&taxonAccessionsL, taxonAccessions, dbs) // previously called accessions
+  taxonAccessionsL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "taxonAccessions",
+    BasePath: prefix + "/taxonomy/accessions",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  // previously called accessions
+  makeRoute(&taxonAccessionsL, taxonAccessions, dbs)
 #+end_src
 
 #+begin_export latex
-	\ty{mrca} is a subservice of \ty{taxonomy} providing json.
+  \ty{mrca} is a subservice of \ty{taxonomy} providing json.
 #+end_export
 
 #+begin_src go <<Initialize \ty{mrca}, Pa. \ref{pa:api}>>=
-	mrcaL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "mrca",
-		BasePath: prefix + "/taxonomy/mrca",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&mrcaL, mrca, dbs) // previously just mrca
+  mrcaL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "mrca",
+    BasePath: prefix + "/taxonomy/mrca",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&mrcaL, mrca, dbs) // previously just mrca
 #+end_src
 
 #+begin_export latex
-	\ty{path} is our last service.
+  \ty{path} is our last service.
 #+end_export
 
 #+begin_src go <<Initialize \ty{path}, Pa. \ref{pa:api}>>=
-	pathL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "path",
-		BasePath: prefix + "/taxonomy/path",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&pathL, path, dbs) // previously just path
+  pathL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "path",
+    BasePath: prefix + "/taxonomy/path",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&pathL, path, dbs) // previously just path
 #+end_src
 
 #+begin_export latex
-	This api also provides a slim interface for calling database related
-	programs of the \ty{neighbors} package. We register these programs with
-	the url prefix \ty{programs}. For this we first write a link document
-	which is returned when \ty{/programs} is called.
+  This api also provides a slim interface for calling database related
+  programs of the \ty{neighbors} package. We register these programs with
+  the url prefix \ty{programs}. For this we first write a link document
+  which is returned when \ty{/programs} is called.
 #+end_export
 
 #+begin_src go <<Initialize \ty{programs}, Pa. \ref{pa:api}>>=
-	programsDocL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "programs",
-		BasePath: prefix + "/programs",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{jsonCt},
-	}
-	makeRoute(&programsDocL, programsDoc, nil)
+  programsDocL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "programs",
+    BasePath: prefix + "/programs",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{jsonCt},
+  }
+  makeRoute(&programsDocL, programsDoc, nil)
 #+end_src
 
 #+begin_export latex
-	One of the programs we want to provide is \ty{ants}.
-	We register under \ty{/programs/ants}. All arguments passed
-	to the url are directly passed to the program when called.
-	We are going to execute the same function for all
-	program calls and pass different names of programs to call.
+  One of the programs we want to provide is \ty{ants}.
+  We register under \ty{/programs/ants}. All arguments passed
+  to the url are directly passed to the program when called.
+  We are going to execute the same function for all
+  program calls and pass different names of programs to call.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progAnts}, Pa. \ref{pa:api}>>=
-	progAntsL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progAnts",
-		BasePath: prefix + "/programs/ants",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progAntsL, programEndpoint, dbs, "ants")
+  progAntsL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progAnts",
+    BasePath: prefix + "/programs/ants",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progAntsL, programEndpoint, dbs, "ants")
 #+end_src
 
 #+begin_export latex
-	All of these program endpoints are going to be the same except for their names.
-	We continue bey defining \ty{dree}.
+  All of these program endpoints are going to be the same except for their
+  names. We continue bey defining \ty{dree}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progDree}, Pa. \ref{pa:api}>>=
-	progDreeL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progDree",
-		BasePath: prefix + "/programs/dree",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progDreeL, programEndpoint, dbs, "dree")
+  progDreeL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progDree",
+    BasePath: prefix + "/programs/dree",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progDreeL, programEndpoint, dbs, "dree")
 #+end_src
 
 #+begin_export latex
-	\ty{fintac} gets the next endpoint.
+  \ty{fintac} gets the next endpoint.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progFintac}, Pa. \ref{pa:api}>>=
-	progFintacL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progFintac",
-		BasePath: prefix + "/programs/fintac",
-		Action:   http.MethodPost,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
+  progFintacL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progFintac",
+    BasePath: prefix + "/programs/fintac",
+    Action:   http.MethodPost,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
 #+end_src
 
 #+begin_export latex
-	Now we define \ty{neighbors}, which has two actions:
-	GET for requests without a body and POST requests
-	containing files.
+  Now we define \ty{neighbors}, which has two actions:
+  GET for requests without a body and POST requests
+  containing files.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progNeighbors}, Pa. \ref{pa:api}>>=
-	progNeighborsGetL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progNeighbors",
-		BasePath: prefix + "/programs/neighbors",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
-	progNeighborsPostL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progNeighbors",
-		BasePath: prefix + "/programs/neighbors",
-		Action:   http.MethodPost,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
+  progNeighborsGetL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progNeighbors",
+    BasePath: prefix + "/programs/neighbors",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
+  progNeighborsPostL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progNeighbors",
+    BasePath: prefix + "/programs/neighbors",
+    Action:   http.MethodPost,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
 #+end_src
 
 #+begin_export latex
-	Next up is \ty{ranks}, which uses the same http methods
-	as \ty{neighbors}.
+  Next up is \ty{ranks}, which uses the same http methods
+  as \ty{neighbors}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progRanks}, Pa. \ref{pa:api}>>=
-	progRanksGetL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progRanks",
-		BasePath: prefix + "/programs/ranks",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
-	progRanksPostL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progRanks",
-		BasePath: prefix + "/programs/ranks",
-		Action:   http.MethodPost,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
+  progRanksGetL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progRanks",
+    BasePath: prefix + "/programs/ranks",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
+  progRanksPostL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progRanks",
+    BasePath: prefix + "/programs/ranks",
+    Action:   http.MethodPost,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
 #+end_src
 
 #+begin_export latex
-	The last one is \ty{taxi}.
+  The last one is \ty{taxi}.
 #+end_export
 
 #+begin_src go <<Initialize \ty{progTaxi}, Pa. \ref{pa:api}>>=
-	progTaxiL := Node{
-		Links:    make(map[string][]Node),
-		Name:     "progTaxi",
-		BasePath: prefix + "/programs/taxi",
-		Action:   http.MethodGet,
-		Types:    []contenttype.MediaType{plainCt},
-	}
-	makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
+  progTaxiL := Node{
+    Links:    make(map[string][]Node),
+    Name:     "progTaxi",
+    BasePath: prefix + "/programs/taxi",
+    Action:   http.MethodGet,
+    Types:    []contenttype.MediaType{plainCt},
+  }
+  makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
 #+end_src
 
 #+begin_export latex
-	Now that we are done creating nodes and registering function we may set the links that
-	turn the nodes into a graph. The following rules define which links should be part of responses.
-	\begin{enumerate}
-		\item Every endpoint has a link to itself.
-		\item Every endpoint with services has links to its subservices.
-		\item An item of a collection has a reference to itself.
-		\item A collection has a link to the entities it is made out of.
-		\item An entity that is part of a collection has a link to this collection.
-		\item A paginated collection should reference it's next and previous page.
-		\item Endpoints that provide responses with different attributes should advertise them.
-	\end{enumerate}
-	We can also enhance this graph with a few specific interservice connections like these:
-		\begin{itemize}
-		\item mrca -> path (you may want to see the path to the mrca)
-		\item parent -> ancestor (view further than the direct parent)
-		\item children -> subtree (view further than the direct children)
-	\end{enumerate}
+  Now that we are done creating nodes and registering function we may set the
+  links that turn the nodes into a graph. The following rules define which
+  links should be part of responses.
+  \begin{enumerate}
+    \item Every endpoint has a link to itself.
+    \item Every endpoint with services has links to its subservices.
+    \item An item of a collection has a reference to itself.
+    \item A collection has a link to the entities it is made out of.
+    \item An entity that is part of a collection has a link to this collection.
+    \item A paginated collection should reference it's next and previous page.
+    \item Endpoints that provide responses with different attributes should
+      advertise them.
+  \end{enumerate}
+  We can also enhance this graph with a few specific interservice connections
+  like these:
+  \begin{itemize}
+    \item mrca -> path (you may want to see the path to the mrca)
+    \item parent -> ancestor (view further than the direct parent)
+    \item children -> subtree (view further than the direct children)
+  \end{enumerate}
 
-	While references of an entity to itself, like the \ty{self} reference or pagination references, are essential
-	for the responses, they enhance this graph by any meaningful way. So we might as well omit them here and add
-	them to the responses individually.
-	A lot of these links will need to be slightly modified, to match the current request/ responds. We may define
-	this basic graph now nevertheless.
+  While references of an entity to itself, like the \ty{self} reference or
+  pagination references, are essential for the responses, they enhance this
+  graph by any meaningful way. So we might as well omit them here and add them
+  to the responses individually. A lot of these links will need to be slightly
+  modified, to match the current request/ responds. We may define	this basic
+  graph now nevertheless.
 #+end_export
 
 #+begin_src go <<Link nodes, Pa. \ref{pa:api}>>=
-	//<<Link subservices, Pa. \ref{pa:api}>>
-	//<<Link collection entities, Pa. \ref{pa:api}>>
-	//<<Link entity to collection, Pa. \ref{pa:api}>>
-	//<<Interservice links, Pa. \ref{pa:api}>>
+  //<<Link subservices, Pa. \ref{pa:api}>>
+  //<<Link collection entities, Pa. \ref{pa:api}>>
+  //<<Link entity to collection, Pa. \ref{pa:api}>>
+  //<<Interservice links, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	With the subservices we know that, each endpoint should be contained in the links of the \ty{rootDocument}.
-	Then there \ty{accession} which is a subservice of \ty{accessions}; \ty{taxon}, \ty{children}, \ty{parent}
-	and \ty{subtree} which are subservices of \ty{taxa}. Lastly \ty{taxonAccessions}, \ty{mrca} and \ty{path}
-	are subservices of \ty{taxonomy}. Lastly there are the programs, which are subservices of the \ty{programs}
-	endpoints. These include \ty{progAnts}, \ty{progDree}, \ty{progFintac}, \ty{progNeighbors}, \ty{progRanks}
-	and \ty{progTaxi}.
+  With the subservices we know that, each endpoint should be contained in the
+  links of the \ty{rootDocument}.	Then there \ty{accession} which is a
+  subservice of \ty{accessions}; \ty{taxon}, \ty{children}, \ty{parent}	and
+  \ty{subtree} which are subservices of \ty{taxa}. Lastly \ty{taxonAccessions},
+  \ty{mrca} and \ty{path}	are subservices of \ty{taxonomy}. Lastly there are
+  the programs, which are subservices of the \ty{programs} endpoints. These
+  include \ty{progAnts}, \ty{progDree}, \ty{progFintac}, \ty{progNeighbors},
+  \ty{progRanks} and \ty{progTaxi}.
 #+end_export
 
 #+begin_src go <<Link subservices, Pa. \ref{pa:api}>>=
-	rootDocL.Links["service"] = append(rootDocL.Links["service"],
-		accessionsL,
-		accessionL,
-		databasesL,
-		taxaL,
-		taxonL,
-		childrenL,
-		parentL,
-		subtreeL,
-		taxonomyL,
-		taxonAccessionsL,
-		mrcaL,
-		pathL,
-		progAntsL,
-		progDreeL,
-		progFintacL,
-		progNeighborsGetL,
-		progNeighborsPostL,
-		progRanksGetL,
-		progRanksPostL,
-		progTaxiL,
-	)
-	accessionsL.Links["service"] = append(accessionsL.Links["service"], accessionL)
-	taxaL.Links["service"] = append(taxaL.Links["service"],
-		taxonL,
-		childrenL,
-		parentL,
-		subtreeL,
-	)
-	taxonomyL.Links["service"] = append(taxonomyL.Links["service"],
-		taxonAccessionsL,
-		mrcaL,
-		pathL,
-	)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"],
-		progAntsL,
-		progDreeL,
-		progFintacL,
-		progNeighborsGetL,
-		progNeighborsPostL,
-		progRanksGetL,
-		progRanksPostL,
-		progTaxiL,
-	)
+  rootDocL.Links["service"] = append(rootDocL.Links["service"],
+    accessionsL,
+    accessionL,
+    databasesL,
+    taxaL,
+    taxonL,
+    childrenL,
+    parentL,
+    subtreeL,
+    taxonomyL,
+    taxonAccessionsL,
+    mrcaL,
+    pathL,
+    progAntsL,
+    progDreeL,
+    progFintacL,
+    progNeighborsGetL,
+    progNeighborsPostL,
+    progRanksGetL,
+    progRanksPostL,
+    progTaxiL,
+  )
+  accessionsL.Links["service"] = append(
+    accessionsL.Links["service"],
+    accessionL,
+  )
+  taxaL.Links["service"] = append(taxaL.Links["service"],
+    taxonL,
+    childrenL,
+    parentL,
+    subtreeL,
+  )
+  taxonomyL.Links["service"] = append(taxonomyL.Links["service"],
+    taxonAccessionsL,
+    mrcaL,
+    pathL,
+  )
+  programsDocL.Links["service"] = append(programsDocL.Links["service"],
+    progAntsL,
+    progDreeL,
+    progFintacL,
+    progNeighborsGetL,
+    progNeighborsPostL,
+    progRanksGetL,
+    progRanksPostL,
+    progTaxiL,
+  )
 #+end_src
 
 #+begin_export latex
-	Now to write the entities of the collections. There are basically two entities, which
-	are the basis of almost all the collections. \ty{accession} is the base entity of \ty{accessions};
-	\ty{taxon} is the base entity of \ty{taxa}, \ty{children}, \ty{subtree} and \ty{path}.
+  Now to write the entities of the collections. There are basically two
+  entities, which	are the basis of almost all the collections. \ty{accession}
+  is the base entity of \ty{accessions}; \ty{taxon} is the base entity of
+  \ty{taxa}, \ty{children}, \ty{subtree} and \ty{path}.
 #+end_export
 
 #+begin_src go <<Link collection entities, Pa. \ref{pa:api}>>=
-	accessionsL.Links["entities"] = append(accessionsL.Links["entities"], accessionL)
-	taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
-	childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
-	subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
-	pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
+  accessionsL.Links["entities"] = append(
+    accessionsL.Links["entities"],
+    accessionL,
+  )
+  taxaL.Links["entities"] = append(taxaL.Links["entities"], taxonL)
+  childrenL.Links["entities"] = append(childrenL.Links["entities"], taxonL)
+  subtreeL.Links["entities"] = append(subtreeL.Links["entities"], taxonL)
+  pathL.Links["entities"] = append(pathL.Links["entities"], taxonL)
 #+end_src
 
 #+begin_export latex
-	We now link the entities to their collections. I believe we should link them to the basic
-	collection only, i.e. \ty{taxon} to \ty{taxa}, as \ty{ancestors} for example is basically a filtered
-	version of \ty{taxa}. I don't see a reason to link an entity to every specialized sub collection that
-	it is part of.
+  We now link the entities to their collections. I believe we should link them
+  to the basic collection only, i.e. \ty{taxon} to \ty{taxa}, as \ty{ancestors}
+  for example is basically a filtered	version of \ty{taxa}. I don't see a
+  reason to link an entity to every specialized sub collection that it is part
+  of.
 #+end_export
 
 #+begin_src go <<Link entity to collection, Pa. \ref{pa:api}>>=
-	accessionL.Links["part-of"] = append(accessionL.Links["part-of"], accessionsL)
-	taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
+  accessionL.Links["part-of"] = append(
+    accessionL.Links["part-of"],
+    accessionsL,
+  )
+  taxonL.Links["part-of"] = append(taxonL.Links["part-of"], taxaL)
 #+end_src
 
 #+begin_export latex
-	Handling pagination is easy again, as we already found all the collections.
+  Handling pagination is easy again, as we already found all the collections.
 #+end_export
 
 #+begin_src go <<Link pagination, Pa. \ref{pa:api}>>=
-	accessionsL.Links["previous"] = append(accessionsL.Links["previous"], accessionsL)
-	taxaL.Links["previous"] = append(taxaL.Links["previous"], taxaL)
-	childrenL.Links["previous"] = append(childrenL.Links["previous"], childrenL)
-	subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
-	pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
+  accessionsL.Links["previous"] = append(
+    accessionsL.Links["previous"],
+    accessionsL,
+  )
+  taxaL.Links["previous"] = append(taxaL.Links["previous"], taxaL)
+  childrenL.Links["previous"] = append(childrenL.Links["previous"], childrenL)
+  subtreeL.Links["previous"] = append(subtreeL.Links["previous"], subtreeL)
+  pathL.Links["previous"] = append(pathL.Links["previous"], pathL)
 
-	accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
-	taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
-	childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
-	subtreeL.Links["next"] = append(subtreeL.Links["next"], subtreeL)
-	pathL.Links["next"] = append(pathL.Links["next"], pathL)
+  accessionsL.Links["next"] = append(accessionsL.Links["next"], accessionsL)
+  taxaL.Links["next"] = append(taxaL.Links["next"], taxaL)
+  childrenL.Links["next"] = append(childrenL.Links["next"], childrenL)
+  subtreeL.Links["next"] = append(subtreeL.Links["next"], subtreeL)
+  pathL.Links["next"] = append(pathL.Links["next"], pathL)
 #+end_src
 
 #+begin_export latex
-	All endpoints that offer different fields with their responses, respond with a taxon entity.
-	So we just need to find all that do so and may add another link to themselves.
-	The services are \ty{taxa}, \ty{taxon}, \ty{ancestors}, \ty{children}, \ty{parent},
-	\ty{subtree}, \ty{mrca} and \ty{path}.
+  All endpoints that offer different fields with their responses, respond with
+  a taxon entity.	So we just need to find all that do so and may add another
+  link to themselves.	The services are \ty{taxa}, \ty{taxon}, \ty{ancestors},
+  \ty{children}, \ty{parent}, \ty{subtree}, \ty{mrca} and \ty{path}.
 #+end_export
 
 #+begin_src go <<Link entity fields, Pa. \ref{pa:api}>>=
-	taxaL.Links["more fields"] = append(taxaL.Links["more fields"], taxaL)
-	taxonL.Links["more fields"] = append(taxonL.Links["more fields"], taxonL)
-	childrenL.Links["more fields"] = append(childrenL.Links["more fields"], childrenL)
-	parentL.Links["more fields"] = append(parentL.Links["more fields"], parentL)
-	subtreeL.Links["more fields"] = append(subtreeL.Links["more fields"], subtreeL)
-	mrcaL.Links["more fields"] = append(mrcaL.Links["more fields"], mrcaL)
-	pathL.Links["more fields"] = append(pathL.Links["more fields"], pathL)
+  taxaL.Links["more fields"] = append(taxaL.Links["more fields"], taxaL)
+  taxonL.Links["more fields"] = append(taxonL.Links["more fields"], taxonL)
+  childrenL.Links["more fields"] = append(
+    childrenL.Links["more fields"],
+    childrenL,
+  )
+  parentL.Links["more fields"] = append(parentL.Links["more fields"], parentL)
+  subtreeL.Links["more fields"] = append(
+    subtreeL.Links["more fields"],
+    subtreeL,
+  )
+  mrcaL.Links["more fields"] = append(mrcaL.Links["more fields"], mrcaL)
+  pathL.Links["more fields"] = append(pathL.Links["more fields"], pathL)
 #+end_src
 
 #+begin_export latex
-	Lastly we implement the interservice links. These are straightfoward as we specified them above.
-	We should set the root variable as well, now that we are done with initializing the link graph.
+  Lastly we implement the interservice links. These are straightfoward as we
+  specified them above.	We should set the root variable as well, now that we
+  are done with initializing the link graph.
 #+end_export
 
 #+begin_src go <<Interservice links, Pa. \ref{pa:api}>>=
-	mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
-	childrenL.Links["all descendants"] = append(childrenL.Links["all descendants"], subtreeL)
-	root = rootDocL
+  mrcaL.Links["path"] = append(mrcaL.Links["path"], pathL)
+  childrenL.Links["all descendants"] = append(
+    childrenL.Links["all descendants"],
+    subtreeL,
+  )
+  root = rootDocL
 #+end_src
 
 #+begin_export latex
-	Having set all the links, we may use the graph for it's first time.
-	Every endpoint should provide a response to the \ty{OPTIONS}
-	method. We can easily do this, because all the data making up an \ty{OPTIONS}
-	response is included in the link nodes. So we take the root as an entry, get
-	all services and then add some meta data.
+  Having set all the links, we may use the graph for it's first time.
+  Every endpoint should provide a response to the \ty{OPTIONS}
+  method. We can easily do this, because all the data making up an \ty{OPTIONS}
+  response is included in the link nodes. So we take the root as an entry, get
+  all services and then add some meta data.
 #+end_export
 
 #+begin_src go <<Add \ty{OPTIONS} routes \ty{path}, Pa. \ref{pa:api}>>=
-	services := root.Links["service"]
-	grouped := make(map[string][]Node)
-	//<<Combine same endpoints, Pa. \ref{pa:api}>>
-	for path := range grouped {
-		makeOptionsRoute(grouped[path])
-	}
+  services := root.Links["service"]
+  grouped := make(map[string][]Node)
+  //<<Combine same endpoints, Pa. \ref{pa:api}>>
+  for path := range grouped {
+    makeOptionsRoute(grouped[path])
+  }
 #+end_src
 
 #+begin_export latex
-	When responding to an \ty{OPTIONS} request, we declare all the allowed
-	methods for an endpoint. Some endpoints may provide access via multiple http methods.
-	This means we need to group all the nodes on their base path, to find all the provided
-	methods.
+  When responding to an \ty{OPTIONS} request, we declare all the allowed
+  methods for an endpoint. Some endpoints may provide access via multiple http
+  methods. This means we need to group all the nodes on their base path, to
+  find all the provided	methods.
 #+end_export
 
 #+begin_src go <<Combine same endpoints, Pa. \ref{pa:api}>>=
-	for _, service := range services {
-		grouped[service.BasePath] = append(grouped[service.BasePath], service)
-	}
+  for _, service := range services {
+    grouped[service.BasePath] = append(grouped[service.BasePath], service)
+  }
 #+end_src
 
 #+begin_export latex
-	\ty{makeOptionsRoute} takes a slice of nodes with a common basePath. It gets all
-	the union of the nodes http methods. Responding with a 204 (No Content) and setting
-	an \ty{Allow} header, where it stores the methods it just retrieved.
+  \ty{makeOptionsRoute} takes a slice of nodes with a common basePath. It gets
+  all	the union of the nodes http methods. Responding with a 204 (No Content)
+  and setting	an \ty{Allow} header, where it stores the methods it just
+  retrieved.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func makeOptionsRoute(nodes []Node) {
-		http.HandleFunc("OPTIONS "+nodes[0].BasePath, func(w http.ResponseWriter, r *http.Request) {
-			methods := []string{"OPTIONS"}
-			//<<Get methods, Pa. \ref{pa:api}>>
-			w.Header().Set("Allow", strings.Join(methods, ", "))
-			w.WriteHeader(http.StatusNoContent)
-		})
-	}
+  func makeOptionsRoute(nodes []Node) {
+    http.HandleFunc(
+      "OPTIONS "+nodes[0].BasePath,
+      func(w http.ResponseWriter, r *http.Request) {
+
+      methods := []string{"OPTIONS"}
+      //<<Get methods, Pa. \ref{pa:api}>>
+      w.Header().Set("Allow", strings.Join(methods, ", "))
+      w.WriteHeader(http.StatusNoContent)
+    })
+  }
 #+end_src
 
 #+begin_export latex
-	We also need to import \ty{strings} to use \ty{Join}
+  We also need to import \ty{strings} to use \ty{Join}
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"strings"
+  "strings"
 #+end_src
 
 #+begin_export latex
-	Iterating over the provided nodes lets us retrieve their methods.
-	If a node has a \ty{GET} method we also add an extra \ty{HEAD}.
+  Iterating over the provided nodes lets us retrieve their methods.
+  If a node has a \ty{GET} method we also add an extra \ty{HEAD}.
 #+end_export
 
 #+begin_src go <<Get methods, Pa. \ref{pa:api}>>=
-	for _, node := range nodes {
-		methods = append(methods, node.Action)
-		if node.Action == "GET" {
-			methods = append(methods, "HEAD")
-		}
-	}
+  for _, node := range nodes {
+    methods = append(methods, node.Action)
+    if node.Action == "GET" {
+      methods = append(methods, "HEAD")
+    }
+  }
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{rootDocument}
-	Having declared all the endpoints we need to begin implementing them.
-	We start with the \ty{rootDocument}. It just provides links
-	to all the endpoints provided by this api.
-	This is \ty{rootDocument}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			none
-	Writes:
-		\ty{ResponseBody[nil]}
+  \subsection{rootDocument}
+  Having declared all the endpoints we need to begin implementing them.
+  We start with the \ty{rootDocument}. It just provides links
+  to all the endpoints provided by this api.
+  This is \ty{rootDocument}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      none
+  Writes:
+    \ty{ResponseBody[nil]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func rootDocument(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		out := ResponseBody[*any]{}
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Write \ty{rootDocument}'s links, Pa. \ref{pa:api}>>
-		//<<Write output \ty{rootDocument}, Pa. \ref{pa:api}>>
-	}
+  func rootDocument(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any) {
+
+    out := ResponseBody[*any]{}
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Write \ty{rootDocument}'s links, Pa. \ref{pa:api}>>
+    //<<Write output \ty{rootDocument}, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	We use the \ty{contenttype} to check whether the server is providing a content type
-	that would be accepted by the client. This is just a matter of
-	calling the accept method and supplying the types, which are defined within the
-	nodes.
+  We use the \ty{contenttype} to check whether the server is providing a
+  content type that would be accepted by the client. This is just a matter of
+  calling the accept method and supplying the types, which are defined within
+  the	nodes.
 #+end_export
 
 #+begin_src go <<Check content types, Pa. \ref{pa:api}>>=
-	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
-	//<<React no match, Pa. \ref{pa:api}>>
+  _, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
+  //<<React no match, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	If no type matches the available content types we respond with a 406 (Not Acceptable).
+  If no type matches the available content types we respond with a 406
+  (Not Acceptable).
 #+end_export
 
 #+begin_src go <<React no match, Pa. \ref{pa:api}>>=
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Server does not provide any of the accepted content types.\n"))
-		return
-	}
+  if err != nil {
+    w.WriteHeader(http.StatusNotAcceptable)
+    w.Write([]byte("Server does not provide any of the accepted" +
+      "content types.\n"))
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	This is a perfect application for the link graph we just created. We just iterate over
-	\ty{service} links of root and parse them into the \ty{Link}, which provide json annotation.
-	Parsing \ty{Node}s to \ty{Link}s is going to be common issue, so we might as well write a
-	function for it. Let's call that function \ty{makeLink} for now and implement it later.
+  This is a perfect application for the link graph we just created. We just
+  iterate over \ty{service} links of root and parse them into the \ty{Link},
+  which provide json annotation. Parsing \ty{Node}s to \ty{Link}s is going to
+  be common issue, so we might as well write a function for it. Let's call that
+  function \ty{makeLink} for now and implement it later.
 #+end_export
 
 #+begin_src go <<Write \ty{rootDocument}'s links, Pa. \ref{pa:api}>>=
-	out.Links = append(out.Links, root.makeLink("self", ""))
-	for _, v := range root.Links["service"] {
-		out.Links = append(out.Links, v.makeLink("service", ""))
-	}
+  out.Links = append(out.Links, root.makeLink("self", ""))
+  for _, v := range root.Links["service"] {
+    out.Links = append(out.Links, v.makeLink("service", ""))
+  }
 #+end_src
 
 #+begin_export latex
-	The \ty{makeLink} function takes a \ty{node}, the relation's name and a \ty{href}. If the \ty{href} is empty it uses the \ty{node}'s
-	\ty{href} instead instead.
+  The \ty{makeLink} function takes a \ty{node}, the relation's name and a
+  \ty{href}. If the \ty{href} is empty it uses the \ty{node}'s \ty{href}
+  instead instead.
 #+end_export
 
 #+begin_src go <<Methods, Pa. \ref{pa:api}>>=
-	func (node *Node) makeLink(rel, href string) Link {
-		if href != "" {
-			node.BasePath = href
-		}
-		types := []string{}
-		for _, t := range node.Types {
-			types = append(types, t.String())
-		}
-		return Link{
-			Rel: rel,
-			Href: serverAddress + node.BasePath,
-			Action: node.Action,
-			Types: types,
-		}
-	}
+  func (node *Node) makeLink(rel, href string) Link {
+    if href != "" {
+      node.BasePath = href
+    }
+    types := []string{}
+    for _, t := range node.Types {
+      types = append(types, t.String())
+    }
+    return Link{
+      Rel: rel,
+      Href: serverAddress + node.BasePath,
+      Action: node.Action,
+      Types: types,
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	Writing the output is going to be a very common task. Every
-	endpoint needs to do so. This function combines the steps
-	that turn whatever we want to output into a manageable json.
-	Before actually writing the response we should specify
-	that we are writing in json format. We do this by setting
-	the \ty{Content-type} field of the response header. The
-	\ty{net/http} package writes the \ty{Content-Length} field
-	on its own, so we don't need to do that.
-	For pretty-printing json we need to add a buffer,
-	encode the \ty{out} parameter and indent the result.
-	We can't use \ty{MarshalIndent}, which does all of these
-	steps, because it automatically encodes ampersand. This is a
-	problem, when sending links.
+  Writing the output is going to be a very common task. Every endpoint needs to
+  do so. This function combines the steps that turn whatever we want to output
+  into a manageable json. Before actually writing the response we should
+  specify that we are writing in json format. We do this by setting the
+  \ty{Content-type} field of the response header. The \ty{net/http} package
+  writes the \ty{Content-Length} field on its own, so we don't need to do that.
+  For pretty-printing json we need to add a buffer, encode the \ty{out}
+  parameter and indent the result. We can't use \ty{MarshalIndent}, which does
+  all of these steps, because it automatically encodes ampersand. This is a
+  problem, when sending links.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func writeJsonOutput(w http.ResponseWriter, out any) {
-		w.Header().Set("Content-Type", jsonCt.String())
-		w.WriteHeader(http.StatusOK)
-		buf := &bytes.Buffer{}
-		encoder := json.NewEncoder(buf)
-		encoder.SetEscapeHTML(false)
-		encoder.SetIndent("", "  ")
-		err := encoder.Encode(out)
-		util.Check(err)
-		w.Write(buf.Bytes())
-	}
+  func writeJsonOutput(w http.ResponseWriter, out any) {
+    w.Header().Set("Content-Type", jsonCt.String())
+    w.WriteHeader(http.StatusOK)
+    buf := &bytes.Buffer{}
+    encoder := json.NewEncoder(buf)
+    encoder.SetEscapeHTML(false)
+    encoder.SetIndent("", "  ")
+    err := encoder.Encode(out)
+    util.Check(err)
+    w.Write(buf.Bytes())
+  }
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{bytes}.
+  We need to import \ty{bytes}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"bytes"
+  "bytes"
 #+end_src
 
 #+begin_export latex
-	Having implemented \ty{writeJsonOutput} we may use it to
-	write the links of \ty{rootDocument}.
+  Having implemented \ty{writeJsonOutput} we may use it to
+  write the links of \ty{rootDocument}.
 #+end_export
 
 #+begin_src go <<Write output \ty{rootDocument}, Pa. \ref{pa:api}>>=
-	writeJsonOutput(w, out)
+  writeJsonOutput(w, out)
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{accessions}
-	The endpoint \ty{accessions} used to be called levels.
-	The following sections will closely resemble neverV1
-	In our implementation of \ty{accessions} we extract the accessions, get
-	their levels, and write the output.
-	This is \ty{accessions}' io:
-	Params:
-		Query:
-			accession_ids []string *required
-			offset        int
-			limit     		int
-			plain_data    bool
-	Writes:
-		ResponseBody[ []Accession ]
+  \subsection{accessions}
+  The endpoint \ty{accessions} used to be called levels. The following sections
+  will closely resemble neverV1 In our implementation of \ty{accessions} we
+  extract the accessions, get their levels, and write the output.
+  This is \ty{accessions}' io:
+  Params:
+    Path:
+      none
+    Query:
+      accession_ids []string *required
+      offset        int
+      limit     		int
+      plain_data    bool
+  Writes:
+    ResponseBody[ []Accession ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func accessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Check parameters \ty{accessions}, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Extract accessions, Pa. \ref{pa:api}>>
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Look up levels, Pa. \ref{pa:api}>>
-		//<<Store output \ty{accessions}, Pa. \ref{pa:api}>>
-		//<<Add collection links, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func accessions(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any,
+    ) {
+
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Check parameters \ty{accessions}, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract accessions, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Look up levels, Pa. \ref{pa:api}>>
+    //<<Store output \ty{accessions}, Pa. \ref{pa:api}>>
+    //<<Add collection links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	A lot of endpoints that we are defining here allow for or even require parameters.
-	We are going to define a function that checks whether the required parameters
-	exist.
+  A lot of endpoints that we are defining here allow for or even require
+  parameters. We are going to define a function that checks whether the
+  required parameters exist.
 #+end_export
 
 #+begin_src go <<Check parameters \ty{accessions}, Pa. \ref{pa:api}>>=
-	valid := checkParams(w, r, "accession_ids")
-	if !valid {
-		return
-	}
+  valid := checkParams(w, r, "accession_ids")
+  if !valid {
+    return
+  }
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func checkParams(w http.ResponseWriter, r *http.Request, args ...string) bool {
-		for _, arg := range args {
-			p := r.URL.Query().Get(arg)
-			if p == "" {
-				//<<Write bad request, Pa. \ref{pa:api}>>
-				return false
-			}
-		}
-		return true
-	}
+  func checkParams(
+    w http.ResponseWriter,
+    r *http.Request,
+    args ...string,
+    ) bool {
+
+    for _, arg := range args {
+      p := r.URL.Query().Get(arg)
+      if p == "" {
+        //<<Write bad request, Pa. \ref{pa:api}>>
+        return false
+      }
+    }
+    return true
+  }
 #+end_src
 
 #+begin_export latex
-	In this case 400 (Bad Request) response, we say that the request is missing a
-	required parameter.
+  In this case 400 (Bad Request) response, we say that the request is missing a
+  required parameter.
 #+end_export
 
 #+begin_src go <<Write bad request, Pa. \ref{pa:api}>>=
-	writeBadRequestResp(w, "Missing required parameter.")
+  writeBadRequestResp(w, "Missing required parameter.")
 #+end_src
 
 #+begin_export latex
-	The function we are using for the endpoints need to be variadic
-	so in order to use the parameters passed to them in an orderly fashion
-	we need to assign them and do a type assertion. In this block
-	assign the db.
+  The function we are using for the endpoints need to be variadic
+  so in order to use the parameters passed to them in an orderly fashion
+  we need to assign them and do a type assertion. In this block
+  assign the db.
 #+end_export
 
 #+begin_src go <<Get db from args, Pa. \ref{pa:api}>>=
-	neidb := args[0].(Database).Db
+  neidb := args[0].(Database).Db
 #+end_src
 
 #+begin_export latex
-	If the query parameter \ty{plain_data} is passed, we need to change the response structure.
-	In order to do that we extract the parameter here and act on it later on.
+  If the query parameter \ty{plain_data} is passed, we need to change the
+  response structure. In order to do that we extract the parameter here and act
+  on it later on.
 #+end_export
 
 #+begin_src go <<Get plain param, Pa. \ref{pa:api}>>=
-	strPlain := r.URL.Query().Get("plain_data")
-	plain, err := strconv.ParseBool(strPlain)
-	if strPlain != "" && err != nil {
-		writeBadRequestResp(w, "plain_data is not a bool.")
-		return
-	}
+  strPlain := r.URL.Query().Get("plain_data")
+  plain, err := strconv.ParseBool(strPlain)
+  if strPlain != "" && err != nil {
+    writeBadRequestResp(w, "plain_data is not a bool.")
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	Accessions are passed as a comma-delimited string.
+  Accessions are passed as a comma-delimited string.
 #+end_export
 
 #+begin_src go <<Extract accessions, Pa. \ref{pa:api}>>=
-	str := r.URL.Query().Get("accession_ids")
-	accessions := strings.Split(str, ",")
+  str := r.URL.Query().Get("accession_ids")
+  accessions := strings.Split(str, ",")
 #+end_src
 
 #+begin_export latex
-	The offset and limit are parameters defined in the query.
-	As there are a lot of endpoints that provide these parameters, we
-	should make a function that does exactly that.
+  The offset and limit are parameters defined in the query.  As there are a lot
+  of endpoints that provide these parameters, we should make a function that
+  does exactly that.
 #+end_export
 
 #+begin_src go <<Extract offset and limit, Pa. \ref{pa:api}>>=
-	offset, limit := extractPaging(r)
+  offset, limit := extractPaging(r)
 #+end_src
 
 #+begin_export latex
-	Extracting the parameters is done just like any other query parameter.
-	We set default values if offset or limit are not defined or invalid.
-	For conversion we need to import \ty{strconv}.
+  Extracting the parameters is done just like any other query parameter.  We
+  set default values if offset or limit are not defined or invalid. For
+  conversion we need to import \ty{strconv}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"strconv"
+  "strconv"
 #+end_src
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func extractPaging(r *http.Request) (offset, limit int) {
-		strOffset := r.URL.Query().Get("offset")
-		strLimit := r.URL.Query().Get("limit")
+  func extractPaging(r *http.Request) (offset, limit int) {
+    strOffset := r.URL.Query().Get("offset")
+    strLimit := r.URL.Query().Get("limit")
 
-		if strOffset != "" {
-			cOff, err := strconv.Atoi(strOffset)
-			if err != nil {
-				offset = 0
-			} else {
-				offset = cOff
-			}
-		} else {
-			offset = 0
-		}
+    if strOffset != "" {
+      cOff, err := strconv.Atoi(strOffset)
+      if err != nil {
+        offset = 0
+      } else {
+        offset = cOff
+      }
+    } else {
+      offset = 0
+    }
 
-		if strLimit != "" {
-			cLim, err := strconv.Atoi(strLimit)
-			if err != nil {
-				limit = -1
-			} else {
-				limit = cLim
-			}
-		} else {
-				limit = -1
-		}
-	return
-	}
+    if strLimit != "" {
+      cLim, err := strconv.Atoi(strLimit)
+      if err != nil {
+        limit = -1
+      } else {
+        limit = cLim
+      }
+    } else {
+        limit = -1
+    }
+  return
+  }
 #+end_src
 
 #+begin_export latex
-	We look up the level of each accession and store it.
-	Ensuring limit and offset of the output would be easiest by
-	slicing the accessions at the end. I'm explicitly deciding against
-	doing that as using them in compution is more perfomant. Sadly the code
-	aesthetic suffers from that decision :(
+  We look up the level of each accession and store it.  Ensuring limit and
+  offset of the output would be easiest by slicing the accessions at the end.
+  I'm explicitly deciding against doing that as using them in compution is more
+  perfomant. Sadly the code aesthetic suffers from that decision :(
 #+end_export
 
 #+begin_src go <<Look up levels, Pa. \ref{pa:api}>>=
-	var data = []Accession{}
+  var data = []Accession{}
 
-	if limit == -1 {
-		limit = len(accessions)
-	}
-	for i := offset; i < min(offset + limit, len(accessions)); i++ {
-		accession := accessions[i]
-		level, err := neidb.Level(accession)
-		if err != nil {
-			writeServerError(w, "fn accessions - Error while accessing neidb.Level", "", err)
-			return
-		}
-		acc := Accession{Accession: accession, Level: level}
-		if !plain {
-			//<<Add link to accession object, Pa. \ref{pa:api}>>
-		}
-		data = append(data, acc)
-	}
+  if limit == -1 {
+    limit = len(accessions)
+  }
+  for i := offset; i < min(offset + limit, len(accessions)); i++ {
+    accession := accessions[i]
+    level, err := neidb.Level(accession)
+    if err != nil {
+      writeServerError(
+        w,
+        "fn accessions - Error while accessing neidb.Level",
+        "",
+        err,
+      )
+      return
+    }
+    acc := Accession{Accession: accession, Level: level}
+    if !plain {
+      //<<Add link to accession object, Pa. \ref{pa:api}>>
+    }
+    data = append(data, acc)
+  }
 #+end_src
 
 #+begin_export latex
-	A server error is a response with a 5XX response code.
-	We send it whenever there is an unexpected error on the
-	server side. The user does not gain much info out of this,
-	but we might, if we log it. So we should send an entry
-	to the warning log.
+  A server error is a response with a 5XX response code.
+  We send it whenever there is an unexpected error on the
+  server side. The user does not gain much info out of this,
+  but we might, if we log it. So we should send an entry
+  to the warning log.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func writeServerError(w http.ResponseWriter, internalMsg string, responseMsg string, err error) {
-		if err == nil {
-			err = errors.New("No error passed")
-		}
-		 util.LogWarningDef(
-			util.WarningEntry{
-				Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
-		})
-		w.WriteHeader(http.StatusInternalServerError)
-		if responseMsg != "" {
-			w.Write([]byte("An error occurred: " + responseMsg + "\n"))
-		} else {
-			w.Write([]byte("Internal server error.\n"))
-		}
-	}
+  func writeServerError(w http.ResponseWriter, internalMsg string, responseMsg string, err error) {
+    if err == nil {
+      err = errors.New("No error passed")
+    }
+     util.LogWarningDef(
+      util.WarningEntry{
+        Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
+    })
+    w.WriteHeader(http.StatusInternalServerError)
+    if responseMsg != "" {
+      w.Write([]byte("An error occurred: " + responseMsg + "\n"))
+    } else {
+      w.Write([]byte("Internal server error.\n"))
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	We need to import the \ty{errors} and \ty{runtime/debug} packages.
+  We need to import the \ty{errors} and \ty{runtime/debug} packages.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"errors"
-	"runtime/debug"
+  "errors"
+  "runtime/debug"
 #+end_src
 
 #+begin_export latex
-	We convert our slice of accessions items to JSON and write it as our
-	response. For this we need to import a few packages.
+  We convert our slice of accessions items to JSON and write it as our
+  response. For this we need to import a few packages.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"encoding/json"
-	"fmt"
-	"github.com/evolbioinf/never/util"
+  "encoding/json"
+  "fmt"
+  "github.com/evolbioinf/never/util"
 #+end_src
 
 #+begin_export latex
-	We store the data in a variable called \ty{out}
+  We store the data in a variable called \ty{out}
 #+end_export
 
 #+begin_src go <<Store output \ty{accessions}, Pa. \ref{pa:api}>>=
-	out := ResponseBody[[]Accession]{Data: data}
+  out := ResponseBody[[]Accession]{Data: data}
 #+end_src
 
 #+begin_export latex
-	We need utility functions for working with links. As paths saved in a node are URI templates
-	we need a function that exchanges a wildcard for an actual value.
+  We need utility functions for working with links. As paths saved in a node are URI templates
+  we need a function that exchanges a wildcard for an actual value.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func fillTemplate(node Node, pathParams map[string]string, queryParams map[string]string) string {
-		for k := range pathParams {
-			node.BasePath = strings.Replace(node.BasePath, "{"+k+"}", pathParams[k], 1)
-		}
-		i := 0
-		for k := range queryParams {
-			str := ""
-			if i == 0 {
-				str += "?"
-			} else {
-				str += "&"
-			}
-			node.BasePath = fmt.Sprintf("%s%s%s=%s", node.BasePath, str, k, queryParams[k])
-			i++
-		}
-		return node.BasePath
-	}
+  func fillTemplate(node Node, pathParams map[string]string, queryParams map[string]string) string {
+    for k := range pathParams {
+      node.BasePath = strings.Replace(node.BasePath, "{"+k+"}", pathParams[k], 1)
+    }
+    i := 0
+    for k := range queryParams {
+      str := ""
+      if i == 0 {
+        str += "?"
+      } else {
+        str += "&"
+      }
+      node.BasePath = fmt.Sprintf("%s%s%s=%s", node.BasePath, str, k, queryParams[k])
+      i++
+    }
+    return node.BasePath
+  }
 #+end_src
 
 #+begin_export latex
-	We need a function that makes getting nodes from the link graph easier.
-	This function is \ty{getService}, which goes through all services and returns
-	a pointer to a node with the correct name or nil.
+  We need a function that makes getting nodes from the link graph easier.
+  This function is \ty{getService}, which goes through all services and returns
+  a pointer to a node with the correct name or nil.
 #+end_export
 
 #+begin_src go <<Methods, Pa. \ref{pa:api}>>=
-	func (node *Node) getService (name string) *Node {
-		services := node.Links["service"]
-		idx := slices.IndexFunc(services, func(a Node) bool { return a.Name == name})
+  func (node *Node) getService (name string) *Node {
+    services := node.Links["service"]
+    idx := slices.IndexFunc(services, func(a Node) bool { return a.Name == name})
 
-		if idx != -1 {
-			return &services[idx]
-		} else {
-			return nil
-		}
-	}
+    if idx != -1 {
+      return &services[idx]
+    } else {
+      return nil
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	We also need to import \ty{slices}.
+  We also need to import \ty{slices}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"slices"
+  "slices"
 #+end_src
 
 #+begin_export latex
-	Now we can write the links of the accession entity entity.
+  Now we can write the links of the accession entity entity.
 #+end_export
 
 #+begin_src go <<Add link to accession object, Pa. \ref{pa:api}>>=
-	accNode := *root.getService("accession")
-	acc.Links = append(acc.Links, accNode.makeLink("self",
-		fillTemplate(accNode, map[string]string{}, map[string]string{})))
+  accNode := *root.getService("accession")
+  acc.Links = append(acc.Links, accNode.makeLink("self",
+    fillTemplate(accNode, map[string]string{}, map[string]string{})))
 #+end_src
 
 #+begin_export latex
-	A collection provides multiple links. It shows every of its registered endpoints, as well as
-	a prev and next relations, when using pagination. Lastly a self reference is also part of the
-	links.
+  A collection provides multiple links. It shows every of its registered endpoints, as well as
+  a prev and next relations, when using pagination. Lastly a self reference is also part of the
+  links.
 #+end_export
 
 #+begin_src go <<Add collection links, Pa. \ref{pa:api}>>=
-	if !plain {
-		var links []Link
-		//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-		//<<Add pagination links, Pa. \ref{pa:api}>>
-		//<<Add graph links, Pa. \ref{pa:api}>>
-		out.Links = links
-	}
+  if !plain {
+    var links []Link
+    //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+    //<<Add pagination links, Pa. \ref{pa:api}>>
+    //<<Add graph links, Pa. \ref{pa:api}>>
+    out.Links = links
+  }
 #+end_src
 
 #+begin_export latex
-	For adding the self link we just take the \ty{self} node
-	to make a \ty{Link} with the requested url and append it to the
-	links.
+  For adding the self link we just take the \ty{self} node
+  to make a \ty{Link} with the requested url and append it to the
+  links.
 #+end_export
 
 #+begin_src go <<Add endpoint's self link, Pa. \ref{pa:api}>>=
-		links = append(links, selfNode.makeLink("self", r.URL.String()))
+    links = append(links, selfNode.makeLink("self", r.URL.String()))
 #+end_src
 
 #+begin_export latex
-	Appending the graph links is a matter of iterating over the
-	\ty{self} nodes and turning them into links using the correct
-	relation in the process.
+  Appending the graph links is a matter of iterating over the
+  \ty{self} nodes and turning them into links using the correct
+  relation in the process.
 #+end_export
 
 #+begin_src go <<Add graph links, Pa. \ref{pa:api}>>=
-		for link := range selfNode.Links {
-			for _, node := range selfNode.Links[link] {
-				links = append(links, node.makeLink(link, ""))
-			}
-		}
+    for link := range selfNode.Links {
+      for _, node := range selfNode.Links[link] {
+        links = append(links, node.makeLink(link, ""))
+      }
+    }
 #+end_src
 
 #+begin_export latex
-	Lastly we write the output using the \ty{writeJsonOutput} function.
-	Using the plain parameter we decide whether to output the plain data
-	or the out struct including all the links.
+  Lastly we write the output using the \ty{writeJsonOutput} function.
+  Using the plain parameter we decide whether to output the plain data
+  or the out struct including all the links.
 #+end_export
 
 #+begin_src go <<Write json output, Pa. \ref{pa:api}>>=
-	if plain {
-		writeJsonOutput(w, out.Data)
-	} else {
-		writeJsonOutput(w, out)
-	}
+  if plain {
+    writeJsonOutput(w, out.Data)
+  } else {
+    writeJsonOutput(w, out)
+  }
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{accession}
-	The endpoint \ty{accession} is used to retrieve single
-	resources of the accessions collection.
-	This is \ty{accession}'s io:
-	Params:
-		Path:
-			accession_id string
-		Query:
-			plain_data bool
-		Writes:
-		 \ty{ResponseBody[Accession]}
+  \subsection{accession}
+  The endpoint \ty{accession} is used to retrieve single
+  resources of the accessions collection.
+  This is \ty{accession}'s io:
+  Params:
+    Path:
+      accession_id string
+    Query:
+      plain_data bool
+    Writes:
+     \ty{ResponseBody[Accession]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Look up level, Pa. \ref{pa:api}>>
-		//<<Store output \ty{accession}, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Look up level, Pa. \ref{pa:api}>>
+    //<<Store output \ty{accession}, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	Looking up the level is the same as for an array, so we already know how to
-	do that.
+  Looking up the level is the same as for an array, so we already know how to
+  do that.
 #+end_export
 
 #+begin_src go <<Look up level, Pa. \ref{pa:api}>>=
-	accession := r.PathValue("accession_id")
-	level, err := neidb.Level(accession)
-	if err != nil {
-		writeServerError(w, "fn accession - Error while accessing neidb.Level", "", err)
-		return
-	}
-	var data Accession
-	var links []Link
-	data = Accession{Accession: accession, Level: level}
-	if !plain {
-		//<<Add links \ty{accession}, Pa. \ref{pa:api}>>
-	}
+  accession := r.PathValue("accession_id")
+  level, err := neidb.Level(accession)
+  if err != nil {
+    writeServerError(w, "fn accession - Error while accessing neidb.Level", "", err)
+    return
+  }
+  var data Accession
+  var links []Link
+  data = Accession{Accession: accession, Level: level}
+  if !plain {
+    //<<Add links \ty{accession}, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_src go <<Add links \ty{accession}, Pa. \ref{pa:api}>>=
-	//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-	//<<Add graph links, Pa. \ref{pa:api}>>
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	We store the data in a variable called \ty{out}.
+  We store the data in a variable called \ty{out}.
 #+end_export
 
 #+begin_src go <<Store output \ty{accession}, Pa. \ref{pa:api}>>=
-	out := ResponseBody[Accession]{Data: data, Links: links}
+  out := ResponseBody[Accession]{Data: data, Links: links}
 #+end_src
 
 
 #+begin_export latex
-	\subsection{accession}
-	The endpoint \ty{databases} responds with all the active databases, the user
-	may specify, when querying the endpoints.
-	This is \ty{databases}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			offset     int
-			limit      int
-			plain_data bool
-		Writes:
-		 \ty{ResponseBody[ [] string ]}
+  \subsection{accession}
+  The endpoint \ty{databases} responds with all the active databases, the user
+  may specify, when querying the endpoints.
+  This is \ty{databases}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      offset     int
+      limit      int
+      plain_data bool
+    Writes:
+     \ty{ResponseBody[ [] string ]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func databases(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Write databases, Pa. \ref{pa:api}>>
-		//<<Write links \ty{databases}, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func databases(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Write databases, Pa. \ref{pa:api}>>
+    //<<Write links \ty{databases}, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	For writing the databases we'll basically print the keys of the database map.
-	We should, however, sort those keys before sending them. The map of databases
-	is passed to this functions as the \textbf{second} entry of the \ty{args}
-	slice. We need to keep this in mind, when trying to access the databases.
+  For writing the databases we'll basically print the keys of the database map.
+  We should, however, sort those keys before sending them. The map of databases
+  is passed to this functions as the \textbf{second} entry of the \ty{args}
+  slice. We need to keep this in mind, when trying to access the databases.
 #+end_export
 
 #+begin_src go <<Write databases, Pa. \ref{pa:api}>>=
-	dbs := args[1].(map[string]Database)
-	names := make([]string, len(dbs))
+  dbs := args[1].(map[string]Database)
+  names := make([]string, len(dbs))
 
-	i := 0
-	for n := range dbs {
-		names[i] = n
-		i++
-	}
-	slices.Sort(names)
-	var out ResponseBody[[]string]
-	for i = offset; i < len(names) && (limit == -1 || i < offset + limit); i++ {
-		out.Data = append(out.Data, names[i])
-	}
+  i := 0
+  for n := range dbs {
+    names[i] = n
+    i++
+  }
+  slices.Sort(names)
+  var out ResponseBody[[]string]
+  for i = offset; i < len(names) && (limit == -1 || i < offset + limit); i++ {
+    out.Data = append(out.Data, names[i])
+  }
 #+end_src
 
 #+begin_export latex
-	Databases does not provide a lot of links, it's just a self link and
-	pagination links.
+  Databases does not provide a lot of links, it's just a self link and
+  pagination links.
 #+end_export
 
 #+begin_src go <<Write links \ty{databases}, Pa. \ref{pa:api}>>=
-	if !plain {
-		var links []Link
-		//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-		//<<Add pagination links, Pa. \ref{pa:api}>>
-		out.Links = links
-	}
+  if !plain {
+    var links []Link
+    //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+    //<<Add pagination links, Pa. \ref{pa:api}>>
+    out.Links = links
+  }
 #+end_src
 
 
 #+begin_export latex
-	\subsection{taxa}
-	The enpoint \ty{taxa} takes as input the name of a taxon, whether to use
-	the scientific name only, a matching mode, an offset, a limit
-	and an identifier for the kind of fields that should be returned. It
-	writes as response for each matching taxon the taxon ID, its parent's
-	taxon ID, its scientific name and or its common name.
+  \subsection{taxa}
+  The enpoint \ty{taxa} takes as input the name of a taxon, whether to use
+  the scientific name only, a matching mode, an offset, a limit
+  and an identifier for the kind of fields that should be returned. It
+  writes as response for each matching taxon the taxon ID, its parent's
+  taxon ID, its scientific name and or its common name.
 
-	This is \ty{taxa}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			name            string
-			scientific      bool
-			exact           bool
-			offset          int
-			limit           int
-			field_composite string
-			plain_data      bool
-	Writes:
-		ResponseBody[ []Partial<Taxon> ]
+  This is \ty{taxa}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      name            string
+      scientific      bool
+      exact           bool
+      offset          int
+      limit           int
+      field_composite string
+      plain_data      bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		valid := checkParams(w, r, "name")
-		if !valid {
-			return
-		}
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Extract query params, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Execute taxi query, Pa. \ref{pa:api}>>
-		//<<Store taxon output, Pa. \ref{pa:api}>>
-		//<<Add taxa links, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    valid := checkParams(w, r, "name")
+    if !valid {
+      return
+    }
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Extract query params, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Execute taxi query, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Add taxa links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	We extract the taxon name, whether or not we are matching in exact
-	mode and if we are looking for just the scientific name.
-	If we are \emph{not} matching in exact mode, we bracket the
-	name and the blanks it contains by wildcards.
+  We extract the taxon name, whether or not we are matching in exact
+  mode and if we are looking for just the scientific name.
+  If we are \emph{not} matching in exact mode, we bracket the
+  name and the blanks it contains by wildcards.
 #+end_export
 
 #+begin_src go <<Extract query params, Pa. \ref{pa:api}>>=
-	name := r.URL.Query().Get("name")
-	strExact := r.URL.Query().Get("exact")
-	strScientific := r.URL.Query().Get("scientific")
-	//<<Get field composite, Pa. \ref{pa:api}>>
+  name := r.URL.Query().Get("name")
+  strExact := r.URL.Query().Get("exact")
+  strScientific := r.URL.Query().Get("scientific")
+  //<<Get field composite, Pa. \ref{pa:api}>>
 
-	exact, err := strconv.ParseBool(strExact)
-	if strExact != "" && err != nil {
-		writeBadRequestResp(w, "exact is not a bool.")
-		return
-	}
-	scientific, err := strconv.ParseBool(strScientific)
-	if strScientific != "" && err != nil {
-		writeBadRequestResp(w, "scientific is not a bool.")
-		return
-	}
-	if !exact {
-		name = strings.ReplaceAll(name, " ", "% %")
-		name = "%" + name + "%"
-	}
+  exact, err := strconv.ParseBool(strExact)
+  if strExact != "" && err != nil {
+    writeBadRequestResp(w, "exact is not a bool.")
+    return
+  }
+  scientific, err := strconv.ParseBool(strScientific)
+  if strScientific != "" && err != nil {
+    writeBadRequestResp(w, "scientific is not a bool.")
+    return
+  }
+  if !exact {
+    name = strings.ReplaceAll(name, " ", "% %")
+    name = "%" + name + "%"
+  }
 #+end_src
 
 #+begin_export latex
-	The field composite is a query parameter which determines
-	the fields of the response. We call a function
-	\ty{parseFieldComposite}, to handle setting defaults etc.
-	We are going to implement in the next step.
+  The field composite is a query parameter which determines
+  the fields of the response. We call a function
+  \ty{parseFieldComposite}, to handle setting defaults etc.
+  We are going to implement in the next step.
 #+end_export
 
 #+begin_src go <<Get field composite, Pa. \ref{pa:api}>>=
-	fieldComposite := r.URL.Query().Get("field_composite")
-	fieldComposite = parseFieldComposite(fieldComposite)
+  fieldComposite := r.URL.Query().Get("field_composite")
+  fieldComposite = parseFieldComposite(fieldComposite)
 #+end_src
 
 #+begin_export latex
-	This function takes a string, which is supposed to be a field composite
-	descriptor. It checks whether the \ty{arg} matches any of the options
-	and returns \ty{default} if it does not.
+  This function takes a string, which is supposed to be a field composite
+  descriptor. It checks whether the \ty{arg} matches any of the options
+  and returns \ty{default} if it does not.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func parseFieldComposite(arg string) string {
-		availableComps := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
-		_, found := slices.BinarySearch(availableComps, arg)
-		if !found {
-			arg = "default"
-		}
-		return arg
-	}
+  func parseFieldComposite(arg string) string {
+    availableComps := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
+    _, found := slices.BinarySearch(availableComps, arg)
+    if !found {
+      arg = "default"
+    }
+    return arg
+  }
 #+end_src
 
 #+begin_export latex
-	We iterate over the taxon IDs and for each one construct the taxon
-	output and store it in our slice of taxa.
+  We iterate over the taxon IDs and for each one construct the taxon
+  output and store it in our slice of taxa.
 #+end_export
 
 #+begin_src go <<Execute taxi query, Pa. \ref{pa:api}>>=
-	var ids []int
-	if scientific {
-		ids, err = neidb.Taxids(name, limit, offset)
-		if err != nil {
-			writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", "", err)
-			return
-		}
-	} else {
-		ids, err = neidb.CommonTaxids(name, limit, offset)
-		if err != nil {
-			writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", "", err)
-			return
-		}
-	}
-	data := []Taxon{}
-	for _, id := range ids {
-		//<<Construct taxon output, Pa. \ref{pa:api}>>
-	}
+  var ids []int
+  if scientific {
+    ids, err = neidb.Taxids(name, limit, offset)
+    if err != nil {
+      writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", "", err)
+      return
+    }
+  } else {
+    ids, err = neidb.CommonTaxids(name, limit, offset)
+    if err != nil {
+      writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", "", err)
+      return
+    }
+  }
+  data := []Taxon{}
+  for _, id := range ids {
+    //<<Construct taxon output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	Getting the data of a taxon is something we are doing frequently.
-	This means we write a function for this behaviour. \ty{getTaxonData}
-	takes an id, whether the data should be plain, i.e. without links
-	and the composite to create.
+  Getting the data of a taxon is something we are doing frequently.
+  This means we write a function for this behaviour. \ty{getTaxonData}
+  takes an id, whether the data should be plain, i.e. without links
+  and the composite to create.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
-		tax.TaxId = id
-		if fieldComposite == "gen_count" || fieldComposite == "all" {
-			//<<Get raw genome counts, Pa. \ref{pa:api}>>
-		}
-		if fieldComposite == "gen_count_rec" || fieldComposite == "all" {
-			//<<Get rec genome counts, Pa. \ref{pa:api}>>
-		}
-		if fieldComposite == "rank" || fieldComposite == "all" {
-			//<<Retrieve rank fields, Pa. \ref{pa:api}>>
-		}
-		if fieldComposite == "default" || fieldComposite == "all" {
-			//<<Retrieve default fields, Pa. \ref{pa:api}>>
-		}
-		if fieldComposite == "all" {
-			//<<Retrieve all remaining fields, Pa. \ref{pa:api}>>
-		}
-		if !plain {
-			//<<Add entity Link, Pa. \ref{pa:api}>>
-		}
-		return
-	}
+  func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
+    tax.TaxId = id
+    if fieldComposite == "gen_count" || fieldComposite == "all" {
+      //<<Get raw genome counts, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "gen_count_rec" || fieldComposite == "all" {
+      //<<Get rec genome counts, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "rank" || fieldComposite == "all" {
+      //<<Retrieve rank fields, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "default" || fieldComposite == "all" {
+      //<<Retrieve default fields, Pa. \ref{pa:api}>>
+    }
+    if fieldComposite == "all" {
+      //<<Retrieve all remaining fields, Pa. \ref{pa:api}>>
+    }
+    if !plain {
+      //<<Add entity Link, Pa. \ref{pa:api}>>
+    }
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	We look up the raw genome counts across the assembly
-	levels. We return instantly with an error if there is one present.
-	The calling function then handles the error logging.
+  We look up the raw genome counts across the assembly
+  levels. We return instantly with an error if there is one present.
+  The calling function then handles the error logging.
 #+end_export
 
 #+begin_src go <<Get raw genome counts, Pa. \ref{pa:api}>>=
-	raw := make([]GenomeCount, 0)
-	for _, level := range tdb.AssemblyLevels() {
-		var count int
-		count, err = neidb.NumGenomes(id, level)
-		if err != nil {
-			return
-		}
-		gc := GenomeCount{Count: count, Level: level}
-		raw = append(raw, gc)
-	}
-	tax.RawGenomeCount = raw
+  raw := make([]GenomeCount, 0)
+  for _, level := range tdb.AssemblyLevels() {
+    var count int
+    count, err = neidb.NumGenomes(id, level)
+    if err != nil {
+      return
+    }
+    gc := GenomeCount{Count: count, Level: level}
+    raw = append(raw, gc)
+  }
+  tax.RawGenomeCount = raw
 #+end_src
 
 #+begin_export latex
-	We look up the recursive genome counts across the assembly
-	levels.
+  We look up the recursive genome counts across the assembly
+  levels.
 #+end_export
 
 #+begin_src go <<Get rec genome counts, Pa. \ref{pa:api}>>=
-	rec := make([]GenomeCount, 0)
-	for _, level := range tdb.AssemblyLevels() {
-		var count int
-		count, err = neidb.NumGenomesRec(id, level)
-		if err != nil {
-			return
-		}
-		gc := GenomeCount{Count: count, Level: level}
-		rec = append(rec, gc)
-	}
-	tax.RecGenomeCount = rec
+  rec := make([]GenomeCount, 0)
+  for _, level := range tdb.AssemblyLevels() {
+    var count int
+    count, err = neidb.NumGenomesRec(id, level)
+    if err != nil {
+      return
+    }
+    gc := GenomeCount{Count: count, Level: level}
+    rec = append(rec, gc)
+  }
+  tax.RecGenomeCount = rec
 #+end_src
 
 #+begin_export latex
-	We get the rank specific data.
+  We get the rank specific data.
 #+end_export
 
 #+begin_src go <<Retrieve rank fields, Pa. \ref{pa:api}>>=
-	var rank string
-	rank, err = neidb.Rank(id)
-	if err != nil {
-		return
-	}
-	tax.Rank = new(rank)
+  var rank string
+  rank, err = neidb.Rank(id)
+  if err != nil {
+    return
+  }
+  tax.Rank = new(rank)
 #+end_src
 
 #+begin_export latex
-	We get the default data.
+  We get the default data.
 #+end_export
 
 #+begin_src go <<Retrieve default fields, Pa. \ref{pa:api}>>=
-	//<<Get names, Pa. \ref{pa:api}>>
-	//<<Get parent, Pa. \ref{pa:api}>>
+  //<<Get names, Pa. \ref{pa:api}>>
+  //<<Get parent, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	We look up the taxon's scientific and common names with error
-	checking.
+  We look up the taxon's scientific and common names with error
+  checking.
 #+end_export
 
 #+begin_src go <<Get names, Pa. \ref{pa:api}>>=
-	var sciName string
-	sciName, err = neidb.Name(id)
-	if err != nil {
-		return
-	}
-	tax.Name = new(sciName)
-	var comName string
-	comName, err = neidb.CommonName(id)
-	if err != nil {
-		return
-	}
-	tax.CommonName = new(comName)
+  var sciName string
+  sciName, err = neidb.Name(id)
+  if err != nil {
+    return
+  }
+  tax.Name = new(sciName)
+  var comName string
+  comName, err = neidb.CommonName(id)
+  if err != nil {
+    return
+  }
+  tax.CommonName = new(comName)
 #+end_src
 
 #+begin_export latex
-	We look up the parent taxon and check the error.
+  We look up the parent taxon and check the error.
 #+end_export
 
 #+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
-	var parent int
-	parent, err = neidb.Parent(id)
-	if err != nil {
-		return
-	}
-	tax.Parent = new(parent)
+  var parent int
+  parent, err = neidb.Parent(id)
+  if err != nil {
+    return
+  }
+  tax.Parent = new(parent)
 #+end_src
 
 #+begin_export latex
-	We get the all the remaining data.
+  We get the all the remaining data.
 #+end_export
 
 #+begin_src go <<Retrieve all remaining fields, Pa. \ref{pa:api}>>=
-	//<<Is the taxon a leaf? Pa. \ref{pa:api}>>
-	//<<Get images, Pa. \ref{pa:api}>>
+  //<<Is the taxon a leaf? Pa. \ref{pa:api}>>
+  //<<Get images, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	We determine whether the taxon is a leaf.
+  We determine whether the taxon is a leaf.
 #+end_export
 
 #+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
-	var isLeaf bool
-	isLeaf, err = neidb.IsLeaf(id)
-	if err != nil {
-		return
-	}
-	tax.IsLeaf = new(isLeaf)
+  var isLeaf bool
+  isLeaf, err = neidb.IsLeaf(id)
+  if err != nil {
+    return
+  }
+  tax.IsLeaf = new(isLeaf)
 #+end_src
 
 #+begin_export latex
-	We look up the raw genome counts across the assembly
-	levels.
+  We look up the raw genome counts across the assembly
+  levels.
 #+end_export
 
 #+begin_export latex
-	We look up the images associated with the taxon.
+  We look up the images associated with the taxon.
 #+end_export
 
 #+begin_src go <<Get images, Pa. \ref{pa:api}>>=
-	neiImages := make([]Image, 0)
-	var images []tdb.Image
-	images, err = neidb.Images(id)
-	if err != nil {
-		return
-	}
-	for _, image := range images {
-		i := Image{Id: image.Id,
-			Url: image.Url,
-			Attribution: image.Attribution}
-		neiImages = append(neiImages, i)
-	}
-	tax.Images = neiImages
+  neiImages := make([]Image, 0)
+  var images []tdb.Image
+  images, err = neidb.Images(id)
+  if err != nil {
+    return
+  }
+  for _, image := range images {
+    i := Image{Id: image.Id,
+      Url: image.Url,
+      Attribution: image.Attribution}
+    neiImages = append(neiImages, i)
+  }
+  tax.Images = neiImages
 #+end_src
 
 #+begin_export latex
-	Lastly we add the self link of the entity. We search the link graph for the
-	\ty{taxon} service, and replace the \ty{taxon_id} and \ty{field_composite}
-	with their current values.
+  Lastly we add the self link of the entity. We search the link graph for the
+  \ty{taxon} service, and replace the \ty{taxon_id} and \ty{field_composite}
+  with their current values.
 #+end_export
 
 #+begin_src go <<Add entity Link, Pa. \ref{pa:api}>>=
-	taxNode := *root.getService("taxon")
-	tax.Links = append(tax.Links, taxNode.makeLink("self", fillTemplate(
-		taxNode,
-		map[string]string{"taxon_id": strconv.Itoa(id)},
-		map[string]string{"field_composite": fieldComposite},
-	)))
+  taxNode := *root.getService("taxon")
+  tax.Links = append(tax.Links, taxNode.makeLink("self", fillTemplate(
+    taxNode,
+    map[string]string{"taxon_id": strconv.Itoa(id)},
+    map[string]string{"field_composite": fieldComposite},
+  )))
 #+end_src
 
 #+begin_export latex
-	We call get \ty{getTaxonData}, to get data on our taxon
-	using the correct composite of fields and links.
+  We call get \ty{getTaxonData}, to get data on our taxon
+  using the correct composite of fields and links.
 #+end_export
 
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
-	tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-	if err != nil {
-		writeServerError(w, "Error from getTaxonData", "", err)
-		return
-	}
-	data = append(data, tax)
+  tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+  if err != nil {
+    writeServerError(w, "Error from getTaxonData", "", err)
+    return
+  }
+  data = append(data, tax)
 #+end_src
 
 #+begin_export latex
-	We store the data in \ty{out}.
+  We store the data in \ty{out}.
 #+end_export
 
 #+begin_src go <<Store taxon output, Pa. \ref{pa:api}>>=
-	out := ResponseBody[[]Taxon]{Data: data}
+  out := ResponseBody[[]Taxon]{Data: data}
 #+end_src
 
 #+begin_export latex
-	\ty{taxa} gets a self link, pagination, links to its services
-	and a link for all other available composites.
+  \ty{taxa} gets a self link, pagination, links to its services
+  and a link for all other available composites.
 #+end_export
 
 #+begin_src go <<Add taxa links, Pa. \ref{pa:api}>>=
-	if !plain {
-		var links []Link
-		//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-		//<<Add pagination links, Pa. \ref{pa:api}>>
-		//<<Add graph links, Pa. \ref{pa:api}>>
-		//<<Add field composite links, Pa. \ref{pa:api}>>
-		out.Links = links
-	}
+  if !plain {
+    var links []Link
+    //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+    //<<Add pagination links, Pa. \ref{pa:api}>>
+    //<<Add graph links, Pa. \ref{pa:api}>>
+    //<<Add field composite links, Pa. \ref{pa:api}>>
+    out.Links = links
+  }
 #+end_src
 
 #+begin_export latex
-	Every endpoint returning taxon entities is faced with
-	adding links for the available composites.
-	This means we write a function that does this for us.
-	The function \ty{getTaxonCompositeLinks} takes the node
-	of the endpoint, the \ty{fieldComposite} currently in use
-	and the request. It defines all available composites,
-	iterates through them and creates a matching link.
-	We use a dereferenced variable to access the \ty{url},
-	so we don't alter the passed parameter.
+  Every endpoint returning taxon entities is faced with
+  adding links for the available composites.
+  This means we write a function that does this for us.
+  The function \ty{getTaxonCompositeLinks} takes the node
+  of the endpoint, the \ty{fieldComposite} currently in use
+  and the request. It defines all available composites,
+  iterates through them and creates a matching link.
+  We use a dereferenced variable to access the \ty{url},
+  so we don't alter the passed parameter.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
-		available := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
-		queryName := "field_composite"
-		u := *r.URL
-		for _, v := range available {
-			if v != fieldComposite {
-				//<<Create composite link, Pa. \ref{pa:api}>>
-			}
-		}
-		return
-	}
+  func getTaxonCompositeLinks(node *Node, fieldComposite string, r *http.Request) (links []Link) {
+    available := []string{"all", "default", "gen_count", "gen_count_rec", "id", "rank"}
+    queryName := "field_composite"
+    u := *r.URL
+    for _, v := range available {
+      if v != fieldComposite {
+        //<<Create composite link, Pa. \ref{pa:api}>>
+      }
+    }
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	When creating the new link, we want to keep the requested
-	Link as it is, except for the \ty{field_composite} parameter
-	of the query. We can make use of the \ty{Query} map used in
-	the request. By setting and resetting the \ty{field_composite}
-	parameter, we can render the link exactly as it was before,
-	except for the swapped \ty{field_composite}.
+  When creating the new link, we want to keep the requested
+  Link as it is, except for the \ty{field_composite} parameter
+  of the query. We can make use of the \ty{Query} map used in
+  the request. By setting and resetting the \ty{field_composite}
+  parameter, we can render the link exactly as it was before,
+  except for the swapped \ty{field_composite}.
 #+end_export
 
 #+begin_src go <<Create composite link, Pa. \ref{pa:api}>>=
-	q := u.Query()
-	q.Set(queryName, v)
-	u.RawQuery = q.Encode()
-	links = append(links, node.makeLink("more fields", u.String()))
+  q := u.Query()
+  q.Set(queryName, v)
+  u.RawQuery = q.Encode()
+  links = append(links, node.makeLink("more fields", u.String()))
 #+end_src
 
 #+begin_export latex
-	Now we need to call the function we just implemented.
+  Now we need to call the function we just implemented.
 #+end_export
 
 #+begin_src go <<Add field composite links, Pa. \ref{pa:api}>>=
-	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+  links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{taxon}
-	The enpoint \ty{taxon} takes as input the taxon id of a taxon and
-	an identifier for the kind of fields that should be returned. It
-	writes as response for each matching taxon the taxon ID, its parent's
-	taxon ID, its scientific name and or its common name.
+  \subsection{taxon}
+  The enpoint \ty{taxon} takes as input the taxon id of a taxon and
+  an identifier for the kind of fields that should be returned. It
+  writes as response for each matching taxon the taxon ID, its parent's
+  taxon ID, its scientific name and or its common name.
 
-	This is \ty{taxon}'s io:
-	Params:
-		Path:
-			taxon_id id
-		Query:
-			field_composite string
-			plain_data 		  bool
-	Writes:
-		ResponseBody[ Partial<Taxon> ]
+  This is \ty{taxon}'s io:
+  Params:
+    Path:
+      taxon_id id
+    Query:
+      field_composite string
+      plain_data 		  bool
+  Writes:
+    ResponseBody[ Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Get field composite, Pa. \ref{pa:api}>>
-		//<<Get taxon data, Pa. \ref{pa:api}>>
-		//<<Add links taxon entity, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Get taxon data, Pa. \ref{pa:api}>>
+    //<<Add links taxon entity, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	Getting the taxon data is easy with the \ty{getTaxonData}
-	function. We don't want links for single entity responses
-	so we just pass a \ty{true} instead of \ty{plain} to
-	\ty{getTaxonData}.
+  Getting the taxon data is easy with the \ty{getTaxonData}
+  function. We don't want links for single entity responses
+  so we just pass a \ty{true} instead of \ty{plain} to
+  \ty{getTaxonData}.
 #+end_export
 
 #+begin_src go <<Get taxon data, Pa. \ref{pa:api}>>=
-	//<<Parse taxon id, Pa. \ref{pa:api}>>
-	tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
-	if err != nil {
-		writeServerError(w, "fn taxon - Error from getTaxonData", "", err)
-		return
-	}
-	var out ResponseBody[Taxon]
-	out.Data = tax
+  //<<Parse taxon id, Pa. \ref{pa:api}>>
+  tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
+  if err != nil {
+    writeServerError(w, "fn taxon - Error from getTaxonData", "", err)
+    return
+  }
+  var out ResponseBody[Taxon]
+  out.Data = tax
 #+end_src
 
 #+begin_export latex
-	We extract the taxon id as a string via the \ty{PathValue}
-	function. Expecting an integer, we convert the string and
-	return an error response, if it was malformed.
+  We extract the taxon id as a string via the \ty{PathValue}
+  function. Expecting an integer, we convert the string and
+  return an error response, if it was malformed.
 #+end_export
 
 #+begin_src go <<Parse taxon id, Pa. \ref{pa:api}>>=
-	taxIdStr := r.PathValue("taxon_id")
-	taxId, err := strconv.Atoi(taxIdStr)
-	if err != nil {
-		writeBadRequestResp(w, "Taxon id is not an integer.")
-		return
-	}
+  taxIdStr := r.PathValue("taxon_id")
+  taxId, err := strconv.Atoi(taxIdStr)
+  if err != nil {
+    writeBadRequestResp(w, "Taxon id is not an integer.")
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	We also wrote a function for adding links to taxa entities, so this
-	is easy as well.
+  We also wrote a function for adding links to taxa entities, so this
+  is easy as well.
 #+end_export
 
 #+begin_src go <<Add links taxon entity, Pa. \ref{pa:api}>>=
-	var links []Link
-	links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
-	//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-	//<<Add graph links, Pa. \ref{pa:api}>>
-	out.Links = links
+  var links []Link
+  links = append(links, getTaxonCompositeLinks(selfNode, fieldComposite, r)...)
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
+  out.Links = links
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{children}
-	The service \ty{children} takes as argument a taxon id and returns its
-	children as a slice of their taxon id. We implement the service by
-	first getting the taxon id and the corresponding children.
-	Then we iterate over the children and construct the output object
-	for each one, before we write the output.
+  \subsection{children}
+  The service \ty{children} takes as argument a taxon id and returns its
+  children as a slice of their taxon id. We implement the service by
+  first getting the taxon id and the corresponding children.
+  Then we iterate over the children and construct the output object
+  for each one, before we write the output.
 
-	This is \ty{children}'s io:
-	Params:
-		Path:
-			taxon_id int
-		Query:
-			offset          int
-			limit           int
-			field_composite string
-			plain_data      bool
-	Writes:
-		ResponseBody[ []Partial<Taxon> ]
+  This is \ty{children}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      offset          int
+      limit           int
+      field_composite string
+      plain_data      bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Parse taxon id, Pa. \ref{pa:api}>>
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Get field composite, Pa. \ref{pa:api}>>
-		//<<Execute children query, Pa. \ref{pa:api}>>
-		//<<Store taxon output, Pa. \ref{pa:api}>>
-		//<<Define link parameters, Pa. \ref{pa:api}>>
-		//<<Add filled taxa links, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Parse taxon id, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Execute children query, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Define link parameters, Pa. \ref{pa:api}>>
+    //<<Add filled taxa links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	There is a function called \ty{Children} in \ty{tdb}, which returns
-	a slice of integers containing taxon ids. We need to account for
-	pagination, so we add the limit and offset into the loop.
+  There is a function called \ty{Children} in \ty{tdb}, which returns
+  a slice of integers containing taxon ids. We need to account for
+  pagination, so we add the limit and offset into the loop.
 #+end_export
 
 #+begin_src go <<Execute children query, Pa. \ref{pa:api}>>=
-		children, err := neidb.Children(taxId)
-		if err != nil {
-			writeServerError(w, "fn children - Error while executing neidbChildren", "", err)
-			return
-		}
-		if limit == -1 {
-			limit = len(children)
-		}
-		data := []Taxon{}
-		for i := offset; i < min(offset + limit, len(children)); i++ {
-			id := children[i]
-			//<<Construct taxon output, Pa. \ref{pa:api}>>
-		}
+    children, err := neidb.Children(taxId)
+    if err != nil {
+      writeServerError(w, "fn children - Error while executing neidbChildren", "", err)
+      return
+    }
+    if limit == -1 {
+      limit = len(children)
+    }
+    data := []Taxon{}
+    for i := offset; i < min(offset + limit, len(children)); i++ {
+      id := children[i]
+      //<<Construct taxon output, Pa. \ref{pa:api}>>
+    }
 #+end_src
 
 #+begin_export latex
-	While we don't have any query parameters we need to add to the
-	template, there is a path parameter that needs handling.
+  While we don't have any query parameters we need to add to the
+  template, there is a path parameter that needs handling.
 #+end_export
 
 #+begin_src go <<Define link parameters, Pa. \ref{pa:api}>>=
-	pathParams := map[string]string{"taxon_id": taxIdStr}
-	queryParams := map[string]string{}
+  pathParams := map[string]string{"taxon_id": taxIdStr}
+  queryParams := map[string]string{}
 #+end_src
 
 #+begin_export latex
-	Now we need to add our usual links, keeping in mind to fill
-	the templates with the requested parameters.
+  Now we need to add our usual links, keeping in mind to fill
+  the templates with the requested parameters.
 #+end_export
 
 #+begin_src go <<Add filled taxa links, Pa. \ref{pa:api}>>=
-	if !plain {
-		var links []Link
-		//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-		//<<Add pagination links, Pa. \ref{pa:api}>>
-		for link := range selfNode.Links {
-			for _, node := range selfNode.Links[link] {
-				links = append(links, node.makeLink(link, fillTemplate(node, pathParams, queryParams)))
-			}
-		}
-		//<<Add field composite links, Pa. \ref{pa:api}>>
-		out.Links = links
-	}
+  if !plain {
+    var links []Link
+    //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+    //<<Add pagination links, Pa. \ref{pa:api}>>
+    for link := range selfNode.Links {
+      for _, node := range selfNode.Links[link] {
+        links = append(links, node.makeLink(link, fillTemplate(node, pathParams, queryParams)))
+      }
+    }
+    //<<Add field composite links, Pa. \ref{pa:api}>>
+    out.Links = links
+  }
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{parent}
-	The service \ty{parent} takes as argument a taxon id and returns its
-	parent.
+  \subsection{parent}
+  The service \ty{parent} takes as argument a taxon id and returns its
+  parent.
 
-	This is \ty{parent}'s io:
-	Params:
-		Path:
-			taxon_id int
-		Query:
-			field_composite string
-			plain_data 			bool
-	Writes:
-		ResponseBody[ []Partial<Taxon> ]
+  This is \ty{parent}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      field_composite string
+      plain_data 			bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Parse taxon id, Pa. \ref{pa:api}>>
-		//<<Get field composite, Pa. \ref{pa:api}>>
-		//<<Execute parent query, Pa. \ref{pa:api}>>
-		//<<Add links taxon entity, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Parse taxon id, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Execute parent query, Pa. \ref{pa:api}>>
+    //<<Add links taxon entity, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	We call the \ty{Parent} function from \ty{tdb} and
-	use its response to get the requested data on the parent.
+  We call the \ty{Parent} function from \ty{tdb} and
+  use its response to get the requested data on the parent.
 #+end_export
 
 #+begin_src go <<Execute parent query, Pa. \ref{pa:api}>>=
-	parent, err := neidb.Parent(taxId)
-	tax, err := getTaxonData(parent, true, fieldComposite, neidb)
-	if err != nil {
-		writeServerError(w, "fn parent - Error from getTaxonData", "", err)
-		return
-	}
-	var out ResponseBody[Taxon]
-	out.Data = tax
+  parent, err := neidb.Parent(taxId)
+  tax, err := getTaxonData(parent, true, fieldComposite, neidb)
+  if err != nil {
+    writeServerError(w, "fn parent - Error from getTaxonData", "", err)
+    return
+  }
+  var out ResponseBody[Taxon]
+  out.Data = tax
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{subtree}
-	The endpoint \ty{subtree} returns all taxa in a subtree, including the
-	root.
+  \subsection{subtree}
+  The endpoint \ty{subtree} returns all taxa in a subtree, including the
+  root.
 
-	This is \ty{subtree}'s io:
-	Params:
-		Path:
-			taxon_id int
-		Query:
-			offset          int
-			limit           int
-			field_composite string
-			plain_data      bool
-		Writes:
-			ResponseBody[ []Partial<Taxon> ]
+  This is \ty{subtree}'s io:
+  Params:
+    Path:
+      taxon_id int
+    Query:
+      offset          int
+      limit           int
+      field_composite string
+      plain_data      bool
+    Writes:
+      ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Parse taxon id, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Get field composite, Pa. \ref{pa:api}>>
-		//<<Execute subtree query, Pa. \ref{pa:api}>>
-		//<<Store taxon output, Pa. \ref{pa:api}>>
-		//<<Add taxa links, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Parse taxon id, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Execute subtree query, Pa. \ref{pa:api}>>
+    //<<Store taxon output, Pa. \ref{pa:api}>>
+    //<<Add taxa links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	When executing the subtree query, we call the corresponding
-	\ty{tdb} function. Each taxon is then handled as usual.
+  When executing the subtree query, we call the corresponding
+  \ty{tdb} function. Each taxon is then handled as usual.
 #+end_export
 
 #+begin_src go <<Execute subtree query, Pa. \ref{pa:api}>>=
-	taxa, err := neidb.Subtree(taxId)
-	if err != nil {
-		writeServerError(w, "fn subtree - Error while executing neidb.Subtree", "", err)
-		return
-	}
+  taxa, err := neidb.Subtree(taxId)
+  if err != nil {
+    writeServerError(w, "fn subtree - Error while executing neidb.Subtree", "", err)
+    return
+  }
 
-	if limit == -1 {
-		limit = len(taxa)
-	}
+  if limit == -1 {
+    limit = len(taxa)
+  }
 
-	data := []Taxon{}
-	for i := offset; i < min(offset + limit, len(taxa)); i++ {
-		id := taxa[i]
-		//<<Construct taxon output, Pa. \ref{pa:api}>>
-	}
+  data := []Taxon{}
+  for i := offset; i < min(offset + limit, len(taxa)); i++ {
+    id := taxa[i]
+    //<<Construct taxon output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{taxonomy}
-	\subsection{taxonomy} is an endpoint grouping a set of rather
-	miscellaneous services. These services are related to taxa, but
-	rather than being tied to a single taxon, like the subservices of
-	\ty{taxa}, these services are a concern of multiple taxa. Requesting
-	\ty{taxonomy} returns an object of links to its subservices.
-	This is taxonomy's io:
-	Params:
-		Path:
-			none
-		Query:
-			none
-	Writes:
-		\ty{ResponseBody[nil]}
+  \subsection{taxonomy}
+  \subsection{taxonomy} is an endpoint grouping a set of rather
+  miscellaneous services. These services are related to taxa, but
+  rather than being tied to a single taxon, like the subservices of
+  \ty{taxa}, these services are a concern of multiple taxa. Requesting
+  \ty{taxonomy} returns an object of links to its subservices.
+  This is taxonomy's io:
+  Params:
+    Path:
+      none
+    Query:
+      none
+  Writes:
+    \ty{ResponseBody[nil]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		out := ResponseBody[*any]{}
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Write \ty{taxonomy}'s links, Pa. \ref{pa:api}>>
-		writeJsonOutput(w, out)
-	}
+  func taxonomy(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    out := ResponseBody[*any]{}
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Write \ty{taxonomy}'s links, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
+  }
 #+end_src
 
 #+begin_export latex
-	We already know how to add links of a service grouping other services;
-	\ty{rootDocument} does the same.
+  We already know how to add links of a service grouping other services;
+  \ty{rootDocument} does the same.
 #+end_export
 
 #+begin_src go <<Write \ty{taxonomy}'s links, Pa. \ref{pa:api}>>=
-	var links []Link
-	//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-	//<<Add graph links, Pa. \ref{pa:api}>>
-	out.Links = links
+  var links []Link
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
+  out.Links = links
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{taxonAccessions}
-	The endpoint \ty{taxonAccessions} finds all the accessions
-	associated with the given taxa.
+  \subsection{taxonAccessions}
+  The endpoint \ty{taxonAccessions} finds all the accessions
+  associated with the given taxa.
 
-	This is \ty{taxonAccessions}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			taxon_ids []int *required
-			offset    int
-			limit     int
-		Writes:
-			ResponseBody[ []TaxonAccession ]
+  This is \ty{taxonAccessions}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      taxon_ids []int *required
+      offset    int
+      limit     int
+    Writes:
+      ResponseBody[ []TaxonAccession ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Parse taxon ids, Pa. \ref{pa:api}>>
-		//<<Look up accessions, Pa. \ref{pa:api}>>
-		//<<Add collection links, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Parse taxon ids, Pa. \ref{pa:api}>>
+    //<<Look up accessions, Pa. \ref{pa:api}>>
+    //<<Add collection links, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	We declare a slice of \ty{TaxonAccession} for storing. We get the accessions
-	for a taxon, then add it's children. We do this as long as there are unprocessed
-	taxa without exceeding the page .
+  We declare a slice of \ty{TaxonAccession} for storing. We get the accessions
+  for a taxon, then add it's children. We do this as long as there are unprocessed
+  taxa without exceeding the page .
 #+end_export
 
 #+begin_src go <<Look up accessions, Pa. \ref{pa:api}>>=
-	data := []TaxonAccession{}
-	//<<Get link nodes, Pa. \ref{pa:api}>>
-	for len(taxIds) > 0 && (limit == -1 || len(data) < limit) {
-		taxId := taxIds[0]
-		taxIds = taxIds[1:]
-		accs, err := neidb.Accessions(taxId)
-		if err != nil {
-			writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", "", err)
-			return
-		}
-		if len(accs) > 0 {
-			//<<Store accessions, Pa. \ref{pa:api}>>
-		}
-		//<<Get children, Pa. \ref{pa:api}>>
-	}
-	out := ResponseBody[[]TaxonAccession]{Data: data}
+  data := []TaxonAccession{}
+  //<<Get link nodes, Pa. \ref{pa:api}>>
+  for len(taxIds) > 0 && (limit == -1 || len(data) < limit) {
+    taxId := taxIds[0]
+    taxIds = taxIds[1:]
+    accs, err := neidb.Accessions(taxId)
+    if err != nil {
+      writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", "", err)
+      return
+    }
+    if len(accs) > 0 {
+      //<<Store accessions, Pa. \ref{pa:api}>>
+    }
+    //<<Get children, Pa. \ref{pa:api}>>
+  }
+  out := ResponseBody[[]TaxonAccession]{Data: data}
 #+end_src
 
 #+begin_export latex
-	We are going to use the \ty{Taxon} and \ty{Accession} nodes while creating
-	the data. We should get those nodes before looping to avoid indexing
-	the graph unnecessarily.
+  We are going to use the \ty{Taxon} and \ty{Accession} nodes while creating
+  the data. We should get those nodes before looping to avoid indexing
+  the graph unnecessarily.
 #+end_export
 
 #+begin_src go <<Get link nodes, Pa. \ref{pa:api}>>=
-	taxNode := *root.getService("taxon")
-	accNode := *root.getService("accession")
+  taxNode := *root.getService("taxon")
+  accNode := *root.getService("accession")
 
 #+end_src
 
 #+begin_export latex
-	We declare a variable of type \ty{TaxonAccession} based on the \ty{taxId} and
-	store it in our output slice. Then we complete the taxon's accessions by
-	adding their levels before storing them. If we've not yet reached the pagination
-	offset, we decrement the offset instead of storing the accession.
+  We declare a variable of type \ty{TaxonAccession} based on the \ty{taxId} and
+  store it in our output slice. Then we complete the taxon's accessions by
+  adding their levels before storing them. If we've not yet reached the pagination
+  offset, we decrement the offset instead of storing the accession.
 #+end_export
 
 #+begin_src go <<Store accessions, Pa. \ref{pa:api}>>=
-	if offset > 0 {
-		offset--
-	} else {
-		d := TaxonAccession{TaxId: taxId}
-		//<<Add taxon link, Pa. \ref{pa:api}>>
-		for _, acc := range accs {
-			level, err := neidb.Level(acc)
-			if err != nil {
-				writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", "", err)
-				return
-			}
-			accession := Accession{Accession: acc, Level: level}
-			//<<Add accession link, Pa. \ref{pa:api}>>
-			d.Accessions = append(d.Accessions, accession)
-		}
-		data = append(data, d)
-	}
+  if offset > 0 {
+    offset--
+  } else {
+    d := TaxonAccession{TaxId: taxId}
+    //<<Add taxon link, Pa. \ref{pa:api}>>
+    for _, acc := range accs {
+      level, err := neidb.Level(acc)
+      if err != nil {
+        writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", "", err)
+        return
+      }
+      accession := Accession{Accession: acc, Level: level}
+      //<<Add accession link, Pa. \ref{pa:api}>>
+      d.Accessions = append(d.Accessions, accession)
+    }
+    data = append(data, d)
+  }
 #+end_src
 
 #+begin_export latex
-	Each \ty{TaxonAccession} is related to taxon and accession entities.
-	We may add the taxon link to the mid layer struct, i.e. the \ty{TaxonAccession},
-	as it is associated with exactly one taxon. The accessions should be referenced
-	per accession entry.
+  Each \ty{TaxonAccession} is related to taxon and accession entities.
+  We may add the taxon link to the mid layer struct, i.e. the \ty{TaxonAccession},
+  as it is associated with exactly one taxon. The accessions should be referenced
+  per accession entry.
 #+end_export
 
 #+begin_src go <<Add taxon link, Pa. \ref{pa:api}>>=
-	if !plain {
-		d.Links = append(d.Links, taxNode.makeLink("taxon", fillTemplate(
-			taxNode,
-			map[string]string{"taxon_id": strconv.Itoa(taxId)},
-			map[string]string{},
-		)))
-	}
+  if !plain {
+    d.Links = append(d.Links, taxNode.makeLink("taxon", fillTemplate(
+      taxNode,
+      map[string]string{"taxon_id": strconv.Itoa(taxId)},
+      map[string]string{},
+    )))
+  }
 #+end_src
 
 #+begin_export latex
-	Now to add the accession link.
+  Now to add the accession link.
 #+end_export
 
 #+begin_src go <<Add accession link, Pa. \ref{pa:api}>>=
-	if !plain {
-		accession.Links = append(accession.Links, taxNode.makeLink("self", fillTemplate(
-			accNode,
-			map[string]string{"accession_id": acc},
-			map[string]string{},
-		)))
-	}
+  if !plain {
+    accession.Links = append(accession.Links, taxNode.makeLink("self", fillTemplate(
+      accNode,
+      map[string]string{"accession_id": acc},
+      map[string]string{},
+    )))
+  }
 #+end_src
 
 #+begin_export latex
-	We retrieve the children of the current taxon and store them in our
-	slice of taxa, ready for the next iteration.
+  We retrieve the children of the current taxon and store them in our
+  slice of taxa, ready for the next iteration.
 #+end_export
 
 #+begin_src go <<Get children, Pa. \ref{pa:api}>>=
-	children, err := neidb.Children(taxId)
-	if err != nil {
-		writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", "", err)
-		return
-	}
-	for _, child := range children {
-		taxIds = append(taxIds, child)
-	}
+  children, err := neidb.Children(taxId)
+  if err != nil {
+    writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", "", err)
+    return
+  }
+  for _, child := range children {
+    taxIds = append(taxIds, child)
+  }
 #+end_src
 
 
 
 #+begin_export latex
-	\subsection{\ty{mrca}}
-	The service \ty{mrca} taks as argument a slice of taxon IDs and
-	returns their most recent common ancestor. We implement the service
-	by getting the taxon ids, calculating their most recent common ancestor,
-	and writing the output. If there is no most recent common ancestor, we
-	return an empty data object.
+  \subsection{\ty{mrca}}
+  The service \ty{mrca} taks as argument a slice of taxon IDs and
+  returns their most recent common ancestor. We implement the service
+  by getting the taxon ids, calculating their most recent common ancestor,
+  and writing the output. If there is no most recent common ancestor, we
+  return an empty data object.
 
-	This is \ty{mrca}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			taxon_ids       []int *required
-			field_composite string
-			plain_data      bool
-	Writes:
-		ResponseBody[ []Partial<Taxon> ]
+  This is \ty{mrca}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      taxon_ids       []int *required
+      field_composite string
+      plain_data      bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Get field composite, Pa. \ref{pa:api}>>
-		//<<Parse taxon ids, Pa. \ref{pa:api}>>
-		//<<Execute mrca query, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Parse taxon ids, Pa. \ref{pa:api}>>
+    //<<Execute mrca query, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	The taxon ids are stored in a query parameter as a comma delimited string.
-	We need to get them, cut at each comma and parse them one-by-one.
+  The taxon ids are stored in a query parameter as a comma delimited string.
+  We need to get them, cut at each comma and parse them one-by-one.
 #+end_export
 
 #+begin_src go <<Parse taxon ids, Pa. \ref{pa:api}>>=
-	valid := checkParams(w, r, "taxon_ids")
-	if !valid {
-		return
-	}
-	idsStr := r.URL.Query().Get("taxon_ids")
-	var taxIds []int
-	split := strings.Split(idsStr, ",")
-	for _, id := range split {
-		p, err := strconv.Atoi(id)
-		if err != nil {
-			writeBadRequestResp(w, "At least one taxon id is not an integer.")
-			return
-		}
-		taxIds = append(taxIds, p)
-	}
+  valid := checkParams(w, r, "taxon_ids")
+  if !valid {
+    return
+  }
+  idsStr := r.URL.Query().Get("taxon_ids")
+  var taxIds []int
+  split := strings.Split(idsStr, ",")
+  for _, id := range split {
+    p, err := strconv.Atoi(id)
+    if err != nil {
+      writeBadRequestResp(w, "At least one taxon id is not an integer.")
+      return
+    }
+    taxIds = append(taxIds, p)
+  }
 #+end_src
 
 #+begin_export latex
-	We call \ty{tdb}'s \ty{MRCA} function, to find the most recent common ancestor.
-	Using it's id we retrieve its requested fields. If no taxa were requested, we
-	respond with an empty object.
+  We call \ty{tdb}'s \ty{MRCA} function, to find the most recent common ancestor.
+  Using it's id we retrieve its requested fields. If no taxa were requested, we
+  respond with an empty object.
 #+end_export
 
 #+begin_src go <<Execute mrca query, Pa. \ref{pa:api}>>=
-	var out ResponseBody[Taxon]
-	if len(taxIds) > 0 {
-		id, err := neidb.MRCA(taxIds)
-		if err != nil {
-			writeServerError(w, "fn mrca - Error while executing neidb.MRCA", "", err)
-			return
-		}
+  var out ResponseBody[Taxon]
+  if len(taxIds) > 0 {
+    id, err := neidb.MRCA(taxIds)
+    if err != nil {
+      writeServerError(w, "fn mrca - Error while executing neidb.MRCA", "", err)
+      return
+    }
 
-	//<<Get data of taxon, Pa. \ref{pa:api}>>
-	//<<Add links taxon entity, Pa. \ref{pa:api}>>
-	}
+  //<<Get data of taxon, Pa. \ref{pa:api}>>
+  //<<Add links taxon entity, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	We call get \ty{getTaxonData}, to get data on our taxon
-	using the correct composite of fields and links.
+  We call get \ty{getTaxonData}, to get data on our taxon
+  using the correct composite of fields and links.
 #+end_export
 
 #+begin_src go <<Get data of taxon, Pa. \ref{pa:api}>>=
-	tax, err := getTaxonData(id, plain, fieldComposite, neidb)
-	if err != nil {
-		writeServerError(w, "fn mrca - Error from getTaxonData", "", err)
-		return
-	}
-	out.Data = tax
+  tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+  if err != nil {
+    writeServerError(w, "fn mrca - Error from getTaxonData", "", err)
+    return
+  }
+  out.Data = tax
 #+end_src
 
 
 
 #+begin_export latex
-	The service \ty{path} takes as input the taxon ids of a start and an
-	end node in the taxonomy, where the end is closer to the root than the
-	start. It returns the array of taxon ids that form the path from the
-	start to the end. If no such path exists, an empty array is returned.
+  The service \ty{path} takes as input the taxon ids of a start and an
+  end node in the taxonomy, where the end is closer to the root than the
+  start. It returns the array of taxon ids that form the path from the
+  start to the end. If no such path exists, an empty array is returned.
 
-	This is \ty{path}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			start_id        int
-			end_id          int
-			offset          int
-			limit           int
-			field_composite string
-			plain_data      bool
-	Writes:
-		ResponseBody[ []Partial<Taxon> ]
+  This is \ty{path}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      start_id        int
+      end_id          int
+      offset          int
+      limit           int
+      field_composite string
+      plain_data      bool
+  Writes:
+    ResponseBody[ []Partial<Taxon> ]
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Get db from args, Pa. \ref{pa:api}>>
-		//<<Get plain param, Pa. \ref{pa:api}>>
-		//<<Extract offset and limit, Pa. \ref{pa:api}>>
-		//<<Get field composite, Pa. \ref{pa:api}>>
-		//<<Get start and end, Pa. \ref{pa:api}>>
-		//<<Climb taxonomy, Pa. \ref{pa:api}>>
-		//<<Add links taxon entity, Pa. \ref{pa:api}>>
-		//<<Write json output, Pa. \ref{pa:api}>>
-	}
+  func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Get db from args, Pa. \ref{pa:api}>>
+    //<<Get plain param, Pa. \ref{pa:api}>>
+    //<<Extract offset and limit, Pa. \ref{pa:api}>>
+    //<<Get field composite, Pa. \ref{pa:api}>>
+    //<<Get start and end, Pa. \ref{pa:api}>>
+    //<<Climb taxonomy, Pa. \ref{pa:api}>>
+    //<<Add links taxon entity, Pa. \ref{pa:api}>>
+    //<<Write json output, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	Start and end are provided as query arguments.
+  Start and end are provided as query arguments.
 #+end_export
 
 #+begin_src go <<Get start and end, Pa. \ref{pa:api}>>=
-	startStr := r.URL.Query().Get("start_id")
-	start, err := strconv.Atoi(startStr)
-	if err != nil {
-		writeBadRequestResp(w, "start id is not an integer.")
-		return
-	}
-	endStr := r.URL.Query().Get("end_id")
-	end, err := strconv.Atoi(endStr)
-	if err != nil {
-		writeBadRequestResp(w, "end id is not an integer.")
-		return
-	}
+  startStr := r.URL.Query().Get("start_id")
+  start, err := strconv.Atoi(startStr)
+  if err != nil {
+    writeBadRequestResp(w, "start id is not an integer.")
+    return
+  }
+  endStr := r.URL.Query().Get("end_id")
+  end, err := strconv.Atoi(endStr)
+  if err != nil {
+    writeBadRequestResp(w, "end id is not an integer.")
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	We climb the taxonomy until we reach its end or the root, whichever comes
-	first. As we accomodate pagination with this endpoint, we also stop if
-	exceed limit, thoug we only start counting. We need to begin at the start
-	node either way, because we cant't index the path by our offset.
-	Using the resulting ids for retrieving the requested taxon fields.
+  We climb the taxonomy until we reach its end or the root, whichever comes
+  first. As we accomodate pagination with this endpoint, we also stop if
+  exceed limit, thoug we only start counting. We need to begin at the start
+  node either way, because we cant't index the path by our offset.
+  Using the resulting ids for retrieving the requested taxon fields.
 #+end_export
 
 #+begin_src go <<Climb taxonomy, Pa. \ref{pa:api}>>=
-	data := []Taxon{}
-	for i := 0; (len(data) < limit || limit == -1) && start != end; i++ {
-		parent, err := neidb.Parent(start)
+  data := []Taxon{}
+  for i := 0; (len(data) < limit || limit == -1) && start != end; i++ {
+    parent, err := neidb.Parent(start)
 
-		if err != nil {
-			writeServerError(w, "fn path - Error while calling neidb.Parent", "", err)
-			return
-		}
-		//<<Has the path reached the root?, Pa. \ref{pa:api}>>
-		start = parent
-		if i >= offset {
-			//<<Store new node on path, Pa. \ref{pa:api}>>
-		}
-	}
-	out := ResponseBody[[]Taxon]{Data: data}
+    if err != nil {
+      writeServerError(w, "fn path - Error while calling neidb.Parent", "", err)
+      return
+    }
+    //<<Has the path reached the root?, Pa. \ref{pa:api}>>
+    start = parent
+    if i >= offset {
+      //<<Store new node on path, Pa. \ref{pa:api}>>
+    }
+  }
+  out := ResponseBody[[]Taxon]{Data: data}
 #+end_src
 
 #+begin_export latex
-	If the path has reached the root, we empty the output slice and break
-	from climbing the tree.
+  If the path has reached the root, we empty the output slice and break
+  from climbing the tree.
 #+end_export
 
 #+begin_src go <<Has the path reached the root?, Pa. \ref{pa:api}>>=
-	if start == parent {
-		data = data[:0]
-		break
-	}
+  if start == parent {
+    data = data[:0]
+    break
+  }
 #+end_src
 
 #+begin_export latex
-	We construct and store the new node on the path.
+  We construct and store the new node on the path.
 #+end_export
 
 #+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
-	tax, err := getTaxonData(start, plain, fieldComposite, neidb)
-	if err != nil {
-		writeServerError(w, "fn path - Error from getTaxonData", "", err)
-		return
-	}
-	data = append(data, tax)
+  tax, err := getTaxonData(start, plain, fieldComposite, neidb)
+  if err != nil {
+    writeServerError(w, "fn path - Error from getTaxonData", "", err)
+    return
+  }
+  data = append(data, tax)
 #+end_src
 
 
 
 #+begin_export latex
-	The service \ty{programsDoc} provides links for
-	all the registered endpoints executing program
-	calls.
+  The service \ty{programsDoc} provides links for
+  all the registered endpoints executing program
+  calls.
 
-	This is \ty{progTaxi}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			none
-	Writes:
-		\ty{ResponseBody[nil]}
+  This is \ty{progTaxi}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      none
+  Writes:
+    \ty{ResponseBody[nil]}
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		out := ResponseBody[*any]{}
-		//<<Check content types, Pa. \ref{pa:api}>>
-		//<<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>
-		writeJsonOutput(w, out)
-	}
+  func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    out := ResponseBody[*any]{}
+    //<<Check content types, Pa. \ref{pa:api}>>
+    //<<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>
+    writeJsonOutput(w, out)
+  }
 #+end_src
 
 #+begin_export latex
-	We already know how to add links of a service grouping other services;
-	\ty{rootDocument} and \ty{taxonomy} do the same.
+  We already know how to add links of a service grouping other services;
+  \ty{rootDocument} and \ty{taxonomy} do the same.
 #+end_export
 
 #+begin_src go <<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>=
-	var links []Link
-	//<<Add endpoint's self link, Pa. \ref{pa:api}>>
-	//<<Add graph links, Pa. \ref{pa:api}>>
-	out.Links = links
+  var links []Link
+  //<<Add endpoint's self link, Pa. \ref{pa:api}>>
+  //<<Add graph links, Pa. \ref{pa:api}>>
+  out.Links = links
 #+end_src
 
 
 
 #+begin_export latex
-	The service \ty{programEndpoint} executes a program call executing
-	one of the \ty{neighbors} programs. It takes a space delimited
-	string with the query parameter \ty{args}. This is directly passed
-	to the program when using the \ty{os/exec} package.
-	Files are passed via \ty{stdin}. Outputs from \ty{stdout}
-	and \ty{stderr} are returned using the response.
+  The service \ty{programEndpoint} executes a program call executing
+  one of the \ty{neighbors} programs. It takes a space delimited
+  string with the query parameter \ty{args}. This is directly passed
+  to the program when using the \ty{os/exec} package.
+  Files are passed via \ty{stdin}. Outputs from \ty{stdout}
+  and \ty{stderr} are returned using the response.
 
-	This is \ty{programEndpoint}'s io:
-	Params:
-		Path:
-			none
-		Query:
-			args string (anything the program provides)
-	Writes:
-		string
+  This is \ty{programEndpoint}'s io:
+  Params:
+    Path:
+      none
+    Query:
+      args string (anything the program provides)
+  Writes:
+    string
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
-		//<<Check for input, Pa. \ref{pa:api}>>
-		//<<Get dbPath and program name, Pa. \ref{pa:api}>>
-		//<<Create program call context, Pa. \ref{pa:api}>>
-		//<<Set call arguments, Pa. \ref{pa:api}>>
-		//<<Call program, Pa. \ref{pa:api}>>
-		//<<Write response, Pa. \ref{pa:api}>>
-	}
+  func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+    //<<Check for input, Pa. \ref{pa:api}>>
+    //<<Get dbPath and program name, Pa. \ref{pa:api}>>
+    //<<Get context, Pa. \ref{pa:api}>>
+    //<<Set call arguments, Pa. \ref{pa:api}>>
+    //<<Call program, Pa. \ref{pa:api}>>
+    //<<Write response, Pa. \ref{pa:api}>>
+  }
 #+end_src
 
 #+begin_export latex
-	Before doing anything we should check whether the request contains any
-	input. If there are neither options, nor extra arguments and no data in
-	the body, we should respond with an error.
+  Before doing anything we should check whether the request contains any
+  input. If there are neither options, nor extra arguments and no data in
+  the body, we should respond with an error.
 #+end_export
 
 #+begin_src go <<Check for input, Pa. \ref{pa:api}>>=
-	options := r.URL.Query()["options"]
-	extra := r.URL.Query()["extra"]
+  options := r.URL.Query()["options"]
+  extra := r.URL.Query()["extra"]
 
-	if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
-		writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly.`)
-		return
-	}
+  if len(options) == 0 && len(extra) == 0 && r.ContentLength == 0 {
+    writeBadRequestResp(w, `Please provide data using the query parameters "options" or "extra" and reference filenames correctly.`)
+    return
+  }
 #+end_src
 
 #+begin_export latex
-	The database is given as the first value of \ty{args} and the program name as
-	a second.
+  The database is given as the first value of \ty{args} and the program name as
+  a second.
 #+end_export
 
 #+begin_src go <<Get dbPath and program name, Pa. \ref{pa:api}>>=
-	dbPath := args[0].(Database).Path
-	progName := args[1].(string)
+  dbPath := args[0].(Database).Path
+  progName := args[1].(string)
 #+end_src
 
 #+begin_export latex
-	We can use a context with a timeout limit the maximum amount of
-	time a program call may take.
+  We can use a context with a timeout limit the maximum amount of	time a
+  program call may take. We've employed is a middleware setting contexts for
+  these kinds of things.
 #+end_export
 
-#+begin_src go <<Create program call context, Pa. \ref{pa:api}>>=
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+#+begin_src go <<Get context, Pa. \ref{pa:api}>>=
+  ctx := r.Context()
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{context} and \ty{time}.
-#+end_export
-
-#+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"context"
-	"time"
-#+end_src
-
-#+begin_export latex
-	The arguments we are going to use for calling the program are stored in the
-	query parameters \ty{options} and \ty{extra}. The cli programs follow a
-	certain structure for call parameters. They begin with a set of options
-	specified using \ty{flag}, then the database is passed followed by optional
-	files. For some programs \ty{stdin} may be used instead of the files. We are
-	going to recreate this behaviour using the exploded query parameters
-	\ty{options} and \ty{extra}. The values in \ty{extra} and \ty{options} might
-	be files, which we need to create later on. Adding those allows us to use
-	both \ty{options} and \ty{extra} as if we were doing a normal program call.
-	We also need to sift through the call argumens and check for any options that
-	might trigger further remote executions. These options might result in an
-	infinite recursion. We send an error if the request contains of them. The
-	options we need to be on the lookout for are \ty{r} and \ty{D}. Options may
-	be specified with one or two dashes as a prefix. We need to prevent passing
-	either.
+  The arguments we are going to use for calling the program are stored in the
+  query parameters \ty{options} and \ty{extra}. The cli programs follow a
+  certain structure for call parameters. They begin with a set of options
+  specified using \ty{flag}, then the database is passed followed by optional
+  files. For some programs \ty{stdin} may be used instead of the files. We are
+  going to recreate this behaviour using the exploded query parameters
+  \ty{options} and \ty{extra}. The values in \ty{extra} and \ty{options} might
+  be files, which we need to create later on. Adding those allows us to use
+  both \ty{options} and \ty{extra} as if we were doing a normal program call.
+  We also need to sift through the call argumens and check for any options that
+  might trigger further remote executions. These options might result in an
+  infinite recursion. We send an error if the request contains of them. The
+  options we need to be on the lookout for are \ty{r} and \ty{D}. Options may
+  be specified with one or two dashes as a prefix. We need to prevent passing
+  either.
 #+end_export
 
 #+begin_src go <<Set call arguments, Pa. \ref{pa:api}>>=
-	callArgs := options
-	//<<Add database to args, Pa. \ref{pa:api}>>
-	callArgs = append(callArgs, extra...)
-	if slices.Contains(callArgs, "-r") || slices.Contains(callArgs, "--r") ||
-		slices.Contains(callArgs, "-D") || slices.Contains(callArgs, "--D") {
-			writeBadRequestResp(w, "Bad Request.")
-			return
-		}
+  callArgs := options
+  //<<Add database to args, Pa. \ref{pa:api}>>
+  callArgs = append(callArgs, extra...)
+  if slices.Contains(callArgs, "-r") || slices.Contains(callArgs, "--r") ||
+    slices.Contains(callArgs, "-D") || slices.Contains(callArgs, "--D") {
+      writeBadRequestResp(w, "Bad Request.")
+      return
+    }
 #+end_src
 
 #+begin_export latex
-	We add the database path between options and extras as an argument. This is
-	the same for all programs except \ty{fintac}. In \ty{fintac} the database is
-	part of the options. This means we pass it with the corresponding switch
-	\ty{-H}.
+  We add the database path between options and extras as an argument. This is
+  the same for all programs except \ty{fintac}. In \ty{fintac} the database is
+  part of the options. This means we pass it with the corresponding switch
+  \ty{-H}.
 #+end_export
 
 #+begin_src go <<Add database to args, Pa. \ref{pa:api}>>=
-	if progName == "fintac" {
-		callArgs = append(callArgs, "-H")
-	}
-	callArgs = append(callArgs, "../"+dbPath)
+  if progName == "fintac" {
+    callArgs = append(callArgs, "-H")
+  }
+  callArgs = append(callArgs, "../"+dbPath)
 #+end_src
 
 #+begin_export latex
-	We are calling the program using the \ty{os/exec} package using the
-	previously defined context. Program calls may contain file references. We
-	don't want files of different users to clash, so each command and thus its
-	files are executed within a temporary directory. We use a random text to
-	guarantee uniqueness for the directories name as its. The directory and its
-	contents are removed after execution. Handling files entails creating the
-	necessary temporary files and taking care of the data provided via
-	\ty{stdin}.
+  We are calling the program using the \ty{os/exec} package using the
+  previously defined context. Program calls may contain file references. We
+  don't want files of different users to clash, so each command and thus its
+  files are executed within a temporary directory. We use a random text to
+  guarantee uniqueness for the directories name as its. The directory and its
+  contents are removed after execution. Handling files entails creating the
+  necessary temporary files and taking care of the data provided via
+  \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Call program, Pa. \ref{pa:api}>>=
-	dir := rand.Text()
-	err := os.MkdirAll(dir, os.ModePerm)
-	if err != nil {
-		writeServerError(w, "Failed to open directory.", err.Error(), err)
-		return
-	}
-	defer os.RemoveAll(dir)
-	var stdinData string
-	//<<Handle files, Pa. \ref{pa:api}>>
-	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
-	//<<Set pipes, Pa. \ref{pa:api}>>
-	cmd.Dir = dir
-	//<<Log command, Pa. \ref{pa:api}>>
-	err = cmd.Run()
+  dir := rand.Text()
+  err := os.MkdirAll(dir, os.ModePerm)
+  if err != nil {
+    writeServerError(w, "Failed to open directory.", err.Error(), err)
+    return
+  }
+  defer os.RemoveAll(dir)
+  var stdinData string
+  //<<Handle files, Pa. \ref{pa:api}>>
+  cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
+  //<<Set pipes, Pa. \ref{pa:api}>>
+  cmd.Dir = dir
+  //<<Log command, Pa. \ref{pa:api}>>
+  err = cmd.Run()
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{os/exec} and \ty{crypto/rand}.
+  We need to import \ty{os/exec} and \ty{crypto/rand}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"os/exec"
-	"crypto/rand"
+  "os/exec"
+  "crypto/rand"
 #+end_src
 
 #+begin_export latex
-	If a request is sent in \ty{multipart/form-data} we can assume that, there
-	are files to check. \ty{multipart/form-data} is a common content type. Let's
-	create a variable which defines this content type for use.
+  If a request is sent in \ty{multipart/form-data} we can assume that, there
+  are files to check. \ty{multipart/form-data} is a common content type. Let's
+  create a variable which defines this content type for use.
 #+end_export
 
 #+begin_src go <<Content types, Pa. \ref{pa:api}>>=
-	var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
+  var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 #+end_src
 
 #+begin_export latex
-	We define that a \ty{post} request has to have \ty{multipart} as a
-	content type. If it does not, the request should have been of type \ty{get}.
-	Then we inspect the form data using \ty{parseFormData}, which we need to
-	implement in a moment. This returns \ty{stdin}'s content. We may use it as
-	the commands \ty{stdin}.
+  We define that a \ty{post} request has to have \ty{multipart} as a
+  content type. If it does not, the request should have been of type \ty{get}.
+  Then we inspect the form data using \ty{parseFormData}, which we need to
+  implement in a moment. This returns \ty{stdin}'s content. We may use it as
+  the commands \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
-	if r.Method == http.MethodPost {
-		ct, err := contenttype.GetMediaType(r)
-		if err != nil {
-			writeBadRequestResp(w, "Malformed content type.")
-			return
-		}
-		if !ct.EqualsMIME(multipartCt) {
-			w.WriteHeader(http.StatusUnsupportedMediaType)
-			w.Write([]byte("Use multipart/form-data with POST requests.\n"))
-			return
-		} else {
-			stdinData, err = parseFormData(w, r, dir, callArgs)
-			if err != nil {
-				return
-			}
-		}
-	}
+  if r.Method == http.MethodPost {
+    ct, err := contenttype.GetMediaType(r)
+    if err != nil {
+      writeBadRequestResp(w, "Malformed content type.")
+      return
+    }
+    if !ct.EqualsMIME(multipartCt) {
+      w.WriteHeader(http.StatusUnsupportedMediaType)
+      w.Write([]byte("Use multipart/form-data with POST requests.\n"))
+      return
+    } else {
+      stdinData, err = parseFormData(w, r, dir, callArgs)
+      if err != nil {
+        return
+      }
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	Accessing the data of a multipart form request, requires a parsing step. In
-	this the data is checked for syntactical correctness and loaded into
-	memory. We may define the amount space we are willing to allocate for this
-	data. I've decided on 3MB, the remaining data will be stored on the disk.
-	We return a 400 (Bad Request) if the data is malformed.
+  Accessing the data of a multipart form request, requires a parsing step. In
+  this the data is checked for syntactical correctness and loaded into
+  memory. We may define the amount space we are willing to allocate for this
+  data. I've decided on 3MB, the remaining data will be stored on the disk.
+  We return a 400 (Bad Request) if the data is malformed.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-	func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs []string) (stdin string, err error) {
-		err = r.ParseMultipartForm(3_000_000)
-		if err != nil {
-			writeBadRequestResp(w, "Malformed multipart form request.")
-			return "", err
-		}
-		if len(r.MultipartForm.File) == 0 {
-			err = errors.New("Please provide files, when sending multipart/form-data request.")
-			writeBadRequestResp(w, err.Error())
-			return "", err
-		} else {
-			//<<Sort files, Pa. \ref{pa:api}>>
-			//<<Iterate over files, Pa. \ref{pa:api}>>
-		}
-	}
+  func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs []string) (stdin string, err error) {
+    err = r.ParseMultipartForm(3_000_000)
+    if err != nil {
+      writeBadRequestResp(w, "Malformed multipart form request.")
+      return "", err
+    }
+    if len(r.MultipartForm.File) == 0 {
+      err = errors.New("Please provide files, when sending multipart/form-data request.")
+      writeBadRequestResp(w, err.Error())
+      return "", err
+    } else {
+      //<<Sort files, Pa. \ref{pa:api}>>
+      //<<Iterate over files, Pa. \ref{pa:api}>>
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	Sorting the files is a good idea to ensure their processing order. We use the
-	keys that indicate the files to do so.
+  Sorting the files is a good idea to ensure their processing order. We use the
+  keys that indicate the files to do so.
 #+end_export
 
 #+begin_src go <<Sort files, Pa. \ref{pa:api}>>=
-	keys := []string{}
-	for key := range r.MultipartForm.File {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+  keys := []string{}
+  for key := range r.MultipartForm.File {
+    keys = append(keys, key)
+  }
+  sort.Strings(keys)
 #+end_src
 
 #+begin_export latex
-	We need to import the \ty{sort} package for this.
+  We need to import the \ty{sort} package for this.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"sort"
+  "sort"
 #+end_src
 
 #+begin_export latex
-	The \ty{neighbors} programs take a variety of parameters as input. Most don't
-	depend on anything, but some, like filenames, depend environmental
-	surroundings. For this reason we are going to create all the files, using
-	and exchange their local names for new ones - this prevents problems cause by
-	relative paths - and store them in the temporary directory. We are going to
-	extract \ty{stdin} as well and return. If all the files are present during
-	execution, the commands arguments may be left almost unaltered. In order to
-	ensure this, we iterate over all the files, extract their data and store it
-	in a new local file.
+  The \ty{neighbors} programs take a variety of parameters as input. Most don't
+  depend on anything, but some, like filenames, depend environmental
+  surroundings. For this reason we are going to create all the files, using
+  and exchange their local names for new ones - this prevents problems cause by
+  relative paths - and store them in the temporary directory. We are going to
+  extract \ty{stdin} as well and return. If all the files are present during
+  execution, the commands arguments may be left almost unaltered. In order to
+  ensure this, we iterate over all the files, extract their data and store it
+  in a new local file.
 #+end_export
 
 #+begin_src go <<Iterate over files, Pa. \ref{pa:api}>>=
-	for i, key := range keys {
-		mFiles := r.MultipartForm.File[key]
-		if len(mFiles) > 0 {
-		//<<Extract request's file data, Pa. \ref{pa:api}>>
-		}
-	}
-	return
+  for i, key := range keys {
+    mFiles := r.MultipartForm.File[key]
+    if len(mFiles) > 0 {
+    //<<Extract request's file data, Pa. \ref{pa:api}>>
+    }
+  }
+  return
 #+end_src
 
 #+begin_export latex
-	The map of files we are iterating over, provides a slice of pointers to file
-	headers. We expect that each key provides exactly one file. This means every
-	has it's own field. Accessing that file allows opening it. We read the data
-	to a byte slice and store it in a file or \ty{stdin}.
+  The map of files we are iterating over, provides a slice of pointers to file
+  headers. We expect that each key provides exactly one file. This means every
+  has it's own field. Accessing that file allows opening it. We read the data
+  to a byte slice and store it in a file or \ty{stdin}.
 #+end_export
 
 #+begin_src go <<Extract request's file data, Pa. \ref{pa:api}>>=
-	h := *mFiles[0]
-	var rf multipart.File
-	rf, err = h.Open()
-	if err != nil {
-		writeServerError(w, "Error while opening multipart file", "", err)
-		return
-	}
-	defer rf.Close()
-	b := make([]byte, h.Size)
-	rf.Read(b)
-	//<<Store file content, Pa. \ref{pa:api}>>
+  h := *mFiles[0]
+  var rf multipart.File
+  rf, err = h.Open()
+  if err != nil {
+    writeServerError(w, "Error while opening multipart file", "", err)
+    return
+  }
+  defer rf.Close()
+  b := make([]byte, h.Size)
+  rf.Read(b)
+  //<<Store file content, Pa. \ref{pa:api}>>
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{mime/multipart}
+  We need to import \ty{mime/multipart}
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"mime/multipart"
+  "mime/multipart"
 #+end_src
 
 #+begin_export latex
-	We store the file's data in a new file using the same name as before, but if
-	it's name was \ty{stdin} we store it in the return variable \ty{stdin}
-	instead. When writing data to local files, we first need to create that file.
-	We use the previously defined directory and then specify the filename, as
-	well as the unix permission bits. After opening, we may finally write the
-	data and close the file afterwards.
+  We store the file's data in a new file using the same name as before, but if
+  it's name was \ty{stdin} we store it in the return variable \ty{stdin}
+  instead. When writing data to local files, we first need to create that file.
+  We use the previously defined directory and then specify the filename, as
+  well as the unix permission bits. After opening, we may finally write the
+  data and close the file afterwards.
 #+end_export
 
 #+begin_src go <<Store file content, Pa. \ref{pa:api}>>=
-	if h.Filename == "stdin" {
-		stdin = string(b)
-	} else {
-		var tf *os.File
-		tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			writeServerError(w, "Error while opening temp file", "", err)
-			return
-		}
-		//<<Replace filename, Pa. \ref{pa:api}>>
-		buffer := bytes.NewBuffer(b)
-		buffer.WriteTo(tf)
-		tf.Close()
-	}
+  if h.Filename == "stdin" {
+    stdin = string(b)
+  } else {
+    var tf *os.File
+    tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0600)
+    if err != nil {
+      writeServerError(w, "Error while opening temp file", "", err)
+      return
+    }
+    //<<Replace filename, Pa. \ref{pa:api}>>
+    buffer := bytes.NewBuffer(b)
+    buffer.WriteTo(tf)
+    tf.Close()
+  }
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{os}.
+  We need to import \ty{os}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"os"
+  "os"
 #+end_src
 
 #+begin_export latex
-	We just wrote the file data into a new file. Now we need to exchange all the
-	file references in the command for the file's new name. File references may
-	be made using the files base name or a relative/total path to the file. We
-	should first get the complete filename, including it's path, and then check
-	the args for the file's base name and its complete name .
+  We just wrote the file data into a new file. Now we need to exchange all the
+  file references in the command for the file's new name. File references may
+  be made using the files base name or a relative/total path to the file. We
+  should first get the complete filename, including it's path, and then check
+  the args for the file's base name and its complete name .
 #+end_export
 
 #+begin_src go <<Replace filename, Pa. \ref{pa:api}>>=
-	//<<Get complete filename, Pa. \ref{pa:api}>>
-	for j, arg := range callArgs {
-		if j != 0 && (arg == h.Filename || arg == filename) {
-			callArgs[j] = strconv.Itoa(i)
-		}
-	}
+  //<<Get complete filename, Pa. \ref{pa:api}>>
+  for j, arg := range callArgs {
+    if j != 0 && (arg == h.Filename || arg == filename) {
+      callArgs[j] = strconv.Itoa(i)
+    }
+  }
 #+end_src
 
 #+begin_export latex
-	A complete name including path segments is stripped when calling
-	\ty{r.ParseMultipartForm}. \ty{h.Filename} is just the file's base name.
-	However, the header is untouched by this, meaning we can parse the content
-	disposition, where the files complete name is stored, manually. Accessing
-	the \ty{"filename"} field buried somewhere in there, results in the filename
-	we are looking for.
+  A complete name including path segments is stripped when calling
+  \ty{r.ParseMultipartForm}. \ty{h.Filename} is just the file's base name.
+  However, the header is untouched by this, meaning we can parse the content
+  disposition, where the files complete name is stored, manually. Accessing
+  the \ty{"filename"} field buried somewhere in there, results in the filename
+  we are looking for.
 #+end_export
 
 #+begin_src go <<Get complete filename, Pa. \ref{pa:api}>>=
-	cd := h.Header.Get("Content-Disposition")
-	var params map[string]string
-	_, params, err = mime.ParseMediaType(cd)
-	if err != nil {
-		writeServerError(w, "Error while parsing media type of multipart file", "", err)
-		return
-	}
-	filename := params["filename"]
+  cd := h.Header.Get("Content-Disposition")
+  var params map[string]string
+  _, params, err = mime.ParseMediaType(cd)
+  if err != nil {
+    writeServerError(w, "Error while parsing media type of multipart file", "", err)
+    return
+  }
+  filename := params["filename"]
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{mime}.
+  We need to import \ty{mime}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"mime"
+  "mime"
 #+end_src
 
 #+begin_export latex
-	After doing all of this file handling, all that is left to do is, set the
-	pipes for input and output of the command. Then we are done with prepping the
-	program's environment.
+  After doing all of this file handling, all that is left to do is, set the
+  pipes for input and output of the command. Then we are done with prepping the
+  program's environment.
 #+end_export
 
 #+begin_src go <<Set pipes, Pa. \ref{pa:api}>>=
-	cmd.Stdin = strings.NewReader(stdinData)
-	res := &bytes.Buffer{}
-	cmd.Stdout = res
-	cmdErr := &bytes.Buffer{}
-	cmd.Stderr = cmdErr
+  cmd.Stdin = strings.NewReader(stdinData)
+  res := &bytes.Buffer{}
+  cmd.Stdout = res
+  cmdErr := &bytes.Buffer{}
+  cmd.Stderr = cmdErr
 #+end_src
 
 #+begin_export latex
-	At some point, we might want to see what programs were called and what string
-	was used to call the programs. Logging is a good tool for this.
+  At some point, we might want to see what programs were called and what string
+  was used to call the programs. Logging is a good tool for this.
 #+end_export
 
 #+begin_src go <<Log command, Pa. \ref{pa:api}>>=
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		util.LogWarningDef(
-			util.WarningEntry{
-				Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
-			})
-	}
-	dataInStdin := stdinData == ""
-	util.LogInfoDef(util.InfoEntry{
-		RequestIp:     ip,
-		RequestUrl:    r.URL.String(),
-		RequestMethod: r.Method,
-		Description:
-			"Data in stdin: " + strconv.FormatBool(dataInStdin) +
-			" | Program call: " + cmd.String(),
-	})
+  ip, _, err := net.SplitHostPort(r.RemoteAddr)
+  if err != nil {
+    util.LogWarningDef(
+      util.WarningEntry{
+        Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+      })
+  }
+  dataInStdin := stdinData == ""
+  util.LogInfoDef(util.InfoEntry{
+    RequestIp:     ip,
+    RequestUrl:    r.URL.String(),
+    RequestMethod: r.Method,
+    Description:
+      "Data in stdin: " + strconv.FormatBool(dataInStdin) +
+      " | Program call: " + cmd.String(),
+  })
 #+end_src
 
 #+begin_export latex
-	We need to import \ty{net}, when splitting the ip.
+  We need to import \ty{net}, when splitting the ip.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:api}>>=
-	"net"
+  "net"
 #+end_src
 
 #+begin_export latex
-	When writing the response we check whether there is an error. If there is one,
-	we log it. Otherwise we'll send a response with the programs text output.
+  When writing the response we check whether there is an error. If there is one,
+  we log it. Otherwise we'll send a response with the programs text output.
 #+end_export
 
 #+begin_src go <<Write response, Pa. \ref{pa:api}>>=
-	if cmdErr.Len() != 0 {
-		writeBadRequestResp(w, cmdErr.String())
-	} else if err != nil {
-		writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
-	} else {
-		w.Header().Set("Content-Type", plainCt.String())
-		w.Write(res.Bytes())
-	}
+  if cmdErr.Len() != 0 {
+    writeBadRequestResp(w, cmdErr.String())
+  } else if err != nil {
+    writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
+  } else {
+    w.Header().Set("Content-Type", plainCt.String())
+    w.Write(res.Bytes())
+  }
 #+end_src

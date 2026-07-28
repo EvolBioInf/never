@@ -403,6 +403,7 @@ import (
   //<<Create logger middleware, Pr. \ref{pr:main}>>
   //<<Create limiter middleware, Pr. \ref{pr:main}>>
   //<<Create caching middleware, Pr. \ref{pr:main}>>
+  //<<Create timeout middleware, Pr. \ref{pr:main}>>
 #+end_src
 
 #+begin_export latex
@@ -560,6 +561,7 @@ import (
   generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
   //<<Declare per user limiter, Pr. \ref{pr:main}>>
   //<<Write limiter middleware, Pr. \ref{pr:main}>>
+  //<<Clear limiter map periodically, Pr. \ref{pr:main}>>
 #+end_src
 
 #+begin_export latex
@@ -670,6 +672,41 @@ import (
 #+end_src
 
 #+begin_export latex
+  The sync map now holds an entry for every ip address that ever requested
+  anything. That's a little ambitious. We should clear the map every now and
+  then, reducing memory build up.
+#+end_export
+
+#+begin_src go <<Clear limiter map periodically, Pr. \ref{pr:main}>>=
+  go func(ul *SyncMap) {
+    for {
+	    time.Sleep(5 * time.Minute)
+		  userLimiters.mu.Lock()
+      fmt.Println(ul.ma)
+	    for k := range userLimiters.ma {
+	    	delete(userLimiters.ma, k)
+	    }
+      fmt.Println(ul.ma)
+		  userLimiters.mu.Unlock()
+    }
+  }(&userLimiters)
+#+end_src
+
+#+begin_export latex
+  \ty{net/http} package provides a timeout handler. We create a wrapper for,
+  which makes adding it to the handler chain easier. This does stop the tcp
+  connection, but not the internal computations. The packages need to take care
+  of this themselves. The timeout handler does however create a custom context
+  for each request. So the packages may access that when enforcing timeouts.
+#+end_export
+
+#+begin_src go <<Create timeout middleware, Pr. \ref{pr:main}>>=
+	middlewareTimeout := func(next http.Handler, d time.Duration) http.Handler {
+		return http.TimeoutHandler(next, d, "Request timed out.\n")
+	}
+#+end_src
+
+#+begin_export latex
   Now we are ready to start the server. If no host was provided we serve
   everything locally using http. If a host was specified, we serve at that
   address using HTTPS/TLS. In either case we should report where we are
@@ -685,21 +722,18 @@ import (
 
 #+begin_export latex
   Now lets get into starting the server. Here we need to define the
-  middleware chain first. Then there is the server object, which needs
-  creating. Running the server is the next step. Lastly we need to take care of
-  shutting down the server. This entails checking if a termination signal was
-  send, passing it down to the server and do some logging.
-
-
-
-  In order to do so, we run the server in a subroutine
-  and block until we get a terminate signal. After receiving the signal, we
-  pass it along to the server and allow it to hadle it's shutdown. We might
-  want to add a log entry stating, that the server was shut down.
+  middleware chain first. By default a request should be limited to 15 seconds.
+  Next up is the server object, which needs creating. Running the server is the
+  next step. Lastly we need to take care of shutting down the server. This
+  entails checking if a termination signal was send, passing it down to the
+  server and do some logging.
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
-  handlerChain := middlewareLimiter(middlewareLogger(http.DefaultServeMux))
+  handlerChain := middlewareTimeout(
+		middlewareLimiter(
+			middlewareLogger(http.DefaultServeMux)),
+		15*time.Second)
   //<<Determine server address, Pr. \ref{pr:main}>>
   //<<Create server, Pr. \ref{pr:main}>>
   //<<Run server, Pr. \ref{pr:main}>>
