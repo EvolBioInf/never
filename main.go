@@ -235,10 +235,13 @@ func main() {
 			"large requests locally.\n")
 	}
 
-	handlerChain := middlewareTimeout(
-		middlewareLimiter(
-			middlewareLogger(http.DefaultServeMux)),
-		30*time.Second)
+	handlerChain :=
+		middlewareLogger(
+			middlewareLimiter(
+				middlewareTimeout(
+					http.DefaultServeMux,
+					30*time.Second,
+				)))
 	var addr string
 	if isLocal {
 		addr = fmt.Sprintf(":%d", port)

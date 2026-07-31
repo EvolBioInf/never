@@ -729,10 +729,13 @@ import (
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
-  handlerChain := middlewareTimeout(
-		middlewareLimiter(
-			middlewareLogger(http.DefaultServeMux)),
-		30*time.Second)
+  handlerChain := 
+    middlewareLogger(
+			middlewareLimiter(
+			  middlewareTimeout(
+					http.DefaultServeMux,
+				  30*time.Second,
+    )))
   //<<Determine server address, Pr. \ref{pr:main}>>
   //<<Create server, Pr. \ref{pr:main}>>
   //<<Run server, Pr. \ref{pr:main}>>

@@ -563,7 +563,8 @@ func accessions(
 		if err != nil {
 			writeServerError(
 				w,
-				"fn accessions - Error while accessing neidb.LevelContext",
+				"fn accessions - Error while accessing neidb.LevelContext with: "+
+					accession,
 				"",
 				err,
 			)
@@ -647,13 +648,28 @@ func extractPaging(r *http.Request) (offset, limit int) {
 	return
 }
 
-func writeServerError(w http.ResponseWriter, internalMsg string, responseMsg string, err error) {
+func writeServerError(
+	w http.ResponseWriter,
+	internalMsg string,
+	responseMsg string,
+	err error,
+) {
+	trace := ""
 	if err == nil {
 		err = errors.New("No error passed")
+	} else if err.Error() != "signal: killed" &&
+		err.Error() != "context deadline exceeded" {
+
+		trace = string(debug.Stack())
 	}
 	util.LogWarningDef(
 		util.WarningEntry{
-			Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
+			Warning: fmt.Sprintf(
+				"Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s",
+				internalMsg,
+				err.Error(),
+				trace,
+			),
 		})
 	w.WriteHeader(http.StatusInternalServerError)
 	if responseMsg != "" {
@@ -681,7 +697,12 @@ func fillTemplate(node Node, pathParams map[string]string, queryParams map[strin
 	return node.BasePath
 }
 
-func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+func accession(
+	w http.ResponseWriter,
+	r *http.Request,
+	selfNode *Node,
+	args ...any,
+) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -702,7 +723,13 @@ func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...a
 	accession := r.PathValue("accession_id")
 	level, err := neidb.LevelContext(r.Context(), accession)
 	if err != nil {
-		writeServerError(w, "fn accession - Error while accessing neidb.Level", "", err)
+		writeServerError(
+			w,
+			"fn accession - Error while accessing neidb.LevelContext with: "+
+				accession,
+			"",
+			err,
+		)
 		return
 	}
 	var data Accession
@@ -825,13 +852,27 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	if scientific {
 		ids, err = neidb.TaxidsContext(r.Context(), name, limit, offset)
 		if err != nil {
-			writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf("fn taxa - Error while accessing neidb.TaxidsContext "+
+					" with: n=%s l=%d o=%d",
+					name, limit, offset),
+				"",
+				err,
+			)
 			return
 		}
 	} else {
 		ids, err = neidb.CommonTaxidsContext(r.Context(), name, limit, offset)
 		if err != nil {
-			writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf("fn taxa - Error while accessing "+
+					"neidb.CommonTaxidsContext with: n=%s l=%d o=%d",
+					name, limit, offset),
+				"",
+				err,
+			)
 			return
 		}
 	}
@@ -839,7 +880,15 @@ func taxa(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	for _, id := range ids {
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb, r)
 		if err != nil {
-			writeServerError(w, "Error from getTaxonData", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf(
+					"Error from getTaxonData. Params: %d, %t, %s",
+					id, plain, fieldComposite,
+				),
+				"",
+				err,
+			)
 			return
 		}
 		data = append(data, tax)
@@ -1029,7 +1078,15 @@ func taxon(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) 
 
 	tax, err := getTaxonData(taxId, true, fieldComposite, neidb, r)
 	if err != nil {
-		writeServerError(w, "fn taxon - Error from getTaxonData", "", err)
+		writeServerError(
+			w,
+			fmt.Sprintf(
+				"Error from getTaxonData. Params: %d, %t, %s",
+				taxId, true, fieldComposite,
+			),
+			"",
+			err,
+		)
 		return
 	}
 	var out ResponseBody[Taxon]
@@ -1087,7 +1144,16 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 
 	children, err := neidb.ChildrenContext(r.Context(), taxId)
 	if err != nil {
-		writeServerError(w, "fn children - Error while executing neidbChildren", "", err)
+		writeServerError(
+			w,
+			fmt.Sprintf(
+				"fn children - Error while executing neidb.ChildrenContext. "+
+					"Params: %d",
+				taxId,
+			),
+			"",
+			err,
+		)
 		return
 	}
 	if limit == -1 {
@@ -1098,7 +1164,15 @@ func children(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...an
 		id := children[i]
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb, r)
 		if err != nil {
-			writeServerError(w, "Error from getTaxonData", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf(
+					"Error from getTaxonData. Params: %d, %t, %s",
+					id, plain, fieldComposite,
+				),
+				"",
+				err,
+			)
 			return
 		}
 		data = append(data, tax)
@@ -1167,9 +1241,28 @@ func parent(
 	fieldComposite = parseFieldComposite(fieldComposite)
 
 	parent, err := neidb.ParentContext(r.Context(), taxId)
+	if err != nil {
+		writeServerError(
+			w,
+			fmt.Sprintf(
+				"fn parent - Error while calling neidb.ParentContext. Params: %d",
+				taxId,
+			),
+			"",
+			err,
+		)
+	}
 	tax, err := getTaxonData(parent, true, fieldComposite, neidb, r)
 	if err != nil {
-		writeServerError(w, "fn parent - Error from getTaxonData", "", err)
+		writeServerError(
+			w,
+			fmt.Sprintf(
+				"fn parent - Error from getTaxonData. Params: %d, %t, %s",
+				parent, true, fieldComposite,
+			),
+			"",
+			err,
+		)
 		return
 	}
 	var out ResponseBody[Taxon]
@@ -1195,7 +1288,12 @@ func parent(
 
 }
 
-func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+func subtree(
+	w http.ResponseWriter,
+	r *http.Request,
+	selfNode *Node,
+	args ...any,
+) {
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -1227,7 +1325,15 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 
 	taxa, err := neidb.SubtreeContext(r.Context(), taxId)
 	if err != nil {
-		writeServerError(w, "fn subtree - Error while executing neidb.Subtree", "", err)
+		writeServerError(
+			w,
+			fmt.Sprintf(
+				"fn subtree - Error while executing neidb.SubtreeContext. Params: %d",
+				taxId,
+			),
+			"",
+			err,
+		)
 		return
 	}
 
@@ -1240,7 +1346,15 @@ func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any
 		id := taxa[i]
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb, r)
 		if err != nil {
-			writeServerError(w, "Error from getTaxonData", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf(
+					"Error from getTaxonData. Params: %d, %t, %s",
+					id, plain, fieldComposite,
+				),
+				"",
+				err,
+			)
 			return
 		}
 		data = append(data, tax)
@@ -1348,7 +1462,11 @@ func taxonAccessions(
 		if err != nil {
 			writeServerError(
 				w,
-				"fn taxonAccessions - Error while executing neidb.Accessions",
+				fmt.Sprintf(
+					"fn taxonAccessions - Error while executing "+
+						"neidb.AccessionsContext. Params: %d",
+					taxId,
+				),
 				"",
 				err,
 			)
@@ -1372,7 +1490,8 @@ func taxonAccessions(
 					if err != nil {
 						writeServerError(
 							w,
-							"fn taxonAccessions - Error while executing neidb.Level",
+							"fn taxonAccessions - Error while executing neidb.LevelContext. "+
+								"Params:"+acc,
 							"",
 							err,
 						)
@@ -1401,7 +1520,11 @@ func taxonAccessions(
 		if err != nil {
 			writeServerError(
 				w,
-				"fn taxonAccessions - Error while executing neidb.Children",
+				fmt.Sprintf(
+					"fn taxonAccessions - Error while executing neidb.ChildrenContext. "+
+						"Params: %d",
+					taxId,
+				),
 				"",
 				err,
 			)
@@ -1483,7 +1606,10 @@ func mrca(
 		if err != nil {
 			writeServerError(
 				w,
-				"fn mrca - Error while executing neidb.MRCA",
+				fmt.Sprintf(
+					"fn mrca - Error while executing neidb.MRCAContext. Params: %v",
+					taxIds,
+				),
 				"",
 				err,
 			)
@@ -1492,7 +1618,15 @@ func mrca(
 
 		tax, err := getTaxonData(id, plain, fieldComposite, neidb, r)
 		if err != nil {
-			writeServerError(w, "fn mrca - Error from getTaxonData", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf(
+					"Error from getTaxonData. Params: %d, %t, %s",
+					id, plain, fieldComposite,
+				),
+				"",
+				err,
+			)
 			return
 		}
 		out.Data = tax
@@ -1563,9 +1697,16 @@ func path(
 	data := []Taxon{}
 	for i := 0; (len(data) < limit || limit == -1) && start != end; i++ {
 		parent, err := neidb.ParentContext(r.Context(), start)
-
 		if err != nil {
-			writeServerError(w, "fn path - Error while calling neidb.Parent", "", err)
+			writeServerError(
+				w,
+				fmt.Sprintf(
+					"fn path - Error while calling neidb.ParentContext. Params: %d",
+					start,
+				),
+				"",
+				err,
+			)
 			return
 		}
 		if start == parent {
@@ -1577,7 +1718,15 @@ func path(
 		if i >= offset {
 			tax, err := getTaxonData(start, plain, fieldComposite, neidb, r)
 			if err != nil {
-				writeServerError(w, "fn path - Error from getTaxonData", "", err)
+				writeServerError(
+					w,
+					fmt.Sprintf(
+						"Error from getTaxonData. Params: %d, %t, %s",
+						start, plain, fieldComposite,
+					),
+					"",
+					err,
+				)
 				return
 			}
 			data = append(data, tax)
@@ -1717,7 +1866,15 @@ func programEndpoint(
 	if cmdErr.Len() != 0 {
 		writeBadRequestResp(w, cmdErr.String())
 	} else if err != nil {
-		writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
+		writeServerError(
+			w,
+			fmt.Sprintf(
+				"Failed while calling neighbors program. Argv: %v",
+				cmd.Args,
+			),
+			err.Error(),
+			err,
+		)
 	} else {
 		w.Header().Set("Content-Type", plainCt.String())
 		w.Write(res.Bytes())
@@ -1767,7 +1924,12 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs 
 					var params map[string]string
 					_, params, err = mime.ParseMediaType(cd)
 					if err != nil {
-						writeServerError(w, "Error while parsing media type of multipart file", "", err)
+						writeServerError(
+							w,
+							"Error while parsing media type of multipart file",
+							"",
+							err,
+						)
 						return
 					}
 					filename := params["filename"]
