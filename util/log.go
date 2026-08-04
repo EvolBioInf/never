@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"strconv"
@@ -32,6 +33,7 @@ type InfoEntry struct {
 
 var infoBuffer, warningBuffer *csv.Writer
 var infoFile, warningFile *os.File
+var infoMutex, warningMutex sync.Mutex
 var timer *time.Timer
 var interval time.Duration
 
@@ -44,7 +46,10 @@ func SetupLog() {
 	}
 
 	infoFile, infoBuffer = handleFileOpen(dir+"info.csv", InfoEntry{})
-	warningFile, warningBuffer = handleFileOpen(dir+"warning.csv", WarningEntry{})
+	warningFile, warningBuffer = handleFileOpen(
+		dir+"warning.csv",
+		WarningEntry{},
+	)
 
 	LogInfoDef(InfoEntry{Description: "Setup log"})
 }
@@ -115,19 +120,29 @@ func setTimer() {
 
 func LogInfoDef(e InfoEntry) {
 	e.timestamp = time.Now().Format(time.DateTime)
+	infoMutex.Lock()
 	infoBuffer.Write(e.Values())
+	infoMutex.Unlock()
 	setTimer()
 }
 
 func LogWarningDef(e WarningEntry) {
 	e.timestamp = time.Now().Format(time.DateTime)
+	warningMutex.Lock()
 	warningBuffer.Write(e.Values())
+	warningMutex.Unlock()
 	setTimer()
 }
 
 func logBuffs() {
+	infoMutex.Lock()
 	infoBuffer.Flush()
+	infoMutex.Unlock()
+
+	warningMutex.Lock()
 	warningBuffer.Flush()
+	warningMutex.Unlock()
+
 	timer = nil
 }
 
