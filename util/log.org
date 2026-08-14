@@ -1,6 +1,6 @@
 #+begin_export latex
   Log is a custom log providing deffered logging functionality. Data is written
-  to buffers and copied to files during off time. This log works in a debounce 
+  to buffers and copied to files during off time. This log works in a debounce
   like fashion. Data is written to it, stored in buffers and written to files
   some later time.
 #+end_export
@@ -20,13 +20,13 @@
 
 #+begin_export latex
   \section{\ty{SetupLog}}
-  \ty{SetupLog} sets up the logger for deferred writing. This means it has to 
+  \ty{SetupLog} sets up the logger for deferred writing. This means it has to
   create files to write to and set variables needed in the process. We write
   down the global variables necessary for this. These are the info and warning
-  files, as well as there respective buffers. The http server is multithreaded. 
-  Adding a mutexes for the buffers prevents race conditions. While the log is 
-  called synchronously, writing is done asynchronously. This requires variables 
-  for a timer and an interval. 
+  files, as well as there respective buffers. The http server is multithreaded.
+  Adding a mutexes for the buffers prevents race conditions. While the log is
+  called synchronously, writing is done asynchronously. This requires variables
+  for a timer and an interval.
 #+end_export
 
 #+begin_src go <<Variables, Pa. \ref{pa:uti}>>=
@@ -80,17 +80,19 @@
 #+end_src
 
 #+begin_export latex
-  We need to open the file for appending and create it if it does not exist. We can use the
-  os flags for this. In order to check, whether we need to write a header, we need to read the file as well.
-  this leads to us using a union of these three flags: \ty{os.O_APPEND}, \ty{os.O_CREATE}, \ty{os.O_RDWR}.
-  The permissions are again specified using explicit unix permission bits. The log files should be read and written
-  to by their owner. This results in exactly these bits: \ty{0600}. 
-  The type of entry is going to be discussed shortly.
+  We need to open the file for appending and create it if it does not exist. We
+  can use the os flags for this. In order to check, whether we need to write a
+  header, we need to read the file as well. This leads to us using a union of
+  these three flags: \ty{os.O_APPEND}, \ty{os.O_CREATE}, \ty{os.O_RDWR}. The
+  permissions are again specified using explicit unix permission bits. The log
+  files should be read and written to by their owner. Different users need read
+  access, in order to check the logs. This results in exactly these bits:
+  \ty{0644}. The type of entry is going to be discussed shortly.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func handleFileOpen(path string, entry Writable) (*os.File, *csv.Writer) {
-    f, err := os.OpenFile(path, os.O_APPEND | os.O_CREATE | os.O_RDWR, 0600)
+    f, err := os.OpenFile(path, os.O_APPEND | os.O_CREATE | os.O_RDWR, 0644)
 	  if err != nil {
 		  panic(fmt.Sprintf("Could not open %s for logs: %s\n", path, err))
 	  }
@@ -130,10 +132,10 @@
 #+end_src
 
 #+begin_export latex
-  Go doesn't seem to provide access to keynames or tags unless using the 
+  Go doesn't seem to provide access to keynames or tags unless using the
   \ty{reflect} package, which I'm trying to avoid. We will write two functions
   per entry, which will simulate this for us. Sadly those need to be kept in
-  sync with the actual structs manually. These functions are called \ty{Keys} 
+  sync with the actual structs manually. These functions are called \ty{Keys}
   and \ty{Values}. \ty{Keys} returns an array of string literals, which
   represent each key of the struct. \ty{Values} returns an array of strings
   composed of each property's value. Again I don't like hardcoding this, but
@@ -191,7 +193,7 @@
 #+end_src
 
 #+begin_export latex
-  Now we define an interface for those two types. We can use this for 
+  Now we define an interface for those two types. We can use this for
   convenience when doing action that are equivalent for both entry types.
 #+end_export
 
@@ -203,7 +205,7 @@
 #+end_src
 
 #+begin_export latex
-  Having defined all types, functions and an interface to work with these 
+  Having defined all types, functions and an interface to work with these
   entries, we may now call the handle function. Closing the files and cleaning
   up this logger is going to be handled by a separate function later on.
 #+end_export
@@ -284,7 +286,7 @@ func LogWarningDef(e WarningEntry) {
 
 #+begin_export latex
   \ty{logBuffs} writes the buffers to the log files and removes the timer
-  reference. Each flush requires the mutex again. We don't want to be in both 
+  reference. Each flush requires the mutex again. We don't want to be in both
   critical sections at the same time. Unlocking one mutex before requesting the
   next prevents double mutex requiring deadlocks.
 #+end_export
@@ -298,14 +300,14 @@ func logBuffs() {
   warningMutex.Lock()
 	warningBuffer.Flush()
   warningMutex.Unlock()
-  
+
   timer = nil
 }
 #+end_src
 
 #+begin_export latex
   \section{\ty{StopLogging}}
-  \ty{StopLogging} shuts down the logging timer, writes the remaining buffers 
+  \ty{StopLogging} shuts down the logging timer, writes the remaining buffers
   and closes the files.
 #+end_export
 

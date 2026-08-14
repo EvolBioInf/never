@@ -1917,7 +1917,11 @@ func parseFormData(w http.ResponseWriter, r *http.Request, dir string, callArgs 
 					stdin = string(b)
 				} else {
 					var tf *os.File
-					tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0600)
+					tf, err = os.OpenFile(
+						dir+"/"+strconv.Itoa(i),
+						os.O_CREATE|os.O_WRONLY,
+						0644,
+					)
 					if err != nil {
 						writeServerError(w, "Error while opening temp file", "", err)
 						return

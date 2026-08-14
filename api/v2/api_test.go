@@ -195,7 +195,7 @@ func TestApi(t *testing.T) {
 	util.Check(err)
 	defer e1.Close()
 	libTest := LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			fu,
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{"testing/eco7k.nwk"},
@@ -210,7 +210,7 @@ func TestApi(t *testing.T) {
 	util.Check(err)
 	defer e2.Close()
 	libTest = LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			fu,
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{},
@@ -225,7 +225,7 @@ func TestApi(t *testing.T) {
 	util.Check(err)
 	defer e3.Close()
 	libTest = LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			fu,
 			[]string{"-t", "991910_"},
 			[]string{},
@@ -237,7 +237,7 @@ func TestApi(t *testing.T) {
 		r: 19}
 	libTests = append(libTests, libTest)
 	libTest = LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			fu,
 			[]string{},
 			[]string{},
@@ -264,7 +264,7 @@ func TestApi(t *testing.T) {
 	util.Check(err)
 	defer t1.Close()
 	libTest = LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			nu,
 			[]string{"-L", "complete"},
 			[]string{"testing/targets.txt"},
@@ -279,7 +279,7 @@ func TestApi(t *testing.T) {
 	util.Check(err)
 	defer t2.Close()
 	libTest = LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			nu,
 			[]string{"-L", "complete"},
 			[]string{},
@@ -366,7 +366,7 @@ func TestApi(t *testing.T) {
 	util.Check(err)
 	defer g1.Close()
 	libTest = LibTest{t: func() string {
-		return util.SendPostRequest(
+		return util.SendQueryRequest(
 			ru,
 			[]string{"-g", "testing/myGenomeList.txt", "9612"},
 			[]string{},

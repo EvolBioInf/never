@@ -27,7 +27,7 @@
     {
       "rel": "service",
       "href": "http://localhost:8008/api/v2/programs/fintac",
-      "action": "POST",
+      "action": "QUERY",
       "types": [
         "text/plain;charset=utf-8"
       ]
@@ -43,7 +43,7 @@
     {
       "rel": "service",
       "href": "http://localhost:8008/api/v2/programs/neighbors",
-      "action": "POST",
+      "action": "QUERY",
       "types": [
         "text/plain;charset=utf-8"
       ]
@@ -59,7 +59,7 @@
     {
       "rel": "service",
       "href": "http://localhost:8008/api/v2/programs/ranks",
-      "action": "POST",
+      "action": "QUERY",
       "types": [
         "text/plain;charset=utf-8"
       ]
