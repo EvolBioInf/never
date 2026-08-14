@@ -131,6 +131,8 @@ var root Node
 var prefix string
 var serverAddress string
 
+const httpMethodQuery = "QUERY"
+
 var jsonCt = contenttype.MediaType{
 	Type:       "application",
 	Subtype:    "json",
@@ -297,7 +299,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Links:    make(map[string][]Node),
 		Name:     "progFintac",
 		BasePath: prefix + "/programs/fintac",
-		Action:   http.MethodPost,
+		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
@@ -310,14 +312,14 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
-	progNeighborsPostL := Node{
+	progNeighborsQueryL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
 		BasePath: prefix + "/programs/neighbors",
-		Action:   http.MethodPost,
+		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
+	makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors")
 
 	progRanksGetL := Node{
 		Links:    make(map[string][]Node),
@@ -327,14 +329,14 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Types:    []contenttype.MediaType{plainCt},
 	}
 	makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
-	progRanksPostL := Node{
+	progRanksQueryL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
 		BasePath: prefix + "/programs/ranks",
-		Action:   http.MethodPost,
+		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
+	makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks")
 
 	progTaxiL := Node{
 		Links:    make(map[string][]Node),
@@ -362,9 +364,9 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		progDreeL,
 		progFintacL,
 		progNeighborsGetL,
-		progNeighborsPostL,
+		progNeighborsQueryL,
 		progRanksGetL,
-		progRanksPostL,
+		progRanksQueryL,
 		progTaxiL,
 	)
 	accessionsL.Links["service"] = append(
@@ -387,9 +389,9 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		progDreeL,
 		progFintacL,
 		progNeighborsGetL,
-		progNeighborsPostL,
+		progNeighborsQueryL,
 		progRanksGetL,
-		progRanksPostL,
+		progRanksQueryL,
 		progTaxiL,
 	)
 
@@ -1613,7 +1615,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 	}
 	defer os.RemoveAll(dir)
 	var stdinData string
-	if r.Method == http.MethodPost {
+	if r.Method == httpMethodQuery {
 		ct, err := contenttype.GetMediaType(r)
 		if err != nil {
 			writeBadRequestResp(w, "Malformed content type.")
@@ -1621,7 +1623,7 @@ func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, arg
 		}
 		if !ct.EqualsMIME(multipartCt) {
 			w.WriteHeader(http.StatusUnsupportedMediaType)
-			w.Write([]byte("Use multipart/form-data with POST requests.\n"))
+			w.Write([]byte("Use multipart/form-data with QUERY requests.\n"))
 			return
 		} else {
 			stdinData, err = parseFormData(w, r, dir, callArgs)

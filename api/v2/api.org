@@ -627,15 +627,25 @@ type Node struct {
     Links:    make(map[string][]Node),
     Name:     "progFintac",
     BasePath: prefix + "/programs/fintac",
-    Action:   http.MethodPost,
+    Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
   makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
 #+end_src
 
 #+begin_export latex
+  \ty{fintac} uses the new http method QUERY. As of now, the latest version of
+  \ty{net/http} does not provide constants for this method. So we define them
+  ourselves.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  const httpMethodQuery = "QUERY"
+#+end_src
+
+#+begin_export latex
   Now we define \ty{neighbors}, which has two actions:
-  GET for requests without a body and POST requests
+  GET for requests without a body and QUERY requests
   containing files.
 #+end_export
 
@@ -648,14 +658,14 @@ type Node struct {
     Types:    []contenttype.MediaType{plainCt},
   }
   makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
-  progNeighborsPostL := Node{
+  progNeighborsQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progNeighbors",
     BasePath: prefix + "/programs/neighbors",
-    Action:   http.MethodPost,
+    Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
+  makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors")
 #+end_src
 
 #+begin_export latex
@@ -672,14 +682,14 @@ type Node struct {
     Types:    []contenttype.MediaType{plainCt},
   }
   makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
-  progRanksPostL := Node{
+  progRanksQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progRanks",
     BasePath: prefix + "/programs/ranks",
-    Action:   http.MethodPost,
+    Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
+  makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks")
 #+end_src
 
 #+begin_export latex
@@ -763,9 +773,9 @@ type Node struct {
     progDreeL,
     progFintacL,
     progNeighborsGetL,
-    progNeighborsPostL,
+    progNeighborsQueryL,
     progRanksGetL,
-    progRanksPostL,
+    progRanksQueryL,
     progTaxiL,
   )
   accessionsL.Links["service"] = append(
@@ -788,9 +798,9 @@ type Node struct {
     progDreeL,
     progFintacL,
     progNeighborsGetL,
-    progNeighborsPostL,
+    progNeighborsQueryL,
     progRanksGetL,
-    progRanksPostL,
+    progRanksQueryL,
     progTaxiL,
   )
 #+end_src
@@ -2849,7 +2859,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We define that a \ty{post} request has to have \ty{multipart} as a
+  We define that a \ty{query} request has to have \ty{multipart} as a
   content type. If it does not, the request should have been of type \ty{get}.
   Then we inspect the form data using \ty{parseFormData}, which we need to
   implement in a moment. This returns \ty{stdin}'s content. We may use it as
@@ -2857,7 +2867,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
-  if r.Method == http.MethodPost {
+  if r.Method == httpMethodQuery {
     ct, err := contenttype.GetMediaType(r)
     if err != nil {
       writeBadRequestResp(w, "Malformed content type.")
@@ -2865,7 +2875,7 @@ type Node struct {
     }
     if !ct.EqualsMIME(multipartCt) {
       w.WriteHeader(http.StatusUnsupportedMediaType)
-      w.Write([]byte("Use multipart/form-data with POST requests.\n"))
+      w.Write([]byte("Use multipart/form-data with QUERY requests.\n"))
       return
     } else {
       stdinData, err = parseFormData(w, r, dir, callArgs)
