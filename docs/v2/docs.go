@@ -155,7 +155,10 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 	http.Handle(prefix+"/static/",
 		http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 
-	p := prefix + "/" + dbDirPath + "/"
+	p := prefix + "/" + dbDirPath
+	if !strings.HasSuffix(p, "/") {
+		p += "/"
+	}
 	http.Handle(p, http.StripPrefix(p, http.FileServer(http.Dir(dbDirPath))))
 }
 

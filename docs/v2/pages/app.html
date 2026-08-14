@@ -45,25 +45,26 @@
           We use the
           <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy">taxonomy</a>
            and
-          <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome data</a>
+          <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome lists</a>
            supplied by the 
           <a href=https://www.ncbi.nlm.nih.gov>NCBI</a>
-            to build a custom database. The compressed files we used for the construction of the
-          databases as well as the much larger sqlite databases may be downloaded from
+            to build a custom database, neidb. The files we used for the construction of the
+          database as well as the resulting sqlite database may be downloaded from
           {{if .Local}}
           <a href="{{.Prefix}}/{{.DbDirPath}}">here</a>.
           {{else}}
           <a href="https://neighbors.evolbio.mpg.de/{{.Prefix}}/{{.DbDirPath}}">here</a>.
           {{end}}
-            The compressed files are bundled in tgz archives, while the databases
+            This directory includes a history of previous databases.
+            The construction files are bundled in tgz archives, while the databases
             are marked with a .db file extension.
           <br />
           <br />
           
-          Our REST API for querying this database is implemented in
+          Our REST API for querying neidb is implemented in
           the Neighbors server,
           <a href="https://github.com/evolbioinf/never">never</a>,
-           developed by the 
+           developed by us, the 
           <a href="https://evolbioinf.github.io/">Research Group Bioinformatics</a>
            at the 
           <a href="https://www.evolbio.mpg.de">Max-Planck-Institute for Evolutionary Biology</a>
@@ -74,15 +75,17 @@
           sequences with Neighbors and related software, please read
           our 
           <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
+          <br />
+          <br />
 
           On API versioning: 
-          Never follows a major/minor release schema. Major releases might change up anything of an endpoint, including 
-	        it's removal. All major releases stay online, with their assigned prefix, in order to stay compatible. 
-          This means you can reach all major api versions with this prefix: "/api/v[release]". Each API prefix 
-	        i.e.:"/api/v1", "/api/v2" provides access to the latest minor release within that major.
-          Minor releases follow an add only strategy, which means endpoints, schemas and parameters may be added,
-          but all previous URIs and schemas will be left unchanged. Although minor releases
-          might introduce greater changes if security demands it.
+          Never follows a major/minor release schema. Major releases might change any aspect of an endpoint, including 
+	        its removal. All major releases remain online, to ensure backward compatibility. 
+          This means you can reach all major API versions with this prefix: "/api/v[release]". Each API prefix, 
+	        i.e.:"/api/v1", "/api/v2", provides access to the latest minor release within that major release.
+          Minor releases follow an add-only strategy, which means endpoints, schemas, and parameters may be added,
+          but all previous URIs and schemas are left unchanged. The only exceptions to this rule are security updates.
+          These take precedent and will lead to the required changes in all releases.
       </p>
     </section>
     <div class="sever-info">

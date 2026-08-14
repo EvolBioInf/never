@@ -18,13 +18,13 @@
   background-color: color-mix(in srgb, var(--get-color), white 70%);
 }
 
-.endpoint-card-header-post {
-  border: 2px solid var(--post-color);
-  background-color: color-mix(in srgb, var(--post-color), white 90%);
+.endpoint-card-header-query {
+  border: 2px solid var(--query-color);
+  background-color: color-mix(in srgb, var(--query-color), white 90%);
 }
 
-.endpoint-card-header-post:hover {
-  background-color: color-mix(in srgb, var(--post-color), white 70%);
+.endpoint-card-header-query:hover {
+  background-color: color-mix(in srgb, var(--query-color), white 70%);
 }
 
 .selected-header {
@@ -49,8 +49,8 @@
   background-color: var(--get-color);
 }
 
-.request-type-block-post {
-  background-color: var(--post-color);
+.request-type-block-query {
+  background-color: var(--query-color);
 }
 
 polyline {

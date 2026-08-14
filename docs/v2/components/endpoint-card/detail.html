@@ -28,7 +28,7 @@
       </div>
       {{end}}
     </div>
-    {{if eq .Op.Verb "POST"}}
+    {{if eq .Op.Verb "QUERY"}}
     <div class="request-params">
       <h3>Request Body</h3>
       <div class="single-argument">
@@ -43,7 +43,7 @@
   <div class="responses">
     <div class="response-upper">
       <div class="example-request-header">
-        {{if eq .Op.Verb "POST"}}
+        {{if eq .Op.Verb "QUERY"}}
         <input
           id='{{toKebab "input" "example" "file" .Name .Op.Verb}}'
           name="input-file"
@@ -83,7 +83,7 @@
               );
 
               let formData;
-              if ("{{ .Op.Verb }}" === "POST") {
+              if ("{{ .Op.Verb }}" === "QUERY") {
                 const fileInput = document.getElementById(
                   '{{toKebab "input" "example" "file" .Name .Op.Verb}}',
                 );

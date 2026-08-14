@@ -1282,6 +1282,8 @@ type Node struct {
   offset of the output would be easiest by slicing the accessions at the end.
   I'm explicitly deciding against doing that as using them in compution is more
   perfomant. Sadly the code aesthetic suffers from that decision :(
+  We use the context aware version of tdb's queries. This stops querying, once
+  the context hits a timeout.
 #+end_export
 
 #+begin_src go <<Look up levels, Pa. \ref{pa:api}>>=
@@ -1292,11 +1294,12 @@ type Node struct {
   }
   for i := offset; i < min(offset + limit, len(accessions)); i++ {
     accession := accessions[i]
-    level, err := neidb.Level(accession)
+    level, err := neidb.LevelContext(r.Context(), accession)
     if err != nil {
       writeServerError(
         w,
-        "fn accessions - Error while accessing neidb.Level",
+				"fn accessions - Error while accessing neidb.LevelContext with: "+
+          accession,
         "",
         err,
       )
@@ -1311,21 +1314,37 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  A server error is a response with a 5XX response code.
-  We send it whenever there is an unexpected error on the
-  server side. The user does not gain much info out of this,
-  but we might, if we log it. So we should send an entry
-  to the warning log.
+  A server error is a response with a 5XX response code.  We send it whenever
+  there is an unexpected error on the server side. The user does not gain much
+  info out of this, but we might, if we log it. So we should send an entry to
+  the warning log. We may decrease the amount of logging when encountering 
+  timeouts. Timeouts are expected errors. A stack trace will not be necessary
+  for those.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func writeServerError(w http.ResponseWriter, internalMsg string, responseMsg string, err error) {
+  func writeServerError(
+    w http.ResponseWriter,
+    internalMsg string,
+    responseMsg string,
+    err error,
+  ) {
+    trace := ""
     if err == nil {
       err = errors.New("No error passed")
+    } else if err.Error() != "signal: killed" &&
+      err.Error() != "context deadline exceeded" {
+      
+      trace = string(debug.Stack())
     }
      util.LogWarningDef(
       util.WarningEntry{
-        Warning: fmt.Sprintf("Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s", internalMsg, err.Error(), debug.Stack()),
+        Warning: fmt.Sprintf(
+          "Apiv2: Internal server error.\nMessage: %s\nErr: %s\nTrace: %s",
+          internalMsg,
+          err.Error(),
+          trace,
+        ),
     })
     w.WriteHeader(http.StatusInternalServerError)
     if responseMsg != "" {
@@ -1497,7 +1516,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func accession(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func accession(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any,
+  ) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
@@ -1514,9 +1538,15 @@ type Node struct {
 
 #+begin_src go <<Look up level, Pa. \ref{pa:api}>>=
   accession := r.PathValue("accession_id")
-  level, err := neidb.Level(accession)
+  level, err := neidb.LevelContext(r.Context(), accession)
   if err != nil {
-    writeServerError(w, "fn accession - Error while accessing neidb.Level", "", err)
+    writeServerError(
+      w,
+      "fn accession - Error while accessing neidb.LevelContext with: " +
+        accession,
+      "",
+      err,
+    )
     return
   }
   var data Accession
@@ -1714,15 +1744,29 @@ type Node struct {
 #+begin_src go <<Execute taxi query, Pa. \ref{pa:api}>>=
   var ids []int
   if scientific {
-    ids, err = neidb.Taxids(name, limit, offset)
+    ids, err = neidb.TaxidsContext(r.Context(), name, limit, offset)
     if err != nil {
-      writeServerError(w, "fn taxa - Error while accessing neidb.Taxids", "", err)
+      writeServerError(
+        w,
+        fmt.Sprintf("fn taxa - Error while accessing neidb.TaxidsContext " +
+          " with: n=%s l=%d o=%d",
+          name, limit, offset),
+        "",
+        err,
+      )
       return
     }
   } else {
-    ids, err = neidb.CommonTaxids(name, limit, offset)
+    ids, err = neidb.CommonTaxidsContext(r.Context(), name, limit, offset)
     if err != nil {
-      writeServerError(w, "fn taxa - Error while accessing neidb.CommonTaxids", "", err)
+      writeServerError(
+        w,
+        fmt.Sprintf("fn taxa - Error while accessing " +
+          "neidb.CommonTaxidsContext with: n=%s l=%d o=%d",
+          name, limit, offset),
+        "",
+        err,
+      )
       return
     }
   }
@@ -1733,14 +1777,21 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Getting the data of a taxon is something we are doing frequently.
-  This means we write a function for this behaviour. \ty{getTaxonData}
-  takes an id, whether the data should be plain, i.e. without links
-  and the composite to create.
+  Getting the data of a taxon is a frequent problem. This means we write a
+  function for this behaviour. \ty{getTaxonData} takes an id, whether the data
+  should be plain, i.e. without links and the composite to create. It also 
+  needs access to the databases and the requests context. 
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func getTaxonData(id int, plain bool, fieldComposite string, neidb *tdb.TaxonomyDB) (tax Taxon, err error) {
+  func getTaxonData(
+    id int,
+    plain bool,
+    fieldComposite string,
+    neidb *tdb.TaxonomyDB,
+    r *http.Request,
+    ) (tax Taxon, err error) {
+
     tax.TaxId = id
     if fieldComposite == "gen_count" || fieldComposite == "all" {
       //<<Get raw genome counts, Pa. \ref{pa:api}>>
@@ -1774,7 +1825,7 @@ type Node struct {
   raw := make([]GenomeCount, 0)
   for _, level := range tdb.AssemblyLevels() {
     var count int
-    count, err = neidb.NumGenomes(id, level)
+    count, err = neidb.NumGenomesContext(r.Context(), id, level)
     if err != nil {
       return
     }
@@ -1793,7 +1844,7 @@ type Node struct {
   rec := make([]GenomeCount, 0)
   for _, level := range tdb.AssemblyLevels() {
     var count int
-    count, err = neidb.NumGenomesRec(id, level)
+    count, err = neidb.NumGenomesRecContext(r.Context(), id, level)
     if err != nil {
       return
     }
@@ -1809,7 +1860,7 @@ type Node struct {
 
 #+begin_src go <<Retrieve rank fields, Pa. \ref{pa:api}>>=
   var rank string
-  rank, err = neidb.Rank(id)
+  rank, err = neidb.RankContext(r.Context(), id)
   if err != nil {
     return
   }
@@ -1832,13 +1883,13 @@ type Node struct {
 
 #+begin_src go <<Get names, Pa. \ref{pa:api}>>=
   var sciName string
-  sciName, err = neidb.Name(id)
+  sciName, err = neidb.NameContext(r.Context(), id)
   if err != nil {
     return
   }
   tax.Name = new(sciName)
   var comName string
-  comName, err = neidb.CommonName(id)
+  comName, err = neidb.CommonNameContext(r.Context(), id)
   if err != nil {
     return
   }
@@ -1851,7 +1902,7 @@ type Node struct {
 
 #+begin_src go <<Get parent, Pa. \ref{pa:api}>>=
   var parent int
-  parent, err = neidb.Parent(id)
+  parent, err = neidb.ParentContext(r.Context(), id)
   if err != nil {
     return
   }
@@ -1873,7 +1924,7 @@ type Node struct {
 
 #+begin_src go <<Is the taxon a leaf? Pa. \ref{pa:api}>>=
   var isLeaf bool
-  isLeaf, err = neidb.IsLeaf(id)
+  isLeaf, err = neidb.IsLeafContext(r.Context(), id)
   if err != nil {
     return
   }
@@ -1892,7 +1943,7 @@ type Node struct {
 #+begin_src go <<Get images, Pa. \ref{pa:api}>>=
   neiImages := make([]Image, 0)
   var images []tdb.Image
-  images, err = neidb.Images(id)
+  images, err = neidb.ImagesContext(r.Context(), id)
   if err != nil {
     return
   }
@@ -1921,14 +1972,22 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We call get \ty{getTaxonData}, to get data on our taxon
-  using the correct composite of fields and links.
+  We call get \ty{getTaxonData}, to get data on our taxon using the correct
+  composite of fields and links.
 #+end_export
 
 #+begin_src go <<Construct taxon output, Pa. \ref{pa:api}>>=
-  tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+  tax, err := getTaxonData(id, plain, fieldComposite, neidb, r)
   if err != nil {
-    writeServerError(w, "Error from getTaxonData", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "Error from getTaxonData. Params: %d, %t, %s",
+        id, plain, fieldComposite,  
+      ),
+      "",
+      err,
+    )
     return
   }
   data = append(data, tax)
@@ -2041,17 +2100,24 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Getting the taxon data is easy with the \ty{getTaxonData}
-  function. We don't want links for single entity responses
-  so we just pass a \ty{true} instead of \ty{plain} to
-  \ty{getTaxonData}.
+  Getting the taxon data is easy with the \ty{getTaxonData} function. We don't
+  want links for single entity responses so we just pass a \ty{true} instead of
+  \ty{plain} to \ty{getTaxonData}.
 #+end_export
 
 #+begin_src go <<Get taxon data, Pa. \ref{pa:api}>>=
   //<<Parse taxon id, Pa. \ref{pa:api}>>
-  tax, err := getTaxonData(taxId, true, fieldComposite, neidb)
+  tax, err := getTaxonData(taxId, true, fieldComposite, neidb, r)
   if err != nil {
-    writeServerError(w, "fn taxon - Error from getTaxonData", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "Error from getTaxonData. Params: %d, %t, %s",
+        taxId, true, fieldComposite,  
+      ),
+      "",
+      err,
+    )
     return
   }
   var out ResponseBody[Taxon]
@@ -2132,9 +2198,18 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Execute children query, Pa. \ref{pa:api}>>=
-    children, err := neidb.Children(taxId)
+    children, err := neidb.ChildrenContext(r.Context(), taxId)
     if err != nil {
-      writeServerError(w, "fn children - Error while executing neidbChildren", "", err)
+      writeServerError(
+        w,
+        fmt.Sprintf(
+          "fn children - Error while executing neidb.ChildrenContext. " + 
+            "Params: %d",
+          taxId,
+          ),
+        "",
+        err,
+      )
       return
     }
     if limit == -1 {
@@ -2196,7 +2271,13 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func parent(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func parent(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any,
+    ) {
+
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
@@ -2209,15 +2290,34 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We call the \ty{Parent} function from \ty{tdb} and
-  use its response to get the requested data on the parent.
+  We call the \ty{Parent} function from \ty{tdb} and use its response to get
+  the requested data on the parent.
 #+end_export
 
 #+begin_src go <<Execute parent query, Pa. \ref{pa:api}>>=
-  parent, err := neidb.Parent(taxId)
-  tax, err := getTaxonData(parent, true, fieldComposite, neidb)
+  parent, err := neidb.ParentContext(r.Context(), taxId)
   if err != nil {
-    writeServerError(w, "fn parent - Error from getTaxonData", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "fn parent - Error while calling neidb.ParentContext. Params: %d",
+        taxId,
+      ),
+      "",
+      err,
+    )
+  }
+  tax, err := getTaxonData(parent, true, fieldComposite, neidb, r)
+  if err != nil {
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "fn parent - Error from getTaxonData. Params: %d, %t, %s",
+        parent, true, fieldComposite,  
+      ),
+      "",
+      err,
+    )
     return
   }
   var out ResponseBody[Taxon]
@@ -2228,8 +2328,7 @@ type Node struct {
 
 #+begin_export latex
   \subsection{subtree}
-  The endpoint \ty{subtree} returns all taxa in a subtree, including the
-  root.
+  The endpoint \ty{subtree} returns all taxa in a subtree, including the root.
 
   This is \ty{subtree}'s io:
   Params:
@@ -2245,7 +2344,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func subtree(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func subtree(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any,
+  ) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Parse taxon id, Pa. \ref{pa:api}>>
@@ -2265,9 +2369,17 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Execute subtree query, Pa. \ref{pa:api}>>=
-  taxa, err := neidb.Subtree(taxId)
+  taxa, err := neidb.SubtreeContext(r.Context(), taxId)
   if err != nil {
-    writeServerError(w, "fn subtree - Error while executing neidb.Subtree", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "fn subtree - Error while executing neidb.SubtreeContext. Params: %d",
+        taxId,
+      ),
+      "",
+      err,
+    )
     return
   }
 
@@ -2342,7 +2454,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func taxonAccessions(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func taxonAccessions(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any,
+    ) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
@@ -2356,8 +2473,8 @@ type Node struct {
 
 #+begin_export latex
   We declare a slice of \ty{TaxonAccession} for storing. We get the accessions
-  for a taxon, then add it's children. We do this as long as there are unprocessed
-  taxa without exceeding the page .
+  for a taxon, then add it's children. We do this as long as there are 
+  unprocessed taxa without exceeding the page.
 #+end_export
 
 #+begin_src go <<Look up accessions, Pa. \ref{pa:api}>>=
@@ -2366,9 +2483,18 @@ type Node struct {
   for len(taxIds) > 0 && (limit == -1 || len(data) < limit) {
     taxId := taxIds[0]
     taxIds = taxIds[1:]
-    accs, err := neidb.Accessions(taxId)
+    accs, err := neidb.AccessionsContext(r.Context(), taxId)
     if err != nil {
-      writeServerError(w, "fn taxonAccessions - Error while executing neidb.Accessions", "", err)
+      writeServerError(
+        w,
+        fmt.Sprintf(
+          "fn taxonAccessions - Error while executing " + 
+            "neidb.AccessionsContext. Params: %d",
+            taxId,
+        ),
+        "",
+        err,
+      )
       return
     }
     if len(accs) > 0 {
@@ -2394,8 +2520,8 @@ type Node struct {
 #+begin_export latex
   We declare a variable of type \ty{TaxonAccession} based on the \ty{taxId} and
   store it in our output slice. Then we complete the taxon's accessions by
-  adding their levels before storing them. If we've not yet reached the pagination
-  offset, we decrement the offset instead of storing the accession.
+  adding their levels before storing them. If we've not yet reached the 
+  pagination offset, we decrement the offset instead of storing the accession.
 #+end_export
 
 #+begin_src go <<Store accessions, Pa. \ref{pa:api}>>=
@@ -2405,9 +2531,15 @@ type Node struct {
     d := TaxonAccession{TaxId: taxId}
     //<<Add taxon link, Pa. \ref{pa:api}>>
     for _, acc := range accs {
-      level, err := neidb.Level(acc)
+      level, err := neidb.LevelContext(r.Context(), acc)
       if err != nil {
-        writeServerError(w, "fn taxonAccessions - Error while executing neidb.Level", "", err)
+        writeServerError(
+          w,
+          "fn taxonAccessions - Error while executing neidb.LevelContext. " +
+            "Params:" + acc,
+          "",
+          err,
+        )
         return
       }
       accession := Accession{Accession: acc, Level: level}
@@ -2419,9 +2551,9 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  Each \ty{TaxonAccession} is related to taxon and accession entities.
-  We may add the taxon link to the mid layer struct, i.e. the \ty{TaxonAccession},
-  as it is associated with exactly one taxon. The accessions should be referenced
+  Each \ty{TaxonAccession} is related to taxon and accession entities. We may
+  add the taxon link to the mid layer struct, i.e. the \ty{TaxonAccession}, as
+  it is associated with exactly one taxon. The accessions should be referenced
   per accession entry.
 #+end_export
 
@@ -2441,10 +2573,14 @@ type Node struct {
 
 #+begin_src go <<Add accession link, Pa. \ref{pa:api}>>=
   if !plain {
-    accession.Links = append(accession.Links, taxNode.makeLink("self", fillTemplate(
-      accNode,
-      map[string]string{"accession_id": acc},
-      map[string]string{},
+    accession.Links = append(
+      accession.Links,
+      taxNode.makeLink(
+        "self",
+        fillTemplate(
+          accNode,
+          map[string]string{"accession_id": acc},
+          map[string]string{},
     )))
   }
 #+end_src
@@ -2455,9 +2591,18 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Get children, Pa. \ref{pa:api}>>=
-  children, err := neidb.Children(taxId)
+  children, err := neidb.ChildrenContext(r.Context(), taxId)
   if err != nil {
-    writeServerError(w, "fn taxonAccessions - Error while executing neidb.Children", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "fn taxonAccessions - Error while executing neidb.ChildrenContext. " + 
+          "Params: %d",
+          taxId,
+      ),
+      "",
+      err,
+    )
     return
   }
   for _, child := range children {
@@ -2488,7 +2633,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func mrca(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func mrca(
+    w http.ResponseWriter,
+    r *http.Request, 
+    selfNode *Node,
+    args ...any,
+    ) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
@@ -2523,17 +2673,25 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We call \ty{tdb}'s \ty{MRCA} function, to find the most recent common ancestor.
-  Using it's id we retrieve its requested fields. If no taxa were requested, we
-  respond with an empty object.
+  We call \ty{tdb}'s \ty{MRCA} function, to find the most recent common
+  ancestor. Using it's id we retrieve its requested fields. If no taxa were
+  requested, we respond with an empty object.
 #+end_export
 
 #+begin_src go <<Execute mrca query, Pa. \ref{pa:api}>>=
   var out ResponseBody[Taxon]
   if len(taxIds) > 0 {
-    id, err := neidb.MRCA(taxIds)
+    id, err := neidb.MRCAContext(r.Context(), taxIds)
     if err != nil {
-      writeServerError(w, "fn mrca - Error while executing neidb.MRCA", "", err)
+      writeServerError(
+        w,
+        fmt.Sprintf(
+          "fn mrca - Error while executing neidb.MRCAContext. Params: %v",
+          taxIds,
+        ),
+        "",
+        err,
+      )
       return
     }
 
@@ -2543,14 +2701,22 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We call get \ty{getTaxonData}, to get data on our taxon
-  using the correct composite of fields and links.
+  We call get \ty{getTaxonData}, to get data on our taxon using the correct 
+  composite of fields and links.
 #+end_export
 
 #+begin_src go <<Get data of taxon, Pa. \ref{pa:api}>>=
-  tax, err := getTaxonData(id, plain, fieldComposite, neidb)
+  tax, err := getTaxonData(id, plain, fieldComposite, neidb, r)
   if err != nil {
-    writeServerError(w, "fn mrca - Error from getTaxonData", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "Error from getTaxonData. Params: %d, %t, %s",
+        id, plain, fieldComposite,  
+      ),
+      "",
+      err,
+    )
     return
   }
   out.Data = tax
@@ -2559,10 +2725,10 @@ type Node struct {
 
 
 #+begin_export latex
-  The service \ty{path} takes as input the taxon ids of a start and an
-  end node in the taxonomy, where the end is closer to the root than the
-  start. It returns the array of taxon ids that form the path from the
-  start to the end. If no such path exists, an empty array is returned.
+  The service \ty{path} takes as input the taxon ids of a start and an end node
+  in the taxonomy, where the end is closer to the root than the start. It
+  returns the array of taxon ids that form the path from the start to the end.
+  If no such path exists, an empty array is returned.
 
   This is \ty{path}'s io:
   Params:
@@ -2580,7 +2746,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func path(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func path(
+      w http.ResponseWriter,
+      r *http.Request,
+      selfNode *Node,
+      args ...any,
+    ) {
     //<<Check content types, Pa. \ref{pa:api}>>
     //<<Get db from args, Pa. \ref{pa:api}>>
     //<<Get plain param, Pa. \ref{pa:api}>>
@@ -2623,10 +2794,17 @@ type Node struct {
 #+begin_src go <<Climb taxonomy, Pa. \ref{pa:api}>>=
   data := []Taxon{}
   for i := 0; (len(data) < limit || limit == -1) && start != end; i++ {
-    parent, err := neidb.Parent(start)
-
+    parent, err := neidb.ParentContext(r.Context(), start)
     if err != nil {
-      writeServerError(w, "fn path - Error while calling neidb.Parent", "", err)
+      writeServerError(
+        w,
+        fmt.Sprintf(
+          "fn path - Error while calling neidb.ParentContext. Params: %d",
+          start,
+        ),
+        "",
+        err,
+      )
       return
     }
     //<<Has the path reached the root?, Pa. \ref{pa:api}>>
@@ -2655,9 +2833,17 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Store new node on path, Pa. \ref{pa:api}>>=
-  tax, err := getTaxonData(start, plain, fieldComposite, neidb)
+  tax, err := getTaxonData(start, plain, fieldComposite, neidb, r)
   if err != nil {
-    writeServerError(w, "fn path - Error from getTaxonData", "", err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "Error from getTaxonData. Params: %d, %t, %s",
+        start, plain, fieldComposite,  
+      ),
+      "",
+      err,
+    )
     return
   }
   data = append(data, tax)
@@ -2722,7 +2908,12 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func programEndpoint(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func programEndpoint(
+    w http.ResponseWriter,
+    r *http.Request,
+    selfNode *Node,
+    args ...any,
+  ) {
     //<<Check for input, Pa. \ref{pa:api}>>
     //<<Get dbPath and program name, Pa. \ref{pa:api}>>
     //<<Get context, Pa. \ref{pa:api}>>
@@ -3049,7 +3240,12 @@ type Node struct {
   var params map[string]string
   _, params, err = mime.ParseMediaType(cd)
   if err != nil {
-    writeServerError(w, "Error while parsing media type of multipart file", "", err)
+    writeServerError(
+      w,
+      "Error while parsing media type of multipart file",
+      "",
+      err,
+    )
     return
   }
   filename := params["filename"]
@@ -3118,7 +3314,15 @@ type Node struct {
   if cmdErr.Len() != 0 {
     writeBadRequestResp(w, cmdErr.String())
   } else if err != nil {
-    writeServerError(w, "Failed while calling neighbors program.", err.Error(), err)
+    writeServerError(
+      w,
+      fmt.Sprintf(
+        "Failed while calling neighbors program. Argv: %v",
+        cmd.Args,
+      ),
+      err.Error(),
+      err,
+    )
   } else {
     w.Header().Set("Content-Type", plainCt.String())
     w.Write(res.Bytes())

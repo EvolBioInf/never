@@ -33,7 +33,7 @@
       "description": "Endpoints executing programs"
     },
     {
-      "name": "Misc",
+      "name": "Miscellaneous",
       "description": "Miscellaneous endpoints"
     }
   ],
@@ -175,7 +175,7 @@
         "operationId": "get_services",
         "parameters": [],
         "description": "Get a list of the api's services",
-        "tags": ["Misc"]
+        "tags": ["Miscellaneous"]
       }
     },
     "/accessions": {
@@ -294,6 +294,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_accessions",
@@ -326,7 +329,7 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Get accessions and their levels filtered by accession IDs"
+        "description": "Get accessions and their assembly levels filtered by accession IDs"
       }
     },
     "/accessions/{accession_id}": {
@@ -408,6 +411,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_accession",
@@ -419,7 +425,7 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Get accession and it's level"
+        "description": "Get accession and its assembly level"
       },
       "parameters": [
         {
@@ -437,7 +443,7 @@
     "/databases": {
       "get": {
         "summary": "Get active databases",
-        "tags": ["Misc"],
+        "tags": ["Miscellaneous"],
         "responses": {
           "200": {
             "description": "OK",
@@ -675,6 +681,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxa",
@@ -852,6 +861,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxa_taxon_id",
@@ -979,6 +991,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxa_taxon_id_children",
@@ -1125,6 +1140,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxa_taxon_id_parent",
@@ -1346,6 +1364,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxa_taxon_id_subtree",
@@ -1438,7 +1459,7 @@
         },
         "operationId": "get_taxonomy_enpoints",
         "parameters": [],
-        "description": "Get the endpoints provided under the taxonomy route",
+        "description": "Get subservices of the taxonomy path",
         "tags": ["Taxon"]
       },
       "parameters": []
@@ -1617,6 +1638,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxonomy_accessions",
@@ -1772,6 +1796,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxonomy_mrca",
@@ -2157,10 +2184,13 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxonomy_path",
-        "description": "Get the path between a start taxon, that is further from root and an end taxon that is closer to root.\nReturns an empty list if no path connects start and end",
+        "description": "Get the path between a start taxon, that is further from the root and an end taxon that is closer to the root.\nReturns an empty list if no path connects start and end",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -2269,7 +2299,7 @@
         },
         "operationId": "get_programs_endpoints",
         "parameters": [],
-        "description": "Get the endpoints provided under the taxonomy route",
+        "description": "Get subservices of the programs path",
         "tags": ["Program"]
       },
       "parameters": []
@@ -2298,6 +2328,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_programs_ants",
@@ -2349,6 +2382,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_programs_dree",
@@ -2402,6 +2438,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "query-programs-fintac",
@@ -2476,6 +2515,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_programs_neighbors",
@@ -2526,10 +2568,13 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "query-programs-neighbors",
-        "description": "Executes the program neighbors remotely with files",
+        "description": "Executes the program neighbors remotely with one or more files of target taxa",
         "parameters": [
           {
             "schema": {
@@ -2600,6 +2645,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_programs_ranks",
@@ -2650,10 +2698,13 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "query-programs-ranks",
-        "description": "Executes the neighbors program ranks remotely with files",
+        "description": "Executes the neighbors program ranks remotely with one file of genome accessions",
         "parameters": [
           {
             "schema": {
@@ -2710,6 +2761,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_programs_taxi",

@@ -682,11 +682,9 @@ import (
     for {
 	    time.Sleep(5 * time.Minute)
 		  userLimiters.mu.Lock()
-      fmt.Println(ul.ma)
 	    for k := range userLimiters.ma {
 	    	delete(userLimiters.ma, k)
 	    }
-      fmt.Println(ul.ma)
 		  userLimiters.mu.Unlock()
     }
   }(&userLimiters)
@@ -702,7 +700,8 @@ import (
 
 #+begin_src go <<Create timeout middleware, Pr. \ref{pr:main}>>=
 	middlewareTimeout := func(next http.Handler, d time.Duration) http.Handler {
-		return http.TimeoutHandler(next, d, "Request timed out.\n")
+		return http.TimeoutHandler(next, d, "Request timed out. Please compute " + 
+      "large requests locally.\n")
 	}
 #+end_src
 
@@ -722,7 +721,7 @@ import (
 
 #+begin_export latex
   Now lets get into starting the server. Here we need to define the
-  middleware chain first. By default a request should be limited to 15 seconds.
+  middleware chain first. By default a request should be limited to 30 seconds.
   Next up is the server object, which needs creating. Running the server is the
   next step. Lastly we need to take care of shutting down the server. This
   entails checking if a termination signal was send, passing it down to the
@@ -730,10 +729,13 @@ import (
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
-  handlerChain := middlewareTimeout(
-		middlewareLimiter(
-			middlewareLogger(http.DefaultServeMux)),
-		15*time.Second)
+  handlerChain := 
+    middlewareLogger(
+			middlewareLimiter(
+			  middlewareTimeout(
+					http.DefaultServeMux,
+				  30*time.Second,
+    )))
   //<<Determine server address, Pr. \ref{pr:main}>>
   //<<Create server, Pr. \ref{pr:main}>>
   //<<Run server, Pr. \ref{pr:main}>>

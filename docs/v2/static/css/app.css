@@ -3,6 +3,7 @@
   --secondary-color: #495057;
   --accent-color: #006c66;
   --post-color: #aaaa22;
+  --query-color: #2277aa;
   --get-color: #00aa66;
   color: var(--secondary-color);
   background-color: var(--primary-color);

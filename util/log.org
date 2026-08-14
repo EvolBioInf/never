@@ -1,7 +1,8 @@
 #+begin_export latex
   Log is a custom log providing deffered logging functionality. Data is written
-  to buffers and copied to files during off time. This log works in a debounce like fashion.
-  Data is written to it, stored in buffers and written to files some later time.
+  to buffers and copied to files during off time. This log works in a debounce 
+  like fashion. Data is written to it, stored in buffers and written to files
+  some later time.
 #+end_export
 
 #+begin_src go <<log.go>>=
@@ -19,29 +20,33 @@
 
 #+begin_export latex
   \section{\ty{SetupLog}}
-  \ty{SetupLog} sets up the logger for deferred writing. This means it has to create files to write to and
-  set variables needed in the process. We write down the global variables necessary for this
-  which are the info and warning files, buffers to write to those files, we use the csv pacakge for this,
-  a timer which calls a logging function, which needs need to be implemented later on. Lastly we need
-  to define the interval in which the logging function is called.
+  \ty{SetupLog} sets up the logger for deferred writing. This means it has to 
+  create files to write to and set variables needed in the process. We write
+  down the global variables necessary for this. These are the info and warning
+  files, as well as there respective buffers. The http server is multithreaded. 
+  Adding a mutexes for the buffers prevents race conditions. While the log is 
+  called synchronously, writing is done asynchronously. This requires variables 
+  for a timer and an interval. 
 #+end_export
 
 #+begin_src go <<Variables, Pa. \ref{pa:uti}>>=
   var infoBuffer, warningBuffer *csv.Writer
   var infoFile, warningFile *os.File
+  var infoMutex, warningMutex sync.Mutex
   var timer *time.Timer
   var interval time.Duration
 #+end_src
 
 #+begin_export latex
-  We import \ty{encoding/csv}, \ty{fmt}, \ty{time} and \ty{os}.
+  We import \ty{encoding/csv}, \ty{fmt}, \ty{os}, \ty{time} and \ty{sync}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:uti}>>=
 	"encoding/csv"
 	"fmt"
-	"time"
   "os"
+	"time"
+	"sync"
 #+end_src
 
 #+begin_export latex
@@ -125,12 +130,15 @@
 #+end_src
 
 #+begin_export latex
-  Go doesn't seem to provide access to keynames or tags unless using the \ty{reflect} package, which I'm trying
-  to avoid. We will write two functions per entry, which will simulate this for us. Sadly those need to be
-  kept in sync with the actual structs manually. These functions are called \ty{Keys} and \ty{Values}.
-  \ty{Keys} returns an array of string literals, which represent each key of the struct. \ty{Values}
-  returns an array of strings composed of each property's value. Again I don't like hardcoding this, but
-  I'm lacking a better way to do this without getting the keys via reflect and looping over them.
+  Go doesn't seem to provide access to keynames or tags unless using the 
+  \ty{reflect} package, which I'm trying to avoid. We will write two functions
+  per entry, which will simulate this for us. Sadly those need to be kept in
+  sync with the actual structs manually. These functions are called \ty{Keys} 
+  and \ty{Values}. \ty{Keys} returns an array of string literals, which
+  represent each key of the struct. \ty{Values} returns an array of strings
+  composed of each property's value. Again I don't like hardcoding this, but
+  I'm lacking a better way to do this without getting the keys via reflect and
+  looping over them.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
@@ -183,8 +191,8 @@
 #+end_src
 
 #+begin_export latex
-  Now we define an interface for those two types. We can use this for convenience when doing action that are
-  equivalent for both entry types.
+  Now we define an interface for those two types. We can use this for 
+  convenience when doing action that are equivalent for both entry types.
 #+end_export
 
 #+begin_src go <<Interfaces, Pa. \ref{pa:uti}>>=
@@ -195,19 +203,23 @@
 #+end_src
 
 #+begin_export latex
-  Having defined all types, functions and an interface to work with these entries, we may now call the
-  handle function. Closing the files and cleaning up this logger is going to be handled by a separate function
-  later on.
+  Having defined all types, functions and an interface to work with these 
+  entries, we may now call the handle function. Closing the files and cleaning
+  up this logger is going to be handled by a separate function later on.
 #+end_export
 
 #+begin_src go <<Call handle file open function, Pa. \ref{pa:uti}>>=
 	infoFile, infoBuffer = handleFileOpen(dir+"info.csv", InfoEntry{})
-	warningFile, warningBuffer = handleFileOpen(dir+"warning.csv", WarningEntry{})
+	warningFile, warningBuffer = handleFileOpen(
+    dir+"warning.csv",
+    WarningEntry{},
+  )
 #+end_src
 
 #+begin_export latex
-  In order to check whether we need to write the header we look at the file size. If the file is empty, it was just
-  created, so we write the header, otherwise we don't. We use os.Stat to check the file's size.
+  In order to check whether we need to write the header we look at the file
+  size. If the file is empty, it was just created, so we write the header,
+  otherwise we don't. We use os.Stat to check the file's size.
 #+end_export
 
 #+begin_src go <<Write csv header, Pa. \ref{pa:uti}>>=
@@ -236,48 +248,65 @@
 
 #+begin_export latex
   \section{\ty{LogInfoDef}}
-  \ty{LogInfoDef} writes to the info buffer used by the periodically called \ty{logBuffs} function.
-  It also starts the logging timer if it's not running.
+  \ty{LogInfoDef} writes to the info buffer used by the periodically called
+  \ty{logBuffs} function. It also starts the logging timer if it's not running.
+  Logging may be called by multiple functions at once. We use a mutex to avoid
+  race conditions.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
 func LogInfoDef(e InfoEntry) {
 	e.timestamp = time.Now().Format(time.DateTime)
+  infoMutex.Lock()
 	infoBuffer.Write(e.Values())
+  infoMutex.Unlock()
   setTimer()
 }
 #+end_src
 
 #+begin_export latex
   \section{\ty{LogWarningDef}}
-  \ty{LogWarningDef} writes to the warning buffer used by the periodically called \ty{logBuffs} function.
-  It also starts the logging timer if it's not running.
+  \ty{LogWarningDef} writes to the warning buffer used by the periodically
+  called \ty{logBuffs} function. It also starts the logging timer if it's not
+  running. Logging may be called by multiple functions at once. We use a mutex
+  to avoid race conditions.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
 func LogWarningDef(e WarningEntry) {
 	e.timestamp = time.Now().Format(time.DateTime)
+  warningMutex.Lock()
 	warningBuffer.Write(e.Values())
+  warningMutex.Unlock()
   setTimer()
 }
 #+end_src
 
 #+begin_export latex
-  \section{\ty{logBuffs}}
-  \ty{logBuffs} writes the buffers to the log files and removes the timer reference.
+  \ty{logBuffs} writes the buffers to the log files and removes the timer
+  reference. Each flush requires the mutex again. We don't want to be in both 
+  critical sections at the same time. Unlocking one mutex before requesting the
+  next prevents double mutex requiring deadlocks.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
 func logBuffs() {
+  infoMutex.Lock()
 	infoBuffer.Flush()
+  infoMutex.Unlock()
+
+  warningMutex.Lock()
 	warningBuffer.Flush()
+  warningMutex.Unlock()
+  
   timer = nil
 }
 #+end_src
 
 #+begin_export latex
   \section{\ty{StopLogging}}
-  \ty{StopLogging} shuts down the logging timer, writes the remaining buffers and closes the files.
+  \ty{StopLogging} shuts down the logging timer, writes the remaining buffers 
+  and closes the files.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=

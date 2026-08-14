@@ -223,23 +223,25 @@ func main() {
 		for {
 			time.Sleep(5 * time.Minute)
 			userLimiters.mu.Lock()
-			fmt.Println(ul.ma)
 			for k := range userLimiters.ma {
 				delete(userLimiters.ma, k)
 			}
-			fmt.Println(ul.ma)
 			userLimiters.mu.Unlock()
 		}
 	}(&userLimiters)
 
 	middlewareTimeout := func(next http.Handler, d time.Duration) http.Handler {
-		return http.TimeoutHandler(next, d, "Request timed out.\n")
+		return http.TimeoutHandler(next, d, "Request timed out. Please compute "+
+			"large requests locally.\n")
 	}
 
-	handlerChain := middlewareTimeout(
-		middlewareLimiter(
-			middlewareLogger(http.DefaultServeMux)),
-		15*time.Second)
+	handlerChain :=
+		middlewareLogger(
+			middlewareLimiter(
+				middlewareTimeout(
+					http.DefaultServeMux,
+					30*time.Second,
+				)))
 	var addr string
 	if isLocal {
 		addr = fmt.Sprintf(":%d", port)
