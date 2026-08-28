@@ -143,12 +143,13 @@ func (l *Limiter) Free(r *http.Request, limits UrlNode) {
 		urlCost = node.cpuCost
 	}
 
+	fmt.Printf("in Free\n")
 	l.mu.Lock()
 	l.usage -= urlCost
 	if l.usage < 0.0 {
 		l.usage = 0.0
-		fmt.Printf("Freeing: %f, Usage: %f\n", urlCost, l.usage)
 	}
+	fmt.Printf("Freeing: %f, Usage: %f\n", urlCost, l.usage)
 	l.mu.Unlock()
 
 }
