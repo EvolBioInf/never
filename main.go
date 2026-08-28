@@ -154,8 +154,13 @@ func (l *Limiter) Free(r *http.Request, limits UrlNode) {
 
 }
 
+type UserLimiter struct {
+	l Limiter
+	t time.Time
+}
+
 type SyncMap struct {
-	ma map[string]*Limiter
+	ma map[string]*UserLimiter
 	mu sync.Mutex
 }
 
@@ -318,7 +323,7 @@ func main() {
 
 	generalLimiter := Limiter{usage: 0, limit: 85}
 
-	userLimiters := SyncMap{ma: make(map[string]*Limiter)}
+	userLimiters := SyncMap{ma: make(map[string]*UserLimiter)}
 
 	middlewareLimiter := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -333,17 +338,20 @@ func main() {
 					userLimiters.mu.Lock()
 					userLimiter, ok := userLimiters.ma[ip]
 					if !ok {
-						userLimiter = new(Limiter{usage: 0.0, limit: 30.0})
+						userLimiter = new(UserLimiter{
+							l: Limiter{usage: 0.0, limit: 30.0},
+							t: time.Now(),
+						})
 						userLimiters.ma[ip] = userLimiter
 					}
 					userLimiters.mu.Unlock()
 
-					allowed := userLimiter.Reserve(r, urlLimits)
+					allowed := userLimiter.l.Reserve(r, urlLimits)
 
 					if allowed {
 						next.ServeHTTP(w, r)
 						generalLimiter.Free(r, urlLimits)
-						userLimiter.Free(r, urlLimits)
+						userLimiter.l.Free(r, urlLimits)
 					} else {
 						w.WriteHeader(http.StatusTooManyRequests)
 						w.Write([]byte("You've exceed your rate limit\n"))
@@ -364,10 +372,15 @@ func main() {
 		for {
 			time.Sleep(5 * time.Minute)
 			userLimiters.mu.Lock()
+			threshold := time.Now().Add(time.Minute * -5)
 			for k := range userLimiters.ma {
-				delete(userLimiters.ma, k)
+				if userLimiters.ma[k].t.Before(threshold) {
+					delete(userLimiters.ma, k)
+				}
 			}
 			userLimiters.mu.Unlock()
+			fmt.Print("cleared map ")
+			fmt.Println(userLimiters)
 		}
 	}(&userLimiters)
 

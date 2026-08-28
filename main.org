@@ -572,26 +572,28 @@ import (
 
 #+begin_src go <<Create limiter middleware, Pr. \ref{pr:main}>>=
   //<<Read configuration file, Pr. \ref{pr:main}>>
-  PrintTree(urlLimits, 0)
-
   //<<Initialize general limiter, Pr. \ref{pr:main}>>
   //<<Declare per user limiter, Pr. \ref{pr:main}>>
   //<<Write limiter middleware, Pr. \ref{pr:main}>>
   //<<Clear limiter map periodically, Pr. \ref{pr:main}>>
 #+end_src
 
+#+begin_export latex
+  We add a small utility function, which eases debugging, when checking the
+  tree's correctness.
+#+end_export
+
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-  func PrintTree(node UrlNode, depth int) {
+  func printTree(node UrlNode, depth int) {
     for range depth {
       fmt.Print(" ")
     }
     fmt.Printf(node.prefix + " | Cost: %.2f\n", node.cpuCost)
     for _, child := range node.children {
-      PrintTree(child, depth + 2)
+      printTree(child, depth + 2)
     }
   }
 #+end_src
-
 
 #+begin_export latex
   The config file is called \ty{rate_config.json}. It needs to be embedded to
@@ -757,7 +759,6 @@ import (
   l.mu.Lock()
   if urlCost + l.usage < l.limit {
     l.usage += urlCost
-    fmt.Printf("Reserving: %f, Usage: %f\n", urlCost, l.usage)
     resp = true
   }
   l.mu.Unlock()
@@ -807,13 +808,11 @@ import (
 
 #+begin_src go <<Implement free limit, Pr. \ref{pr:main}>>=
   //<<Lookup url value, Pr. \ref{pr:main}>>
-  fmt.Printf("in Free\n")
   l.mu.Lock()
   l.usage -= urlCost
   if l.usage < 0.0 {
     l.usage = 0.0
   }
-  fmt.Printf("Freeing: %f, Usage: %f\n", urlCost, l.usage)
   l.mu.Unlock()
 #+end_src
 
@@ -828,14 +827,20 @@ import (
 
 #+begin_export latex
   The per user limiter is actually a map of many limiters. The map has ip
-  addresses as a key for user identification and their respective limiter as a
-  value. As the server runs concurrently, a mutex is required. We wrap both of
-  them in a struct for better handling.
+  addresses as a key for user identification. The value is an object containing
+  the user's limiter and a timestamp of the last request. As the server runs
+  concurrently, a mutex is required. We wrap both of them in a struct for
+  better handling.
 #+end_export
 
 #+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type UserLimiter struct {
+    l Limiter
+    t time.Time
+  }
+
   type SyncMap struct {
-    ma map[string]*Limiter
+    ma map[string]*UserLimiter
     mu sync.Mutex
   }
 #+end_src
@@ -845,7 +850,7 @@ import (
 #+end_export
 
 #+begin_src go <<Declare per user limiter, Pr. \ref{pr:main}>>=
-  userLimiters := SyncMap{ma: make(map[string]*Limiter)}
+  userLimiters := SyncMap{ma: make(map[string]*UserLimiter)}
 #+end_src
 
 #+begin_export latex
@@ -887,7 +892,7 @@ import (
       if allowed {
         next.ServeHTTP(w, r)
         generalLimiter.Free(r, urlLimits)
-        userLimiter.Free(r, urlLimits)
+        userLimiter.l.Free(r, urlLimits)
       } else {
         w.WriteHeader(http.StatusTooManyRequests)
         w.Write([]byte("You've exceed your rate limit\n"))
@@ -920,7 +925,10 @@ import (
   userLimiters.mu.Lock()
   userLimiter, ok := userLimiters.ma[ip]
   if !ok {
-		userLimiter = new(Limiter{usage: 0.0, limit: 30.0})
+		userLimiter = new(UserLimiter{
+      l: Limiter {usage: 0.0, limit: 30.0},
+      t: time.Now(),
+    })
 		userLimiters.ma[ip] = userLimiter
   }
   userLimiters.mu.Unlock()
@@ -941,13 +949,15 @@ import (
 #+end_export
 
 #+begin_src go <<Check user limiter, Pr. \ref{pr:main}>>=
-  allowed := userLimiter.Reserve(r, urlLimits)
+  allowed := userLimiter.l.Reserve(r, urlLimits)
 #+end_src
 
 #+begin_export latex
   The sync map now holds an entry for every ip address that ever requested
   anything. That's a little ambitious. We should clear the map every now and
-  then, reducing memory build up.
+  then, reducing memory build up. Every five minutes we loop through the map
+  and check timestamps. If the timestamp for the user is older than five
+  minutes, we clear their entry.
 #+end_export
 
 #+begin_src go <<Clear limiter map periodically, Pr. \ref{pr:main}>>=
@@ -955,8 +965,11 @@ import (
     for {
 	    time.Sleep(5 * time.Minute)
 		  userLimiters.mu.Lock()
+      threshold := time.Now().Add(time.Minute * -5)
 	    for k := range userLimiters.ma {
-	    	delete(userLimiters.ma, k)
+        if (userLimiters.ma[k].t.Before(threshold)) {
+	    	  delete(userLimiters.ma, k)
+        }
 	    }
 		  userLimiters.mu.Unlock()
     }
