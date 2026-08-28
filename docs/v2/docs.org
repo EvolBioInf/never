@@ -101,7 +101,7 @@
   we make all characters lowercased  as well.
   Then we join the strings and delete leading dashes as well as dashes followed
   by another dash. The path parameters are enclosed by curly brackets. We remove
-  those as well. If an argument is empty or just a \ty{/} we convert it to 
+  those as well. If an argument is empty or just a \ty{/} we convert it to
   \ty{em}.
 #+end_export
 
@@ -176,13 +176,13 @@
 #+begin_src go <<Embedded files, Pa. \ref{pa:docs}>>=
 	//go:embed pages/*
 	var pagesFS embed.FS
-  
+
 	//go:embed components/*
 	var componentsFS embed.FS
 #+end_src
 
 #+begin_export latex
-  We need to import the \ty{embed} package.
+  We import \ty{embed}.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
@@ -275,7 +275,7 @@ type Response struct {
 #+begin_export latex
   We might aswell provide the assigned prefix and the path to the databases, so
   the html pages may use them for dynamic linking. Same goes for the database
-  directory and local hosting options. All of them change the documentation's 
+  directory and local hosting options. All of them change the documentation's
   links.
 #+end_export
 
@@ -287,8 +287,8 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  Relative file references break whenever the binary is called from somewhere 
-  outside the top level directory. We already used the \ty{embed} package 
+  Relative file references break whenever the binary is called from somewhere
+  outside the top level directory. We already used the \ty{embed} package
   ealier to fix this. Let's do that again.
 #+end_export
 
@@ -298,7 +298,7 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  Our function for retrieving data, takes the data file, a flag stating, 
+  Our function for retrieving data, takes the data file, a flag stating,
   whether this is hosted locally and lastly the server's port.
 #+end_export
 
@@ -579,10 +579,10 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   We reduce parsing the request's body to reading a few fields. The body may
-  be made up of lots of complex content types and further examples, but we are 
+  be made up of lots of complex content types and further examples, but we are
   not using those. As defined above, all we are looking for are a description,
   which is a string and a mime type. There are just a few endpoints supporting
-  request bodies. This means we need to check the body's existence before 
+  request bodies. This means we need to check the body's existence before
   parsing it.
 #+end_export
 
@@ -639,13 +639,13 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  Appending the query parameters is relatively straight forward. If there are 
+  Appending the query parameters is relatively straight forward. If there are
   any query parameters, that have examples we append a question mark. We then
   iterate over the parameters, if they have an example value we append their
   name followed by '=' and the example value. The discriminator is defined as
-  '&'. Array parameters might have an explode option. The explode options 
-  says that instead of passing array items in one comma separated string, we 
-  need to pass them as separate arguments, each prefixed by the parameters 
+  '&'. Array parameters might have an explode option. The explode options
+  says that instead of passing array items in one comma separated string, we
+  need to pass them as separate arguments, each prefixed by the parameters
   name.
 #+end_export
 
@@ -730,7 +730,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   To differentiate between response codes we first check whether it is of code
-  200 (OK). If it is we need to make sure that is has content. A single 
+  200 (OK). If it is we need to make sure that is has content. A single
   response code may store multiple response contents, meaning we need to
   iterate over the provided map. This is also the only step were the acceptable
   content types are defined. Mime types/ content types of 200 (OK) responses
@@ -752,7 +752,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   Parsing the schema is rather complex. So we divide the problem into multiple
-  steps. Step one is building the schema. Then we need to get a better 
+  steps. Step one is building the schema. Then we need to get a better
   representation. The next step is to parse the new representation. Lastly we
   need to write the result into our \ty{Operation} type.
 #+end_export
@@ -779,13 +779,13 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  To get this schema in a more manageable representation, we are going to 
+  To get this schema in a more manageable representation, we are going to
   unwrap it. My idea of unwrapping an object consists of two steps:
-  The first one is to use the yaml representation to create a json string, 
-  essentially marshalling it. The second step is unmarshalling it, to get a 
+  The first one is to use the yaml representation to create a json string,
+  essentially marshalling it. The second step is unmarshalling it, to get a
   json object. I use this marshal and unmarshal strategy to get the json out of
   the libraries \ty{yaml.Node} format. It might be possible to do all of this
-  in one go, but I don't see how, given the example's node structure. 
+  in one go, but I don't see how, given the example's node structure.
 #+end_export
 
 #+begin_src go <<Change schema representation, Pa. \ref{pa:docs}>>=
@@ -800,7 +800,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   Marshalling requires \ty{encoding/json}. This package provides json
-  specific utility functions. Most importantly it allows us to pretty print 
+  specific utility functions. Most importantly it allows us to pretty print
   using \ty{MarshalIndent}. So we need to import the package.
 #+end_export
 
@@ -995,12 +995,12 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  Unwrapping the response is again about marshalling and unmarshalling the 
-  json. If the response schema is plain text, i.e. the response is a single 
+  Unwrapping the response is again about marshalling and unmarshalling the
+  json. If the response schema is plain text, i.e. the response is a single
   string, we need to modify the example. The plain text examples are enclosed
   in \ty{"}, to comply with json format. The actual response however is not
-  enclosed by \ty{"}. So we need to remove this. Then there is a \ty{\n} 
-  string, which should instead be single rune, and lastly there are 
+  enclosed by \ty{"}. So we need to remove this. Then there is a \ty{\n}
+  string, which should instead be single rune, and lastly there are
   escaped quotation marks \ty{"}, in the strings, which need to be unescaped.
 #+end_export
 
@@ -1012,7 +1012,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 	if err != nil {
 		panic(fmt.Sprintf("cannot unwrap example: %e", err))
 	}
-	
+
   if newOperation.Schema == `"string"` {
     rawStr := string(unwrapped)
     rawStr = rawStr[1:len(rawStr)-1]
@@ -1028,7 +1028,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
   The value of \ty{ExampleResponse}, is directly passed to an html tag, that
   renders it as is. \ty{Marshal} introduces html escaping which clashes with
   the html tag we use for rendering. We quickly write a custom version for
-  unmarshal using the json encoder, which avoids html escaping, but keeps 
+  unmarshal using the json encoder, which avoids html escaping, but keeps
   indentation and overall pretty printing.
 #+end_export
 
@@ -1044,15 +1044,15 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  We are now done retrieving the data. Which means we can start adding 
+  We are now done retrieving the data. Which means we can start adding
   handlers. The most important route is for the documentation itself. This
   documentation uses static files and links to the database directory. We need
   to server those later on as well.
 #+end_export
 
 #+begin_src go <<Handle base route, Pa. \ref{pa:docs}>>=
-	http.HandleFunc(prefix, 
-    func(w http.ResponseWriter, r *http.Request) { 
+	http.HandleFunc(prefix,
+    func(w http.ResponseWriter, r *http.Request) {
       defaultHandler(tmpl, &content, w, r)
     })
 #+end_src
@@ -1077,7 +1077,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_src
 
 #+begin_export latex
-  As already mentioned the frontend relies on static files. Those are mostly 
+  As already mentioned the frontend relies on static files. Those are mostly
   style sheets. Serving those requires a fileserver. We again use \ty{embed} to
   keep file access when using binaries. To improve url readability and conform
   to the given prefix we make use of the stripprefix function, when registering
@@ -1087,12 +1087,12 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
   // The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
   // The path before that are the ones I may use within the browser to ask for these files from the file server.
-  http.Handle(prefix+"/static/", 
+  http.Handle(prefix+"/static/",
     http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 #+end_src
 
 #+begin_export latex
-  We use another fileserver for for serving the databases. We don't need to 
+  We use another fileserver for for serving the databases. We don't need to
   embed those, as the user defines the path, when calling \ty{never}.
 #+end_export
 

@@ -39,7 +39,7 @@ test: test_db all
 	SERVER_PID=$$! ; \
 	trap "kill $$SERVER_PID" EXIT ; \
 	sleep 1 ; \
-	for dir in $(TESTDIRS); do \
+for dir in $(TESTDIRS); do \
 		$(MAKE) -C $$dir test; \
 	done
 

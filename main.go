@@ -26,7 +26,9 @@ import (
 
 	"time"
 
-	"golang.org/x/time/rate"
+	_ "embed"
+
+	"encoding/json"
 
 	"sync"
 
@@ -58,10 +60,106 @@ func (w *CustomResponseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
+type RawUrl struct {
+	Url     string  `json:"url"`
+	CpuCost float64 `json:"CpuCost"`
+}
+
+type UrlNode struct {
+	prefix   string
+	cpuCost  float64
+	children []UrlNode
+}
+
+type Limiter struct {
+	usage float64
+	limit float64
+	mu    sync.Mutex
+}
+
+func (l *Limiter) Reserve(r *http.Request, limits UrlNode) bool {
+	urlCost := 0.0
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	node := limits
+	inTree := true
+	for i := 0; i < len(parts) && inTree; i++ {
+		part := parts[i]
+		var idx int
+		idx, inTree = slices.BinarySearchFunc(
+			node.children,
+			part,
+			func(a UrlNode, b string) int {
+				if a.prefix == "*" {
+					return 0
+				}
+				return strings.Compare(a.prefix, b)
+			})
+		if inTree {
+			node = node.children[idx]
+		}
+	}
+
+	if inTree {
+		urlCost = node.cpuCost
+	}
+
+	resp := false
+	l.mu.Lock()
+	if urlCost+l.usage < l.limit {
+		l.usage += urlCost
+		fmt.Printf("Reserving: %f, Usage: %f\n", urlCost, l.usage)
+		resp = true
+	}
+	l.mu.Unlock()
+	return resp
+
+}
+
+func (l *Limiter) Free(r *http.Request, limits UrlNode) {
+	urlCost := 0.0
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	node := limits
+	inTree := true
+	for i := 0; i < len(parts) && inTree; i++ {
+		part := parts[i]
+		var idx int
+		idx, inTree = slices.BinarySearchFunc(
+			node.children,
+			part,
+			func(a UrlNode, b string) int {
+				if a.prefix == "*" {
+					return 0
+				}
+				return strings.Compare(a.prefix, b)
+			})
+		if inTree {
+			node = node.children[idx]
+		}
+	}
+
+	if inTree {
+		urlCost = node.cpuCost
+	}
+
+	l.mu.Lock()
+	l.usage -= urlCost
+	if l.usage < 0.0 {
+		l.usage = 0.0
+		fmt.Printf("Freeing: %f, Usage: %f\n", urlCost, l.usage)
+	}
+	l.mu.Unlock()
+
+}
+
 type SyncMap struct {
-	ma map[string]*rate.Limiter
+	ma map[string]*Limiter
 	mu sync.Mutex
 }
+
+//go:embed rate_config.json
+var rateConfig []byte
 
 func main() {
 	certificate,
@@ -164,7 +262,11 @@ func main() {
 				if err != nil {
 					util.LogWarningDef(
 						util.WarningEntry{
-							Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+							Warning: fmt.Sprintf(
+								"Couldn't parse remote address %s during %s request",
+								r.RemoteAddr,
+								r.URL.Path,
+							),
 						})
 				}
 
@@ -183,35 +285,73 @@ func main() {
 		})
 	}
 
-	generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
-	userLimiters := SyncMap{ma: make(map[string]*rate.Limiter)}
+	var rawUrls []RawUrl
+	err = json.Unmarshal(rateConfig, &rawUrls)
+
+	slices.SortFunc(rawUrls, func(a, b RawUrl) int {
+		return strings.Compare(a.Url, b.Url)
+	})
+	urlLimits := UrlNode{}
+	for _, rawUrl := range rawUrls {
+		urlParts := strings.Split(rawUrl.Url, "/")
+		curr := &urlLimits
+		for _, part := range urlParts {
+			idx, found := slices.BinarySearchFunc(
+				curr.children,
+				part,
+				func(a UrlNode, b string) int {
+					return strings.Compare(a.prefix, b)
+				})
+
+			if found {
+				curr = &curr.children[idx]
+			} else {
+				node := UrlNode{prefix: part, cpuCost: rawUrl.CpuCost}
+				curr.children = append(curr.children, node)
+				curr = &curr.children[len(curr.children)-1]
+			}
+		}
+	}
+
+	PrintTree(urlLimits, 0)
+
+	generalLimiter := Limiter{usage: 0, limit: 85}
+
+	userLimiters := SyncMap{ma: make(map[string]*Limiter)}
 
 	middlewareLimiter := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
-			if !allowed {
-				if generalLimiter.Allow() {
+			rateLimiting := !noRateLimit
+			if rateLimiting {
+				if generalLimiter.Reserve(r, urlLimits) {
 					ip, _, err := net.SplitHostPort(r.RemoteAddr)
 					if err != nil {
 						fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
 					}
 
 					userLimiters.mu.Lock()
-					lim, ok := userLimiters.ma[ip]
+					userLimiter, ok := userLimiters.ma[ip]
 					if !ok {
-						lim = rate.NewLimiter(rate.Limit(10), 25)
-						userLimiters.ma[ip] = lim
+						userLimiter = new(Limiter{usage: 0.0, limit: 30.0})
+						userLimiters.ma[ip] = userLimiter
 					}
-
-					allowed = lim.Allow()
 					userLimiters.mu.Unlock()
 
-				}
-			}
+					allowed := userLimiter.Reserve(r, urlLimits)
 
-			if !allowed {
-				w.WriteHeader(http.StatusTooManyRequests)
-				w.Write([]byte("Exceeded rate limit\n"))
+					if allowed {
+						next.ServeHTTP(w, r)
+						generalLimiter.Free(r, urlLimits)
+						userLimiter.Free(r, urlLimits)
+					} else {
+						w.WriteHeader(http.StatusTooManyRequests)
+						w.Write([]byte("You've exceed your rate limit\n"))
+						generalLimiter.Free(r, urlLimits)
+					}
+				} else {
+					w.WriteHeader(http.StatusServiceUnavailable)
+					w.Write([]byte("Server is busy\n"))
+				}
 			} else {
 				next.ServeHTTP(w, r)
 			}
@@ -269,20 +409,38 @@ func main() {
 	<-term.Done()
 
 	fmt.Println("...Stopping server")
-	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		1500*time.Millisecond,
+	)
 	defer cancel()
 	err = s.Shutdown(ctx)
 
 	if err != nil {
-		util.LogInfoDef(util.InfoEntry{Description: "Server shutdown with error: " + err.Error()})
+		util.LogInfoDef(
+			util.InfoEntry{
+				Description: "Server shutdown with error: " + err.Error(),
+			})
 	} else {
-		util.LogInfoDef(util.InfoEntry{Description: "Server shutdown gracefully"})
+		util.LogInfoDef(
+			util.InfoEntry{
+				Description: "Server shutdown gracefully",
+			})
 	}
 	fmt.Println("Shutdown complete")
 
 }
 
-func ioHandling() (string, string, string, string, string, string, int, bool) {
+func ioHandling() (
+	string,
+	string,
+	string,
+	string,
+	string,
+	string,
+	int,
+	bool,
+) {
 	util.PrepLog("never")
 
 	clio.Usage(
@@ -316,4 +474,14 @@ func ioHandling() (string, string, string, string, string, string, int, bool) {
 
 	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
 
+}
+
+func PrintTree(node UrlNode, depth int) {
+	for range depth {
+		fmt.Print(" ")
+	}
+	fmt.Printf(node.prefix+" | Cost: %.2f\n", node.cpuCost)
+	for _, child := range node.children {
+		PrintTree(child, depth+2)
+	}
 }
