@@ -99,7 +99,6 @@ func (l *Limiter) Reserve(r *http.Request, limits UrlNode) bool {
 			node = node.children[idx]
 		}
 	}
-
 	if inTree {
 		urlCost = node.cpuCost
 	}
@@ -108,7 +107,6 @@ func (l *Limiter) Reserve(r *http.Request, limits UrlNode) bool {
 	l.mu.Lock()
 	if urlCost+l.usage < l.limit {
 		l.usage += urlCost
-		fmt.Printf("Reserving: %f, Usage: %f\n", urlCost, l.usage)
 		resp = true
 	}
 	l.mu.Unlock()
@@ -138,18 +136,15 @@ func (l *Limiter) Free(r *http.Request, limits UrlNode) {
 			node = node.children[idx]
 		}
 	}
-
 	if inTree {
 		urlCost = node.cpuCost
 	}
 
-	fmt.Printf("in Free\n")
 	l.mu.Lock()
 	l.usage -= urlCost
 	if l.usage < 0.0 {
 		l.usage = 0.0
 	}
-	fmt.Printf("Freeing: %f, Usage: %f\n", urlCost, l.usage)
 	l.mu.Unlock()
 
 }
@@ -301,7 +296,8 @@ func main() {
 	for _, rawUrl := range rawUrls {
 		urlParts := strings.Split(rawUrl.Url, "/")
 		curr := &urlLimits
-		for _, part := range urlParts {
+		for i := range len(urlParts) {
+			part := urlParts[i]
 			idx, found := slices.BinarySearchFunc(
 				curr.children,
 				part,
@@ -312,14 +308,16 @@ func main() {
 			if found {
 				curr = &curr.children[idx]
 			} else {
-				node := UrlNode{prefix: part, cpuCost: rawUrl.CpuCost}
+				cost := 0.0
+				if i == len(urlParts)-1 {
+					cost = rawUrl.CpuCost
+				}
+				node := UrlNode{prefix: part, cpuCost: cost}
 				curr.children = append(curr.children, node)
 				curr = &curr.children[len(curr.children)-1]
 			}
 		}
 	}
-
-	PrintTree(urlLimits, 0)
 
 	generalLimiter := Limiter{usage: 0, limit: 85}
 
@@ -339,7 +337,7 @@ func main() {
 					userLimiter, ok := userLimiters.ma[ip]
 					if !ok {
 						userLimiter = new(UserLimiter{
-							l: Limiter{usage: 0.0, limit: 30.0},
+							l: Limiter{usage: 0.0, limit: 20.0},
 							t: time.Now(),
 						})
 						userLimiters.ma[ip] = userLimiter
@@ -354,7 +352,7 @@ func main() {
 						userLimiter.l.Free(r, urlLimits)
 					} else {
 						w.WriteHeader(http.StatusTooManyRequests)
-						w.Write([]byte("You've exceed your rate limit\n"))
+						w.Write([]byte("Rate limit exceeded\n"))
 						generalLimiter.Free(r, urlLimits)
 					}
 				} else {
@@ -379,8 +377,6 @@ func main() {
 				}
 			}
 			userLimiters.mu.Unlock()
-			fmt.Print("cleared map ")
-			fmt.Println(userLimiters)
 		}
 	}(&userLimiters)
 
@@ -490,12 +486,31 @@ func ioHandling() (
 
 }
 
-func PrintTree(node UrlNode, depth int) {
+func printTree(node UrlNode, depth int) {
 	for range depth {
 		fmt.Print(" ")
 	}
 	fmt.Printf(node.prefix+" | Cost: %.2f\n", node.cpuCost)
 	for _, child := range node.children {
-		PrintTree(child, depth+2)
+		printTree(child, depth+2)
 	}
+}
+
+var activeUrls = make(map[string]int)
+
+func updateMap(path string, add bool, generalLimiter *Limiter) {
+	generalLimiter.mu.Lock()
+	if add {
+		activeUrls[path]++
+	} else {
+		activeUrls[path]--
+		if activeUrls[path] < 1 {
+			delete(activeUrls, path)
+		}
+	}
+	fmt.Print("\033[H\033[2J")
+	for key := range activeUrls {
+		fmt.Printf("%s: %d\n", key, activeUrls[key])
+	}
+	generalLimiter.mu.Unlock()
 }

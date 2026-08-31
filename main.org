@@ -664,15 +664,15 @@ import (
 
 #+begin_export latex
   For assembling the tree we first sort the urls, then we iterate over them.
-  String-sorting the urls guarantees us to build the correct tree, one with
-  the correct cost at every node. If we find ourselves at a leaf before
-  reaching the end of the url, we know that the input was wrong, and can report
-  on that. The algorithm for building the tree is now as follows. We split each
-  url into its hierarchical parts. We check the children of the current node we
-  are looking at for one that matches the current part of the url. We follow
-  the nodes in the tree until we hit a node, that does not have child with the
-  current url part. At this point we should be at the end of the url as well
-  and append a node for the last part of the url, including its cost.
+  String-sorting the urls guarantees us to build the correct tree, one that 
+  represents the url hierarchy as intended the correct cost at every node. The
+  algorithm for building the tree is now as follows. We split each url into its
+  hierarchical parts. We check the children of the current node we are looking
+  at for one that matches the current part of the url. We follow the nodes in
+  the tree until we hit a node, that does not have child with the current url
+  part. We append a node for the missing part of the url. Cpu cost is 
+  associated only with the complete url. If the newly appended node does not 
+  represent the complete url, then we don't add a cost.
 #+end_export
 
 #+begin_src go <<Read configuration file, Pr. \ref{pr:main}>>=
@@ -683,7 +683,8 @@ import (
   for _, rawUrl := range rawUrls {
     urlParts := strings.Split(rawUrl.Url, "/")
     curr := &urlLimits
-    for _, part := range urlParts {
+		for i := range len(urlParts) {
+			part := urlParts[i]
       idx, found := slices.BinarySearchFunc(
         curr.children,
         part,
@@ -694,7 +695,11 @@ import (
       if found {
         curr = &curr.children[idx]
       } else {
-        node := UrlNode{prefix: part, cpuCost: rawUrl.CpuCost}
+        cost := 0.0
+        if i == len(urlParts) - 1 {
+          cost = rawUrl.CpuCost
+        } 
+        node := UrlNode{prefix: part, cpuCost: cost}
         curr.children = append(curr.children, node)
         curr = &curr.children[len(curr.children)-1]
       }
@@ -769,7 +774,7 @@ import (
   Looking up the url value means we need to walk through the tree until we
   matched all of the requested url. So we split the requested URL at every
   slash, match through the tree until we are done, or can't find a match
-  anymore. Asteriks are a match all and signify a path parameter.
+  anymore. Asterisks signify a match-all and symbolize a path parameter.
 #+end_export
 
 #+begin_src go <<Lookup url value, Pr. \ref{pr:main}>>=
@@ -794,7 +799,6 @@ import (
       node = node.children[idx]
     }
   }
-
   if inTree {
     urlCost = node.cpuCost
   }
@@ -876,11 +880,10 @@ import (
   response if either limiter denies processing. A 503 (Service Unavailable)
   signifies, that the server is overloading, while 429 (Too Many Requests),
   says that a client has exceed their limit.
-  We are reserving cpu load in
-  two independent limiters. This means we to free them independently as well.
-  So if the general limiter allows processing, but the user limiter does not,
-  we need to free the reserved load in the general limiter, before sending an
-  error response.
+  We are reserving cpu load in two independent limiters. This means we to free
+  them independently as well. So if the general limiter allows processing, but
+  the user limiter does not, we need to free the reserved load in the general
+  limiter, before sending an error response.
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
@@ -895,7 +898,7 @@ import (
         userLimiter.l.Free(r, urlLimits)
       } else {
         w.WriteHeader(http.StatusTooManyRequests)
-        w.Write([]byte("You've exceed your rate limit\n"))
+        w.Write([]byte("Rate limit exceeded\n"))
         generalLimiter.Free(r, urlLimits)
       }
     } else {
@@ -904,6 +907,26 @@ import (
     }
   } else {
     next.ServeHTTP(w, r)
+  }
+#+end_src
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  var activeUrls = make(map[string]int)
+  func updateMap(path string, add bool, generalLimiter *Limiter) {
+    generalLimiter.mu.Lock()
+    if add {
+      activeUrls[path]++
+    } else {
+      activeUrls[path]--
+      if activeUrls[path] < 1 {
+        delete(activeUrls, path)
+      }
+    }
+    fmt.Print("\033[H\033[2J")
+    for key := range activeUrls {
+      fmt.Printf("%s: %d\n", key, activeUrls[key])
+    }
+    generalLimiter.mu.Unlock()
   }
 #+end_src
 
@@ -926,7 +949,7 @@ import (
   userLimiter, ok := userLimiters.ma[ip]
   if !ok {
 		userLimiter = new(UserLimiter{
-      l: Limiter {usage: 0.0, limit: 30.0},
+      l: Limiter {usage: 0.0, limit: 20.0},
       t: time.Now(),
     })
 		userLimiters.ma[ip] = userLimiter

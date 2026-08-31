@@ -163,15 +163,15 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 }
 
 func retrieveData(local bool, port int) Content {
-	fmt.Println("docsV2: reading api document")
+	fmt.Println("docsV2: Reading api document")
 	spec, _ := staticFS.ReadFile("static/api_spec.json")
-	fmt.Println("docsV2: creating document")
+	fmt.Println("docsV2: Creating document")
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
 		panic(fmt.Sprintf("cannot create new document: %e", err))
 	}
 
-	fmt.Println("docsV2: building model")
+	fmt.Println("docsV2: Building model")
 	docModel, err := document.BuildV3Model()
 	if err != nil {
 		panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
