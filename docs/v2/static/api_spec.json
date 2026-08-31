@@ -170,6 +170,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_services",
@@ -462,6 +465,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get-databases",
@@ -1455,6 +1461,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_taxonomy_enpoints",
@@ -2295,6 +2304,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "operationId": "get_programs_endpoints",
