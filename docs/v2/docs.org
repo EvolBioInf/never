@@ -1097,7 +1097,7 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Handle database files, Pa. \ref{pa:docs}>>=
-	p := prefix + "/" + dbDirPath
+	p := "/" + dbDirPath
 	if !strings.HasSuffix(p, "/") {
 		p += "/"
 	}

@@ -338,12 +338,13 @@ import (
   which is this server. The first step to ensure that this works is preventing
   url clashes. While the packages should not know of each other they also
   should not register to the same routes. We prevent clashes by passing an url
-  prefix to each of them. Additionally to the prefix apiv2 needs to get
-  the databases. neverv1 receives prefixes both for the api and its
-  documentation. We further pass the path to the latest database and a path to
-  the datefile. docsv2 gets its prefix. It also needs to know whether it
-  is being hosted locally and on what port, so we need to provide data for
-  that. Lastly, we need to provide the directory to the databases.
+  prefix to each of them. Additionally to the prefix apiv2 needs to get the
+  databases. neverv1 receives prefixes both for the api and its documentation,
+  as well as the path to the database directory. We further pass the path to
+  the latest database and a path to the datefile. docsv2 gets its prefix. It
+  also needs to know whether it is being hosted locally and on what port, so we
+  need to provide data for that. Lastly, we need to provide the directory to 
+  the databases.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -353,8 +354,8 @@ import (
   docsV2Pref := docsPref + apiPref + "/v2"
   isLocal := host == "http://localhost"
 
-  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path,
-    dateFilePath)
+  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbDirPath,
+    dbs["latest"].Path, dateFilePath)
   apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
   docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 #+end_src

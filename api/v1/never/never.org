@@ -25,16 +25,24 @@ function.\bpr{never}{pa:nev}
   //<<Types, Pa. \ref{pa:nev}>>
   //<<Variables, Pa. \ref{pa:nev}>>
   //<<Functions, Pa. \ref{pa:nev}>>
-  func RegisterRoutes(apiPref, docsPref, dbPath, dateFilePath string) {
+  func RegisterRoutes(
+    apiPref,
+    docsPref,
+    dbDirPath,
+    dbPath,
+    dateFilePath string,
+  ) {
 	  //<<Register routes, Pa. \ref{pa:nev}>>
   }
 #+end_src
 #+begin_export latex
-\epr In the registerRoutes function set the global docsPrefix before we handle routes later on.
+\epr In the registerRoutes function set the global docsPrefix, apiPrefix and 
+path to the databases, before we handle routes later on.
 #+end_export
 #+begin_src go <<Register routes, Pa. \ref{pa:nev}>>=
   docsPrefix = docsPref
   apiPrefix = apiPref
+  dbDirectory = dbDirPath
   //<<Construct server, Pa. \ref{pa:nev}>>
 #+end_src
 #+begin_export latex
@@ -42,6 +50,7 @@ We need to declare the prefixes for the api and the docs globally, so that the h
 #+end_export
 #+begin_src go <<Variables, Pa. \ref{pa:nev}>>=
 var apiPrefix string
+var dbDirectory string
 var docsPrefix string
 #+end_src
 #+begin_export latex
@@ -136,20 +145,15 @@ and finally there are pages giving access to \ty{tdb} functions.
 #+end_src
 #+begin_export latex
 \subsection{Files}
-We serve two kinds of files. Style files and data files.
-#+end_export
-#+begin_src go <<Serve files, Pa. \ref{pa:nev}>>=
-  //<<Serve style files, Pa. \ref{pa:nev}>>
-  //<<Serve data files, Pa. \ref{pa:nev}>>
-#+end_src
 #+begin_export latex
+We serve only one kind of files, which is style files.
 The style files are locate in the directory \ty{static}. We make them
 available by registering a file server to that directory. We use the \ty{embed}
 package for deployment purposes. This bundles files for us and directories for
 us, rendering the file resolution independent of the current workind directory.
 The files are marked and resolved using go directives.
 #+end_export
-#+begin_src go <<Serve style files, Pa. \ref{pa:nev}>>=
+#+begin_src go <<Serve files, Pa. \ref{pa:nev}>>=
   staticFiles := http.FileServer(http.FS(staticFS))
   http.Handle(docsPrefix+"/static/", http.StripPrefix(docsPrefix,
 	  staticFiles))
@@ -167,14 +171,6 @@ We import \ty{http} and \ty{embed}.
 #+begin_src go <<Variables, Pa. \ref{pa:nev}>>=
 //go:embed static/*
 var staticFS embed.FS
-#+end_src
-#+begin_export latex
-The data files, finally, are located in the directory \ty{data}. We
-make them available by registering a file server to that directory.
-#+end_export
-#+begin_src go <<Serve data files, Pa. \ref{pa:nev}>>=
-  dataFiles := http.FileServer(http.Dir("data"))
-  http.Handle("/data/", http.StripPrefix("/data/", dataFiles))
 #+end_src
 #+begin_export latex
 \subsection{Start Page}
@@ -209,13 +205,17 @@ returned from executing the template.
 #+end_src
 #+begin_export latex
 As page data we set the title and the list of services offered, as awell as the
-assigned prefix. The list of services is potentially long, so we sort it. We also
-set the number of taxa and genomes, and when the database was last updated.
+assigned prefix and the path to the databases. The database path is determined 
+by user input, but we link to it on the website, so passing it to the html is 
+necessary. Then there is the list of services, which is potentially long. We 
+sort the service to accomodate. We also set the number of taxa and genomes, and
+when the database was last updated.
 #+end_export
 #+begin_src go <<Set index page data, Pa. \ref{pa:nev}>>=
   p.Title = "Neighbors"
   p.Services = services
   p.ApiPrefix = apiPrefix
+  p.DbDir = dbDirectory
   p.DocsPrefix = docsPrefix
   //<<Sort services, Pa. \ref{pa:nev}>>
   //<<Set number of taxa, Pa. \ref{pa:nev}>>
@@ -223,13 +223,14 @@ set the number of taxa and genomes, and when the database was last updated.
   //<<Set database time stamp, Pa. \ref{pa:nev}>>
 #+end_src
 #+begin_export latex
-We set the declare the fields \ty{ApiPrefix}, \ty{DocsPrefix}, \ty{Services} and \ty{Title} in
-``Neighbors''.
+We declare the fields \ty{ApiPrefix}, \ty{DbDir}, \ty{DocsPrefix}, 
+\ty{Services} and \ty{Title} in ``Neighbors''.
 #+end_export
 #+begin_src go <<\ty{PageData} fields, Pa. \ref{pa:nev}>>=
   Services []Service
   Title string
   ApiPrefix string
+  DbDir string
   DocsPrefix string
 #+end_src
 #+begin_export latex
@@ -490,9 +491,9 @@ from which the current database was built.
   <a href=https://www.ncbi.nlm.nih.gov> NCBI</a> to build a custom
   database. The compressed files we used for the construction of the
   current database can be downloaded from
-  <a href="https://neighbors.evolbio.mpg.de/data/neidbData.tgz">
+  <a href="https://neighbors.evolbio.mpg.de/{{.DbDir}}/neidbData.tgz">
     here</a>, the much larger sqlite database itself is
-  <a href="https://neighbors.evolbio.mpg.de/data/neidb">
+  <a href="https://neighbors.evolbio.mpg.de/{{.DbDir}}/neidb">
     here</a>.
 #+end_src
 #+begin_export latex
