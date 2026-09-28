@@ -48,14 +48,16 @@ import (
   we need be able to pass an address and a port for the server to run on. It
   would be nice if we could also define a path for the HTTPS/TLS files i.e. the
   certificate and the private key. Providing extra options for the database
-  directory path, a default among the databases of the directory, the date file
-  and a path for the logs results in a more flexible setup. It should be 
-  possible to toggle therate limit for debugging and testing purposes. This
-  results in seven strings, an integer and a boolean as a return tuple.
+  directory path, a default among the databases of the directory, the date 
+  file, a path for the logs and vitax results in a more flexible setup. It
+  should be possible to toggle therate limit for debugging and testing 
+  purposes. This results in seven strings, an integer and a boolean as a return
+  tuple.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   func ioHandling() (
+    string,
     string,
     string,
     string,
@@ -142,6 +144,7 @@ import (
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
   oFlag := flag.String("o", "http://localhost", "host address")
   lFlag := flag.String("l", "logs/", "directory for log storage")
+  vvFlag := flag.String("V", "vitax/", "directory containing vitax files")
   pFlag := flag.Int("p", 8080, "port")
   rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
   vFlag := flag.Bool("v", false, "print progam info")
@@ -153,7 +156,8 @@ import (
     os.Exit(0)
   }
 
-  return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *lFlag, *pFlag, *rFlag
+  return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag,
+    *oFlag, *lFlag, *vvFlag, *pFlag, *rFlag
 #+end_src
 
 #+begin_export latex
@@ -169,6 +173,7 @@ import (
   privateKey,
   host,
   logDir,
+  vitaxDir,
   port,
   noRateLimit := ioHandling()
 #+end_src
@@ -377,12 +382,12 @@ import (
 #+end_src
 
 #+begin_export latex
-  The Vitax files are located in directory \ty{vitax}. We make them
-  available by registering a file server to that directory.
+  We make the Vitax files available by registering a file server to that
+  directory.
 #+end_export
 
 #+begin_src go <<Serve Vitax files, Pr. \ref{pr:main}>>=
-  vitaxFiles := http.FileServer(http.Dir("vitax"))
+  vitaxFiles := http.FileServer(http.Dir(vitaxDir))
   http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src
 

@@ -170,6 +170,7 @@ func main() {
 		privateKey,
 		host,
 		logDir,
+		vitaxDir,
 		port,
 		noRateLimit := ioHandling()
 
@@ -241,7 +242,7 @@ func main() {
 	apiv2.RegisterRoutes(apiPref+"/v2", host+":"+strconv.Itoa(port), dbs)
 	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 
-	vitaxFiles := http.FileServer(http.Dir("vitax"))
+	vitaxFiles := http.FileServer(http.Dir(vitaxDir))
 	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 
 	http.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
@@ -450,6 +451,7 @@ func ioHandling() (
 	string,
 	string,
 	string,
+	string,
 	int,
 	bool,
 ) {
@@ -474,6 +476,7 @@ func ioHandling() (
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	oFlag := flag.String("o", "http://localhost", "host address")
 	lFlag := flag.String("l", "logs/", "directory for log storage")
+	vvFlag := flag.String("V", "vitax/", "directory containing vitax files")
 	pFlag := flag.Int("p", 8080, "port")
 	rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
 	vFlag := flag.Bool("v", false, "print progam info")
@@ -485,7 +488,8 @@ func ioHandling() (
 		os.Exit(0)
 	}
 
-	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *lFlag, *pFlag, *rFlag
+	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag,
+		*oFlag, *lFlag, *vvFlag, *pFlag, *rFlag
 
 }
 
