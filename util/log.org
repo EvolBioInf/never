@@ -54,7 +54,7 @@
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
-  func SetupLog() {
+  func SetupLog(dir string) {
     dir := "logs/"
     interval = 2 * time.Second
     //<<Handle files, Pa. \ref{pa:uti}>>

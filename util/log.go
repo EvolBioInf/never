@@ -37,8 +37,7 @@ var infoMutex, warningMutex sync.Mutex
 var timer *time.Timer
 var interval time.Duration
 
-func SetupLog() {
-	dir := "logs/"
+func SetupLog(dir string) {
 	interval = 2 * time.Second
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {

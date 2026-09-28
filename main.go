@@ -169,6 +169,7 @@ func main() {
 		dateFilePath,
 		privateKey,
 		host,
+		logDir,
 		port,
 		noRateLimit := ioHandling()
 
@@ -247,7 +248,7 @@ func main() {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})
 
-	util.SetupLog()
+	util.SetupLog(logDir)
 	defer util.StopLogging()
 	middlewareLogger := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -448,6 +449,7 @@ func ioHandling() (
 	string,
 	string,
 	string,
+	string,
 	int,
 	bool,
 ) {
@@ -471,6 +473,7 @@ func ioHandling() (
 		"relative to current working directory")
 	kFlag := flag.String("k", "certificates/private_key.pem", "private key")
 	oFlag := flag.String("o", "http://localhost", "host address")
+	lFlag := flag.String("l", "logs/", "directory for log storage")
 	pFlag := flag.Int("p", 8080, "port")
 	rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
 	vFlag := flag.Bool("v", false, "print progam info")
@@ -482,7 +485,7 @@ func ioHandling() (
 		os.Exit(0)
 	}
 
-	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
+	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *lFlag, *pFlag, *rFlag
 
 }
 
