@@ -49,7 +49,8 @@ import (
   would be nice if we could also define a path for the HTTPS/TLS files i.e. the
   certificate and the private key. Providing extra options for the database
   directory path, a default among the databases of the directory, the date 
-  file, a path for the logs and vitax results in a more flexible setup. It
+  file, a path for the logs, a path to the vitax files and finally a path to 
+  the executable neighbors programs results in a more flexible setup. It
   should be possible to toggle therate limit for debugging and testing 
   purposes. This results in seven strings, an integer and a boolean as a return
   tuple.
@@ -57,6 +58,7 @@ import (
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   func ioHandling() (
+    string,
     string,
     string,
     string,
@@ -145,6 +147,7 @@ import (
   oFlag := flag.String("o", "http://localhost", "host address")
   lFlag := flag.String("l", "logs/", "directory for log storage")
   vvFlag := flag.String("V", "vitax/", "directory containing vitax files")
+  ppFlag := flag.String("P", "prog/", "directory containing neighbors programs")
   pFlag := flag.Int("p", 8080, "port")
   rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
   vFlag := flag.Bool("v", false, "print progam info")
@@ -157,7 +160,7 @@ import (
   }
 
   return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag,
-    *oFlag, *lFlag, *vvFlag, *pFlag, *rFlag
+    *oFlag, *lFlag, *vvFlag, *ppFlag, *pFlag, *rFlag
 #+end_src
 
 #+begin_export latex
@@ -174,6 +177,7 @@ import (
   host,
   logDir,
   vitaxDir,
+  progDir,
   port,
   noRateLimit := ioHandling()
 #+end_src
@@ -347,12 +351,12 @@ import (
   url clashes. While the packages should not know of each other they also
   should not register to the same routes. We prevent clashes by passing an url
   prefix to each of them. Additionally to the prefix apiv2 needs to get the
-  databases. neverv1 receives prefixes both for the api and its documentation,
-  as well as the path to the database directory. We further pass the path to
-  the latest database and a path to the datefile. docsv2 gets its prefix. It
-  also needs to know whether it is being hosted locally and on what port, so we
-  need to provide data for that. Lastly, we need to provide the directory to 
-  the databases.
+  databases and a path to the neighbors executables. neverv1 receives prefixes
+  both for the api and its documentation, as well as the path to the database
+  directory. We further pass the path to the latest database and a path to the
+  datefile. docsv2 gets its prefix. It also needs to know whether it is being
+  hosted locally and on what port, so we need to provide data for that. Lastly,
+  we need to provide the directory to the databases.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -364,7 +368,12 @@ import (
 
   neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbDirPath,
     dbs["latest"].Path, dateFilePath)
-  apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
+  apiv2.RegisterRoutes(
+    apiPref + "/v2",
+    host+":"+strconv.Itoa(port),
+    dbs,
+    progDir,
+  )
   docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 #+end_src
 

@@ -6,9 +6,10 @@
   resemble neverv1, as the backends don't differ too much.
 
   \subsection*{Implementation}
-  The api backend provides the global RegisterRoutes function just
+  The api's backend provides the global RegisterRoutes function just
   like every standalone package used within neverV2. It takes as arguments
-  a prefix for the routes, the server's address and the databases.
+  a prefix for the routes, the server's address and the databases, as well as a
+  path to the neighbors executables.
   \bpr{api}{pr:api}
 #+end_export
 
@@ -21,7 +22,12 @@
   //<<Methods, Pa. \ref{pa:api}>>
   //<<Variables, Pa. \ref{pa:api}>>
   //<<Content types, Pa. \ref{pa:api}>>
-  func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
+  func RegisterRoutes(
+    pref string,
+    serverAdr string,
+    dbs map[string]Database,
+    progDir string,
+  ) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
   //<<Functions, Pa. \ref{pa:api}>>
@@ -599,7 +605,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progAntsL, programEndpoint, dbs, "ants")
+  makeRoute(&progAntsL, programEndpoint, dbs, "ants", progDir)
 #+end_src
 
 #+begin_export latex
@@ -615,7 +621,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progDreeL, programEndpoint, dbs, "dree")
+  makeRoute(&progDreeL, programEndpoint, dbs, "dree", progDir)
 #+end_src
 
 #+begin_export latex
@@ -630,7 +636,7 @@ type Node struct {
     Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
+  makeRoute(&progFintacL, programEndpoint, dbs, "fintac", progDir)
 #+end_src
 
 #+begin_export latex
@@ -657,7 +663,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
+  makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors", progDir)
   progNeighborsQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progNeighbors",
@@ -665,7 +671,7 @@ type Node struct {
     Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors")
+  makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors", progDir)
 #+end_src
 
 #+begin_export latex
@@ -681,7 +687,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
+  makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks", progDir)
   progRanksQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progRanks",
@@ -689,7 +695,7 @@ type Node struct {
     Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks")
+  makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks", progDir)
 #+end_src
 
 #+begin_export latex
@@ -704,7 +710,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
+  makeRoute(&progTaxiL, programEndpoint, dbs, "taxi", progDir)
 #+end_src
 
 #+begin_export latex
@@ -2940,13 +2946,18 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The database is given as the first value of \ty{args} and the program name as
-  a second.
+  The database is given as the first value of \ty{args}, the program name as
+  a second and we receive the directory containing the programs as the last 
+  argument. With this we need to make sure, that contains a trailing slash.
 #+end_export
 
 #+begin_src go <<Get dbPath and program name, Pa. \ref{pa:api}>>=
   dbPath := args[0].(Database).Path
   progName := args[1].(string)
+  progDir := args[2].(string)
+  if !strings.HasSuffix(progDir, "/") {
+    progDir += "/"
+  }
 #+end_src
 
 #+begin_export latex
@@ -3008,8 +3019,8 @@ type Node struct {
   don't want files of different users to clash, so each command and thus its
   files are executed within a temporary directory. We use a random text to
   guarantee uniqueness for the directories name as its. The directory and its
-  contents are removed after execution. Handling files entails creating the
-  necessary temporary files and taking care of the data provided via
+  contents are removed after execution. Handling files entails both creating
+  the necessary temporary files and taking care of the data provided via
   \ty{stdin}.
 #+end_export
 
@@ -3023,7 +3034,11 @@ type Node struct {
   defer os.RemoveAll(dir)
   var stdinData string
   //<<Handle files, Pa. \ref{pa:api}>>
-  cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
+  cmd := exec.CommandContext(
+    ctx,
+    "../" + progDir + progName,
+    callArgs...,
+  )
   //<<Set pipes, Pa. \ref{pa:api}>>
   cmd.Dir = dir
   //<<Log command, Pa. \ref{pa:api}>>

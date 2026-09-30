@@ -171,6 +171,7 @@ func main() {
 		host,
 		logDir,
 		vitaxDir,
+		progDir,
 		port,
 		noRateLimit := ioHandling()
 
@@ -239,7 +240,12 @@ func main() {
 
 	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbDirPath,
 		dbs["latest"].Path, dateFilePath)
-	apiv2.RegisterRoutes(apiPref+"/v2", host+":"+strconv.Itoa(port), dbs)
+	apiv2.RegisterRoutes(
+		apiPref+"/v2",
+		host+":"+strconv.Itoa(port),
+		dbs,
+		progDir,
+	)
 	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
 
 	vitaxFiles := http.FileServer(http.Dir(vitaxDir))
@@ -452,6 +458,7 @@ func ioHandling() (
 	string,
 	string,
 	string,
+	string,
 	int,
 	bool,
 ) {
@@ -477,6 +484,7 @@ func ioHandling() (
 	oFlag := flag.String("o", "http://localhost", "host address")
 	lFlag := flag.String("l", "logs/", "directory for log storage")
 	vvFlag := flag.String("V", "vitax/", "directory containing vitax files")
+	ppFlag := flag.String("P", "prog/", "directory containing neighbors programs")
 	pFlag := flag.Int("p", 8080, "port")
 	rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
 	vFlag := flag.Bool("v", false, "print progam info")
@@ -489,7 +497,7 @@ func ioHandling() (
 	}
 
 	return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag,
-		*oFlag, *lFlag, *vvFlag, *pFlag, *rFlag
+		*oFlag, *lFlag, *vvFlag, *ppFlag, *pFlag, *rFlag
 
 }
 

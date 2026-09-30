@@ -146,7 +146,12 @@ var plainCt = contenttype.MediaType{
 
 var multipartCt = contenttype.MediaType{Type: "multipart", Subtype: "form-data"}
 
-func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
+func RegisterRoutes(
+	pref string,
+	serverAdr string,
+	dbs map[string]Database,
+	progDir string,
+) {
 	prefix = pref
 	serverAddress = serverAdr
 
@@ -284,7 +289,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progAntsL, programEndpoint, dbs, "ants")
+	makeRoute(&progAntsL, programEndpoint, dbs, "ants", progDir)
 
 	progDreeL := Node{
 		Links:    make(map[string][]Node),
@@ -293,7 +298,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progDreeL, programEndpoint, dbs, "dree")
+	makeRoute(&progDreeL, programEndpoint, dbs, "dree", progDir)
 
 	progFintacL := Node{
 		Links:    make(map[string][]Node),
@@ -302,7 +307,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
+	makeRoute(&progFintacL, programEndpoint, dbs, "fintac", progDir)
 
 	progNeighborsGetL := Node{
 		Links:    make(map[string][]Node),
@@ -311,7 +316,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
+	makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors", progDir)
 	progNeighborsQueryL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
@@ -319,7 +324,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors")
+	makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors", progDir)
 
 	progRanksGetL := Node{
 		Links:    make(map[string][]Node),
@@ -328,7 +333,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
+	makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks", progDir)
 	progRanksQueryL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
@@ -336,7 +341,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks")
+	makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks", progDir)
 
 	progTaxiL := Node{
 		Links:    make(map[string][]Node),
@@ -345,7 +350,7 @@ func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
-	makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
+	makeRoute(&progTaxiL, programEndpoint, dbs, "taxi", progDir)
 
 	rootDocL.Links["service"] = append(rootDocL.Links["service"],
 		accessionsL,
@@ -1797,6 +1802,10 @@ func programEndpoint(
 
 	dbPath := args[0].(Database).Path
 	progName := args[1].(string)
+	progDir := args[2].(string)
+	if !strings.HasSuffix(progDir, "/") {
+		progDir += "/"
+	}
 
 	ctx := r.Context()
 
@@ -1839,7 +1848,11 @@ func programEndpoint(
 		}
 	}
 
-	cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
+	cmd := exec.CommandContext(
+		ctx,
+		"../"+progDir+progName,
+		callArgs...,
+	)
 	cmd.Stdin = strings.NewReader(stdinData)
 	res := &bytes.Buffer{}
 	cmd.Stdout = res
