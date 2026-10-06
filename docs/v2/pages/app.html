@@ -28,7 +28,7 @@
     <main>
       <section>
         <h2>Welcome to the Neighbors REST API</h2>
-        <p>
+        <p class='intro-text'>
           The Neighbors REST API gives access to genome sequences via the taxonomy
           of sequenced life.
           <br />
@@ -86,7 +86,30 @@
           Minor releases follow an add-only strategy, which means endpoints, schemas, and parameters may be added,
           but all previous URIs and schemas are left unchanged. The only exceptions to this rule are security updates.
           These take precedent and will lead to the required changes in all releases.
-      </p>
+
+          <br />
+          <br />
+          The database was last updated on {{.LastDBUpdate}} and currently holds the following
+          <br />
+        </p>
+          <table class="db-statistics">
+            <tr>
+              <td>
+                Number of taxa
+              </td>
+              <td>
+                {{.NumTaxa}}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Number of genomes
+              </td>
+              <td>
+                {{.NumGenomes}}
+              </td>
+            </tr>
+          </table>
     </section>
     <div class="sever-info">
       <section>

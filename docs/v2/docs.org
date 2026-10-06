@@ -1,16 +1,15 @@
 #+begin_export latex
-      \section{docs}
-      \ty{docs} is the frontend application for neverV2.
-      It serves to document all endpoints, requests, responses and
-      schemes provided by the api. Data is provided by a openAPI
-      document in json format. While based on go's html templating
-      package it uses basic html, css and javscript to render the docs.
+  \section{docs}
+  \ty{docs} is the frontend application for neverV2. It serves to document all
+  endpoints, requests, responses and schemes provided by the api. Data is
+  provided by a openAPI document in json format. While based on go's html
+  templating package it uses basic html, css and javscript to render the docs.
 
-      \subsection*{Implementation}
-      The program \ty{docs} provides functions for registering the routes
-      and obtaining the api data from the openAPI document, as
-      well as types for holding the data in intermediate data structures.
-      \bpr{docs}{pr:docs}
+  \subsection*{Implementation}
+  The program \ty{docs} provides functions for registering the routes and
+  obtaining the api data from the openAPI document, as well as types for
+  holding the data in intermediate data structures.
+  \bpr{docs}{pr:docs}
 #+end_export
 
 #+begin_src go <<docs.go>>=
@@ -26,18 +25,24 @@
 #+end_src
 
 #+begin_export latex
-  The first function we will be looking at is
-  \ty{RegisterRoutes}. This function will be called by
-  the actual webserver. This allows the \ty{docs} to register
-  all its routes and setup how to handle the different frontend
-  endpoints. To prevent route clashing, the functions expects a prefix
-  that is prepended to all registered routes. The server also provides
-  information on whether it is hosting locally and its port. We need
-  this data later on to for the example requests.
+  The first function we will be looking at is \ty{RegisterRoutes}. This
+  function will be called by the actual webserver. This allows the \ty{docs} to
+  register all its routes and setup how to handle the different frontend
+  endpoints. To prevent route clashing, the functions expects a prefix that is
+  prepended to all registered routes. The server also provides information on
+  whether it is hosting locally and its port. We need this data later on to for
+  the example requests.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
-  func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
+  func RegisterRoutes(
+    prefix       string,
+    local        bool,
+    port         int,
+    dbDirPath    string,
+    dateFilePath string,
+    neidb        *tdb.TaxonomyDB,
+  ) {
     //<<Create template, Pa. \ref{pa:docs}>>
     //<<Add template functions, Pa. \ref{pa:docs}>>
     //<<Read HTML files, Pa. \ref{pa:docs}>>
@@ -49,9 +54,8 @@
 #+end_src
 
 #+begin_export latex
-  We begin \ty{RegisterRoutes} by creating a template called app.
-  For server side debugging purposes we also add some prints
-  for all the actions we take.
+  We begin \ty{RegisterRoutes} by creating a template called app. For server
+  side debugging purposes we also add some prints for all the actions we take.
 #+end_export
 
 #+begin_src go <<Create template, Pa. \ref{pa:docs}>>=
@@ -60,8 +64,8 @@
 #+end_src
 
 #+begin_export latex
-    To be able to use those commands we need to
-    import the fmt and html/template packages.
+  To be able to use those commands we need to import the fmt and html/template
+  packages.
 #+end_export
 
 #+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
@@ -70,16 +74,14 @@
 #+end_export
 
 #+begin_export latex
-  Functions for the templating engine are provided by a function map.
-  Every function defined within that map may be used inside the HTML
-  via the templating syntax. We need three utility functions for the HTML.
-  The first is a simple subtraction.
-  \ty{toKebab} is for rewriting the endpoints names.
-  The endpoints are identified by their names in url syntax. Using those for
-  css identifiers does not seem like a good idea, so we replace some characters
-  to make them more css friendly.
-  \ty{dict} lets us create dictionaries inside HTML. We use this to bypass the
-  single parameter rule sub-templates.
+  Functions for the templating engine are provided by a function map. Every
+  function defined within that map may be used inside the HTML via the
+  templating syntax. We need three utility functions for the HTML. The first is
+  a simple subtraction. \ty{toKebab} is for rewriting the endpoints names. The
+  endpoints are identified by their names in url syntax. Using those for css
+  identifiers does not seem like a good idea, so we replace some characters to
+  make them more css friendly. \ty{dict} lets us create dictionaries inside
+  HTML. We use this to bypass the single parameter rule sub-templates.
 #+end_export
 
 #+begin_src go <<Add template functions, Pa. \ref{pa:docs}>>=
@@ -94,15 +96,14 @@
 #+end_export
 
 #+begin_export latex
-  Now we define \ty{toKebab}. The function is provided a variable
-  amount of strings and returns a single joined string. To get
-  rid of the hierarchical url structure of an endpoint we replace
-  every slash with a dash which results in strings in kebab-case notation, if
-  we make all characters lowercased  as well.
-  Then we join the strings and delete leading dashes as well as dashes followed
-  by another dash. The path parameters are enclosed by curly brackets. We remove
-  those as well. If an argument is empty or just a \ty{/} we convert it to
-  \ty{em}.
+  Now we define \ty{toKebab}. The function is provided a variable amount of
+  strings and returns a single joined string. To get rid of the hierarchical
+  url structure of an endpoint we replace every slash with a dash which results
+  in strings in kebab-case notation, if we make all characters lowercased  as
+  well. Then we join the strings and delete leading dashes as well as dashes
+  followed by another dash. The path parameters are enclosed by curly brackets.
+  We remove those as well. If an argument is empty or just a \ty{/} we convert
+  it to \ty{em}.
 #+end_export
 
 #+begin_src go <<Rewrite paths to CSS IDs, Pa. \ref{pa:docs}>>=
@@ -128,26 +129,26 @@
 #+end_src
 
 #+begin_export latex
-  As mentioned before, as of now go's html templating does not
-  allow to pass multiple values from within a template to a
-  sub-template. To bypass this we use a dict function. This
-  function takes a variable amount of arguments. It uses arguments
-  with an even index as a key and the following argument with an odd
-  index as a value. It should fail if the amount of arguments is not
-  even.
+  As mentioned before, as of now go's html templating does not allow to pass
+  multiple values from within a template to a sub-template. To bypass this we
+  use a dict function. This function takes a variable amount of arguments. It
+  uses arguments with an even index as a key and the following argument with an
+  odd index as a value. It should fail if the amount of arguments is not even.
 #+end_export
 
 #+begin_src go <<Create dict from args, Pa. \ref{pa:docs}>>=
 	"dict": func(args ...any) map[string]any {
 		dict := make(map[string]any)
 		if len(args)%2 != 0 {
-			panic("Cannot create dictionary in template. Number of parameters is odd.\n")
+			panic("Cannot create dictionary in template. " +
+        "Number of parameters is odd.\n")
 		}
 
 		for i := 0; i < len(args); i += 2 {
 			key, ok := args[i].(string)
 			if !ok {
-				panic("Cannot create dictionary in template. Key argument is not a string.\n")
+				panic("Cannot create dictionary in template. " +
+          "Key argument is not a string.\n")
 			}
 
 			dict[key] = args[i+1]
@@ -166,7 +167,9 @@
 #+begin_src go <<Read HTML files, Pa. \ref{pa:docs}>>=
   fmt.Println("docsV2: Reading html files")
   tmpl = template.Must(tmpl.ParseFS(pagesFS, "pages/*.html"))
-  tmpl = template.Must(tmpl.ParseFS(componentsFS, "components/*.html", "components/*/*.html"))
+  tmpl = template.Must(
+    tmpl.ParseFS(componentsFS, "components/*.html", "components/*/*.html"),
+  )
 #+end_src
 
 #+begin_export latex
@@ -201,15 +204,18 @@
 
 #+begin_src go <<Types, Pa. \ref{pa:docs}>>=
 type Content struct {
-	Version     string
-	Description string
-	ApiVersion  string
-	ServerURL   string
-  Prefix      string
-	Title       string
-  Local       bool
-	Tags        []Tag
-	Paths       []Path
+	Version      string
+	Description  string
+	ApiVersion   string
+	ServerURL    string
+  Prefix       string
+	Title        string
+	LastDBUpdate string
+  NumTaxa      string
+  NumGenomes   string
+  Local        bool
+	Tags         []Tag
+	Paths        []Path
 }
 
 type Tag struct {
@@ -274,13 +280,79 @@ type Response struct {
 #+begin_export latex
   We might aswell provide the assigned prefix and the path to the databases, so
   the html pages may use them for dynamic linking as well as the local hosting
-  options. All of them change the documentation's links.
+  options. All of them change the documentation's links. The database
+  statistics should be part of the text as well, so we need to prepare them.
 #+end_export
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
   content := retrieveData(local, port)
   content.Prefix = prefix
   content.Local = local
+  <<Load database statistics, Pa. \ref{pa:docs}>>
+#+end_src
+
+#+begin_export latex
+  First up we get the number of taxa and genomes. This is easily done via the
+  database. After that we read the datefile and print its value into the
+  content struct.
+#+end_export
+
+#+begin_src go <<Load database statistics, Pa. \ref{pa:docs}>>=
+  nt, err := neidb.NumTaxa()
+  util.Check(err)
+  content.NumTaxa = humanize.Comma(int64(nt))
+  ng := 0
+  for _, level := range tdb.AssemblyLevels() {
+	  n, err := neidb.NumGenomesRec(1, level)
+	  util.Check(err)
+	  ng += n
+  }
+  content.NumGenomes = humanize.Comma(int64(ng))
+  <<Reformat datefile, Pa. \ref{pa:docs}>>
+#+end_src
+
+#+begin_export latex
+  We import \ty{humanize}, \ty{tdb} and \ty{util}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+	"github.com/dustin/go-humanize"
+  "github.com/evolbioinf/neighbors/tdb"
+ 	"github.com/evolbioinf/never/util"
+#+end_src
+
+#+begin_export latex
+  To set the time stamp of the database, we read the content of the date file,
+  which has the format
+  \begin{verbatim}
+  Thu May 22 02:00:01 AM CEST 2025
+  \end{verbatim}
+  We reformat this to the more friendly
+  \begin{verbatim}
+  May 22 2025 at 02:00:01 AM CEST
+  \end{verbatim}
+#+end_export
+
+#+begin_src go <<Reformat datefile, Pa. \ref{pa:docs}>>=
+  date, err := os.ReadFile(dateFilePath)
+  util.Check(err)
+  fields := strings.Fields(string(date))
+  content.LastDBUpdate = fmt.Sprintf("%s %s %s at %s %s %s",
+	  fields[1],
+	  fields[2],
+	  fields[6],
+	  fields[3],
+	  fields[4],
+	  fields[5],
+  )
+#+end_src
+
+#+begin_export latex
+  We import \ty{os}.
+#+end_export
+
+#+begin_src go <<Imports, Pa. \ref{pa:docs}>>=
+	"os"
 #+end_src
 
 #+begin_export latex

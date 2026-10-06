@@ -87,3 +87,7 @@ a:link,
 a:visited {
   color: var(--secondary-color);
 }
+
+.intro-text {
+  margin-bottom: 0;
+}

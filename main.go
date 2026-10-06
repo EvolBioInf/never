@@ -250,7 +250,14 @@ func main() {
 		dbs,
 		progDir,
 	)
-	docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
+	docsv2.RegisterRoutes(
+		docsV2Pref,
+		isLocal,
+		port,
+		dbDirPath,
+		dateFilePath,
+		dbs["latest"].Db,
+	)
 
 	vitaxFiles := http.FileServer(http.Dir(vitaxDir))
 	http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))

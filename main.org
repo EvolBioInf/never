@@ -355,8 +355,8 @@ import (
   both for the api and its documentation. We further pass the path to the
   latest database and a path to the datefile. docsv2 gets its prefix. It also
   needs to know whether it is being hosted locally and on what port, so we need
-  Lastly, we need to provide the directory to the databases. to provide data
-  for that.
+  Lastly, we need to provide the directory to the databases and its latest
+  entry. to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -378,7 +378,14 @@ import (
     dbs,
     progDir,
   )
-  docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
+  docsv2.RegisterRoutes(
+    docsV2Pref,
+    isLocal,
+    port,
+    dbDirPath,
+    dateFilePath,
+    dbs["latest"].Db,
+  )
 #+end_src
 
 #+begin_export latex
