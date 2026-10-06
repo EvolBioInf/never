@@ -238,8 +238,12 @@ func main() {
 	docsV2Pref := docsPref + apiPref + "/v2"
 	isLocal := host == "http://localhost"
 
-	neverv1.RegisterRoutes(apiPref+"/v1", docsV1Pref, dbDirPath,
-		dbs["latest"].Path, dateFilePath)
+	neverv1.RegisterRoutes(
+		apiPref+"/v1",
+		docsV1Pref,
+		dbs["latest"].Path,
+		dateFilePath,
+	)
 	apiv2.RegisterRoutes(
 		apiPref+"/v2",
 		host+":"+strconv.Itoa(port),

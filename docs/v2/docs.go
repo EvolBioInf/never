@@ -26,7 +26,6 @@ type Content struct {
 	ApiVersion  string
 	ServerURL   string
 	Prefix      string
-	DbDirPath   string
 	Title       string
 	Local       bool
 	Tags        []Tag
@@ -142,7 +141,6 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 
 	content := retrieveData(local, port)
 	content.Prefix = prefix
-	content.DbDirPath = dbDirPath
 	content.Local = local
 
 	http.HandleFunc(prefix,
@@ -150,15 +148,14 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 			defaultHandler(tmpl, &content, w, r)
 		})
 
-	// The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
-	// The path before that are the ones I may use within the browser to ask for these files from the file server.
+	// The route within in FileServer is a local one, from my filesystem. Files
+	// may be queried and served.
+	// The path before that are the ones I may use within the browser to ask for
+	// these files from the file server.
 	http.Handle(prefix+"/static/",
 		http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 
-	p := "/" + dbDirPath
-	if !strings.HasSuffix(p, "/") {
-		p += "/"
-	}
+	p := "/databases/"
 	http.Handle(p, http.StripPrefix(p, http.FileServer(http.Dir(dbDirPath))))
 }
 
@@ -452,7 +449,8 @@ func parseResponseSchema(t map[string]any) string {
 		for k, v := range dt {
 			pv, ok := v.(map[string]any)
 			if !ok {
-				panic("Error while parsing the schema. Value of nested object property is not a map.")
+				panic("Error while parsing the schema. " +
+					"Value of nested object property is not a map.")
 			}
 
 			res += fmt.Sprintf("\"%s\":%s,", k, parseResponseSchema(pv))
@@ -479,6 +477,11 @@ func marshal(x any) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
+func defaultHandler(
+	tmpl *template.Template,
+	content *Content,
+	w http.ResponseWriter,
+	_ *http.Request,
+) {
 	tmpl.ExecuteTemplate(w, "app.html", content)
 }

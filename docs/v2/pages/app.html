@@ -30,58 +30,58 @@
         <h2>Welcome to the Neighbors REST API</h2>
         <p>
           The Neighbors REST API gives access to genome sequences via the taxonomy
-          of sequenced life. 
+          of sequenced life.
           <br />
           <br />
-          
+
           Starting from one or more target organisms, the accessions of their
           genomes can be looked up. In addition, the genome accessions of the
           targets' closest relatives, their neighbors, can be looked up. Such
           pairs of samples of target and neighbor genomes make good starting
-          material for developing diagnostic markers. 
+          material for developing diagnostic markers.
           <br />
           <br />
-          
+
           We use the
           <a href="https://ftp.ncbi.nlm.nih.gov/pub/taxonomy">taxonomy</a>
            and
           <a href="https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS">genome lists</a>
-           supplied by the 
+           supplied by the
           <a href=https://www.ncbi.nlm.nih.gov>NCBI</a>
             to build a custom database, neidb. The files we used for the construction of the
           database as well as the resulting sqlite database may be downloaded from
           {{if .Local}}
-          <a href="/{{.DbDirPath}}">here</a>.
+          <a href="/databases/">here</a>.
           {{else}}
-          <a href="https://neighbors.evolbio.mpg.de/{{.DbDirPath}}">here</a>.
+          <a href="https://neighbors.evolbio.mpg.de/databases/">here</a>.
           {{end}}
             This directory includes a history of previous databases.
             The construction files are bundled in tgz archives, while the databases
             are marked with a .db file extension.
           <br />
           <br />
-          
+
           Our REST API for querying neidb is implemented in
           the Neighbors server,
           <a href="https://github.com/evolbioinf/never">never</a>,
-           developed by us, the 
+           developed by us, the
           <a href="https://evolbioinf.github.io/">Research Group Bioinformatics</a>
-           at the 
+           at the
           <a href="https://www.evolbio.mpg.de">Max-Planck-Institute for Evolutionary Biology</a>
-           using our 
+           using our
           <a href="https://github.com/evolbioinf/neighbors">Neighbors</a>
            package.
           For more details on genetic marker discovery from whole genome
           sequences with Neighbors and related software, please read
-          our 
+          our
           <a href="https://doi.org/10.1093/bioadv/vbae113">publication</a>.
           <br />
           <br />
 
-          On API versioning: 
-          Never follows a major/minor release schema. Major releases might change any aspect of an endpoint, including 
-	        its removal. All major releases remain online, to ensure backward compatibility. 
-          This means you can reach all major API versions with this prefix: "/api/v[release]". Each API prefix, 
+          On API versioning:
+          Never follows a major/minor release schema. Major releases might change any aspect of an endpoint, including
+	        its removal. All major releases remain online, to ensure backward compatibility.
+          This means you can reach all major API versions with this prefix: "/api/v[release]". Each API prefix,
 	        i.e.:"/api/v1", "/api/v2", provides access to the latest minor release within that major release.
           Minor releases follow an add-only strategy, which means endpoints, schemas, and parameters may be added,
           but all previous URIs and schemas are left unchanged. The only exceptions to this rule are security updates.
@@ -98,15 +98,15 @@
           <br/>
           OpenAPI version: {{.ApiVersion}}
           <br/>
-          OpenAPI document: 
+          OpenAPI document:
           <a href="{{.Prefix}}/static/api_spec.json">{{.Prefix}}/static/api_spec.json</a>
         </p>
-    
+
       </section>
     </div>
     <section>
       <h2>Endpoints</h2>
-      
+
       {{template "components/endpoints" .}}
     </main>
   </body>

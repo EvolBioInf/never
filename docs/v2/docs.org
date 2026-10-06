@@ -190,13 +190,13 @@
 #+end_src
 
 #+begin_export latex
-  The next step is to retrieve the data from the openAPI document.
-  For this we use the library libopenapi. This library parses a
-  byte slice from an openAPI document and lets us create a \ty{DocumentModel}.
-  Using this model we can retrieve the data and form it into an intermediate
-  representation. The intermediate representation needs to be taylored
-  to our spec and use for it within the html templating. With this in mind
-  we create the types that shall hold our data.
+  The next step is to retrieve the data from the openAPI document. For this we
+  use the library libopenapi. This library parses a byte slice from an openAPI
+  document and lets us create a \ty{DocumentModel}. Using this model we can
+  retrieve the data and form it into an intermediate representation. The
+  intermediate representation needs to be taylored to our spec and use for it
+  within the html templating. With this in mind we create the types that shall
+  hold our data.
 #+end_export
 
 #+begin_src go <<Types, Pa. \ref{pa:docs}>>=
@@ -206,7 +206,6 @@ type Content struct {
 	ApiVersion  string
 	ServerURL   string
   Prefix      string
-  DbDirPath 	string
 	Title       string
   Local       bool
 	Tags        []Tag
@@ -274,15 +273,13 @@ type Response struct {
 
 #+begin_export latex
   We might aswell provide the assigned prefix and the path to the databases, so
-  the html pages may use them for dynamic linking. Same goes for the database
-  directory and local hosting options. All of them change the documentation's
-  links.
+  the html pages may use them for dynamic linking as well as the local hosting
+  options. All of them change the documentation's links.
 #+end_export
 
 #+begin_src go <<Retrieve Data, Pa. \ref{pa:docs}>>=
   content := retrieveData(local, port)
   content.Prefix = prefix
-  content.DbDirPath = dbDirPath
   content.Local = local
 #+end_src
 
@@ -310,9 +307,9 @@ type Response struct {
 #+end_src
 
 #+begin_export latex
-  We begin by reading the openAPI document. The library expects a
-  byte slice in either yaml or json format. With that
-  raw data we create a Document which lets us build the model.
+  We begin by reading the openAPI document. The library expects a byte slice in
+  either yaml or json format. With that raw data we create a Document which
+  lets us build the model.
 #+end_export
 
 #+begin_src go <<Create Model from library, Pa. \ref{pa:docs}>>=
@@ -911,12 +908,12 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 
 #+begin_export latex
   Again just like we did with the array, we need to pre- and postpend symbols
-  for a valid object notation. In this case it's curly brackets. Parsing the individual
-  properties begins with writing down their names. The values are again obtained by calling
-  \ty{parseResponseSchema} on them.
-  Each property needs to be separated by a comma. To remove the trailing comma we reslice
-  the string. This probably is not super performant, but I believe that the amount of
-  data we're handling allows us to do so.
+  for a valid object notation. In this case it's curly brackets. Parsing the
+  individual properties begins with writing down their names. The values are
+  again obtained by calling \ty{parseResponseSchema} on them.
+  Each property needs to be separated by a comma. To remove the trailing comma
+  we reslice the string. This probably is not super performant, but I believe
+  that the amount of data we're handling allows us to do so.
 #+end_export
 
 #+begin_src go <<Parse object to string, Pa. \ref{pa:docs}>>=
@@ -924,7 +921,8 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 		for k, v := range dt {
 			pv, ok := v.(map[string]any)
 			if !ok {
-	  	  panic("Error while parsing the schema. Value of nested object property is not a map.")
+	  	  panic("Error while parsing the schema. " +
+          "Value of nested object property is not a map.")
 			}
 
 			res += fmt.Sprintf("\"%s\":%s,", k, parseResponseSchema(pv))
@@ -1071,7 +1069,12 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:docs}>>=
-  func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
+  func defaultHandler(
+    tmpl *template.Template,
+    content *Content,
+    w http.ResponseWriter,
+    _ *http.Request,
+  ) {
     tmpl.ExecuteTemplate(w, "app.html", content)
   }
 #+end_src
@@ -1085,8 +1088,10 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Handle static files, Pa. \ref{pa:docs}>>=
-  // The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
-  // The path before that are the ones I may use within the browser to ask for these files from the file server.
+  // The route within in FileServer is a local one, from my filesystem. Files
+  // may be queried and served.
+  // The path before that are the ones I may use within the browser to ask for
+  // these files from the file server.
   http.Handle(prefix+"/static/",
     http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 #+end_src
@@ -1097,9 +1102,6 @@ func extractParameters(parameters []*v3.Parameter) []Parameter {
 #+end_export
 
 #+begin_src go <<Handle database files, Pa. \ref{pa:docs}>>=
-	p := "/" + dbDirPath
-	if !strings.HasSuffix(p, "/") {
-		p += "/"
-	}
+	p := "/databases/"
   http.Handle(p, http.StripPrefix(p, http.FileServer(http.Dir(dbDirPath))))
 #+end_src

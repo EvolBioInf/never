@@ -55,7 +55,6 @@
 
 #+begin_src go <<Functions, Pa. \ref{pa:uti}>>=
   func SetupLog(dir string) {
-    dir := "logs/"
     interval = 2 * time.Second
     //<<Handle files, Pa. \ref{pa:uti}>>
   	LogInfoDef(InfoEntry{Description: "Setup log"})
@@ -63,11 +62,14 @@
 #+end_src
 
 #+begin_export latex
-  The logs are saved in a different directory. For this we need to create the directory, if it is missing.
-  It seems that setting the permissions is done by writing the unix octal explicitly. The directory needs to
-  be a directory, which is handled by \ty{mkDirAll}, and have rwx for the owner and rx for the group and everyone else.
-  This results in \ty{os.ModeDir | 0755} We also need to open the logging files or create and initialize them, if they
-  don't exist. This is a bit tedious and needs to be done for the warning and info file, so we create a function to do that.
+  The logs are saved in a different directory. For this we need to create the
+  directory, if it is missing. It seems that setting the permissions is done by
+  writing the unix octal explicitly. The directory needs to be a directory,
+  which is handled by \ty{mkDirAll}, and have rwx for the owner and rx for the
+  group and everyone else. This results in \ty{os.ModeDir | 0755} We also need
+  to open the logging files or create and initialize them, if they don't exist.
+  This is a bit tedious and needs to be done for the warning and info file, so
+  we create a function to do that.
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:uti}>>=

@@ -21,7 +21,6 @@ type PageData struct {
 	Services   []Service
 	Title      string
 	ApiPrefix  string
-	DbDir      string
 	DocsPrefix string
 	Ntaxa      string
 	Ngenomes   string
@@ -93,7 +92,6 @@ type Image struct {
 }
 
 var apiPrefix string
-var dbDirectory string
 var docsPrefix string
 var neidb *tdb.TaxonomyDB
 var dateFile string
@@ -109,7 +107,6 @@ func index(w http.ResponseWriter, r *http.Request,
 	p.Title = "Neighbors"
 	p.Services = services
 	p.ApiPrefix = apiPrefix
-	p.DbDir = dbDirectory
 	p.DocsPrefix = docsPrefix
 	slices.SortFunc(p.Services, func(a, b Service) int {
 		return strings.Compare(a.Name, b.Name)
@@ -604,13 +601,11 @@ func path(w http.ResponseWriter, r *http.Request,
 func RegisterRoutes(
 	apiPref,
 	docsPref,
-	dbDirPath,
 	dbPath,
 	dateFilePath string,
 ) {
 	docsPrefix = docsPref
 	apiPrefix = apiPref
-	dbDirectory = dbDirPath
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Fatal("neverV1: db does not exist")
 	} else {

@@ -48,10 +48,10 @@ import (
   we need be able to pass an address and a port for the server to run on. It
   would be nice if we could also define a path for the HTTPS/TLS files i.e. the
   certificate and the private key. Providing extra options for the database
-  directory path, a default among the databases of the directory, the date 
-  file, a path for the logs, a path to the vitax files and finally a path to 
+  directory path, a default among the databases of the directory, the date
+  file, a path for the logs, a path to the vitax files and finally a path to
   the executable neighbors programs results in a more flexible setup. It
-  should be possible to toggle therate limit for debugging and testing 
+  should be possible to toggle therate limit for debugging and testing
   purposes. This results in seven strings, an integer and a boolean as a return
   tuple.
 #+end_export
@@ -352,11 +352,11 @@ import (
   should not register to the same routes. We prevent clashes by passing an url
   prefix to each of them. Additionally to the prefix apiv2 needs to get the
   databases and a path to the neighbors executables. neverv1 receives prefixes
-  both for the api and its documentation, as well as the path to the database
-  directory. We further pass the path to the latest database and a path to the
-  datefile. docsv2 gets its prefix. It also needs to know whether it is being
-  hosted locally and on what port, so we need to provide data for that. Lastly,
-  we need to provide the directory to the databases.
+  both for the api and its documentation. We further pass the path to the
+  latest database and a path to the datefile. docsv2 gets its prefix. It also
+  needs to know whether it is being hosted locally and on what port, so we need
+  Lastly, we need to provide the directory to the databases. to provide data
+  for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -366,8 +366,12 @@ import (
   docsV2Pref := docsPref + apiPref + "/v2"
   isLocal := host == "http://localhost"
 
-  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbDirPath,
-    dbs["latest"].Path, dateFilePath)
+  neverv1.RegisterRoutes(
+    apiPref + "/v1",
+    docsV1Pref,
+    dbs["latest"].Path,
+    dateFilePath,
+  )
   apiv2.RegisterRoutes(
     apiPref + "/v2",
     host+":"+strconv.Itoa(port),
@@ -682,14 +686,14 @@ import (
 
 #+begin_export latex
   For assembling the tree we first sort the urls, then we iterate over them.
-  String-sorting the urls guarantees us to build the correct tree, one that 
+  String-sorting the urls guarantees us to build the correct tree, one that
   represents the url hierarchy as intended the correct cost at every node. The
   algorithm for building the tree is now as follows. We split each url into its
   hierarchical parts. We check the children of the current node we are looking
   at for one that matches the current part of the url. We follow the nodes in
   the tree until we hit a node, that does not have child with the current url
-  part. We append a node for the missing part of the url. Cpu cost is 
-  associated only with the complete url. If the newly appended node does not 
+  part. We append a node for the missing part of the url. Cpu cost is
+  associated only with the complete url. If the newly appended node does not
   represent the complete url, then we don't add a cost.
 #+end_export
 
@@ -716,7 +720,7 @@ import (
         cost := 0.0
         if i == len(urlParts) - 1 {
           cost = rawUrl.CpuCost
-        } 
+        }
         node := UrlNode{prefix: part, cpuCost: cost}
         curr.children = append(curr.children, node)
         curr = &curr.children[len(curr.children)-1]
