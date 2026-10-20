@@ -356,7 +356,7 @@ func main() {
 					userLimiter, ok := userLimiters.ma[ip]
 					if !ok {
 						userLimiter = new(UserLimiter{
-							l: Limiter{usage: 0.0, limit: 20.0},
+							l: Limiter{usage: 0.0, limit: 50.0},
 							t: time.Now(),
 						})
 						userLimiters.ma[ip] = userLimiter
@@ -371,7 +371,7 @@ func main() {
 						userLimiter.l.Free(r, urlLimits)
 					} else {
 						w.WriteHeader(http.StatusTooManyRequests)
-						w.Write([]byte("Rate limit exceeded\n"))
+						w.Write([]byte("Rate limit exceeded. This request cannot be accepted at this moment, please try again later.\n"))
 						generalLimiter.Free(r, urlLimits)
 					}
 				} else {
