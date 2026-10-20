@@ -18,11 +18,12 @@ import (
 
 	"path/filepath"
 
+	"net/http"
+	"strconv"
+
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
-	"net/http"
-	"strconv"
 
 	"time"
 

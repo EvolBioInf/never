@@ -15,6 +15,7 @@ import (
 )
 
 //<<Types, Pr. \ref{pr:main}>>
+//<<Methods, Pr. \ref{pr:main}>>
 //<<Embedded files, Pr. \ref{pr:main}>>
 //<<Functions, Pr. \ref{pr:main}>>
 #+end_src
@@ -889,8 +890,8 @@ import (
 #+begin_export latex
   The middleware is just a function that gets and returns an \ty{http.Handler}.
   Inside we check for a certain condition, which includes the requested url and
-  the current limiter state. We either forward the request or return an 429
-  error code, depending on the result.
+  the current limiter state. We either forward the request, add it to a queue
+  or return an 429 or 503 error code, depending on the result.
 #+end_export
 
 #+begin_src go <<Write limiter middleware, Pr. \ref{pr:main}>>=
@@ -906,13 +907,14 @@ import (
   we immediately call the next handler. If we do, we first check the general
   limiter. If the general limiter allows processing we check the user limiter.
   If both limiters allow processing we call the next handler. We write an error
-  response if either limiter denies processing. A 503 (Service Unavailable)
-  signifies, that the server is overloading, while 429 (Too Many Requests),
-  says that a client has exceed their limit.
+  response if either limiter denies processing and the queue is full.
+  A 503 (Service Unavailable) signifies, that the server is overloading,
+  while 429 (Too Many Requests), says that a client has exceed their limit.
   We are reserving cpu load in two independent limiters. This means we to free
   them independently as well. So if the general limiter allows processing, but
   the user limiter does not, we need to free the reserved load in the general
   limiter, before sending an error response.
+  If the queue is not full, we enqueue the request.
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
@@ -925,19 +927,72 @@ import (
         next.ServeHTTP(w, r)
         generalLimiter.Free(r, urlLimits)
         userLimiter.l.Free(r, urlLimits)
-      } else {
+      } else if (!q.Push({r: r, w: w})) {
         w.WriteHeader(http.StatusTooManyRequests)
-        w.Write([]byte("Rate limit exceeded. This request cannot be accepted at this moment, please try again later.\n"))
+        w.Write([]byte("Rate limit exceeded. This request cannot be accepted "
+          + "at this moment, please try again later.\n"))
         generalLimiter.Free(r, urlLimits)
       }
-    } else {
+    } else if {
         w.WriteHeader(http.StatusServiceUnavailable)
-        w.Write([]byte("Server is busy\n"))
+        w.Write([]byte("Server is busy. This request cannot be accepted at " +
+          "this moment, please try again later.\n"))
     }
   } else {
     next.ServeHTTP(w, r)
   }
 #+end_src
+
+#+begin_export latex
+  We are still missing the queue, so let's create a struct which handles this.
+  This is going to wrap a slice of http readers and writers, which should be
+  bound by struct as well. The queue should not grow forever, so we saving
+  determining a maximum size as well.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type RequestEntry struct {
+    r *http.Request
+    w http.ResponseWriter
+  }
+
+  type RequestQueue struct {
+    entries []RequestEntry
+    maxSize int
+  }
+#+end_src
+
+#+begin_export latex
+   We can add some simple push and pop functions to get queue behaviour.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (r *RequestQueue) isFull() bool {
+    return len(r.entries) >= maxSize
+  }
+
+  func (r *RequestQueue) Push(re RequestEntry) bool {
+    if (!r.isFull()) {
+      r.entries = append(r.entries, re)
+      return true
+    }
+
+    return false
+  }
+
+  func (r *RequestQueue) Pop() *RequestEntry {
+    if (len(r.entries) > 0) {
+      res := r.entries[0]
+      r.entries = r.entries[1:]
+      return &res
+    } else {
+      return nil
+    }
+  }
+#+end_src
+
+#+begin_export latex
+#+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   var activeUrls = make(map[string]int)
