@@ -18,12 +18,11 @@ import (
 
 	"path/filepath"
 
-	"net/http"
-	"strconv"
-
 	neverv1 "github.com/evolbioinf/never/api/v1/never"
 	apiv2 "github.com/evolbioinf/never/api/v2"
 	docsv2 "github.com/evolbioinf/never/docs/v2"
+	"net/http"
+	"strconv"
 
 	"time"
 
@@ -78,78 +77,6 @@ type Limiter struct {
 	mu    sync.Mutex
 }
 
-func (l *Limiter) Reserve(r *http.Request, limits UrlNode) bool {
-	urlCost := 0.0
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	node := limits
-	inTree := true
-	for i := 0; i < len(parts) && inTree; i++ {
-		part := parts[i]
-		var idx int
-		idx, inTree = slices.BinarySearchFunc(
-			node.children,
-			part,
-			func(a UrlNode, b string) int {
-				if a.prefix == "*" {
-					return 0
-				}
-				return strings.Compare(a.prefix, b)
-			})
-		if inTree {
-			node = node.children[idx]
-		}
-	}
-	if inTree {
-		urlCost = node.cpuCost
-	}
-
-	resp := false
-	l.mu.Lock()
-	if urlCost+l.usage < l.limit {
-		l.usage += urlCost
-		resp = true
-	}
-	l.mu.Unlock()
-	return resp
-
-}
-
-func (l *Limiter) Free(r *http.Request, limits UrlNode) {
-	urlCost := 0.0
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	node := limits
-	inTree := true
-	for i := 0; i < len(parts) && inTree; i++ {
-		part := parts[i]
-		var idx int
-		idx, inTree = slices.BinarySearchFunc(
-			node.children,
-			part,
-			func(a UrlNode, b string) int {
-				if a.prefix == "*" {
-					return 0
-				}
-				return strings.Compare(a.prefix, b)
-			})
-		if inTree {
-			node = node.children[idx]
-		}
-	}
-	if inTree {
-		urlCost = node.cpuCost
-	}
-
-	l.mu.Lock()
-	l.usage -= urlCost
-	if l.usage < 0.0 {
-		l.usage = 0.0
-	}
-	l.mu.Unlock()
-
-}
-
 type UserLimiter struct {
 	l Limiter
 	t time.Time
@@ -158,6 +85,157 @@ type UserLimiter struct {
 type SyncMap struct {
 	ma map[string]*UserLimiter
 	mu sync.Mutex
+}
+
+type RequestEntry struct {
+	r *http.Request
+	w http.ResponseWriter
+	t time.Time
+	c float64
+}
+
+type RequestQueue struct {
+	entries []RequestEntry
+	maxSize int
+	mu      sync.Mutex
+}
+
+func (l *Limiter) Reserve(cpuCost float64) bool {
+	resp := false
+	l.mu.Lock()
+	if cpuCost+l.usage < l.limit {
+		l.usage += cpuCost
+		resp = true
+	}
+	l.mu.Unlock()
+	return resp
+
+}
+
+func (l *Limiter) Free(cpuCost float64) {
+	l.mu.Lock()
+	l.usage -= cpuCost
+	if l.usage < 0.0 {
+		l.usage = 0.0
+	}
+	l.mu.Unlock()
+
+}
+
+func (q *RequestQueue) isFull() bool {
+	return len(q.entries) >= q.maxSize
+}
+
+func (q *RequestQueue) Push(re RequestEntry) bool {
+	q.mu.Lock()
+	var str string
+	var resp = false
+	if !q.isFull() {
+		q.entries = append(q.entries, re)
+		str = "Pushed request to queue"
+		resp = true
+	} else {
+		str = "Denied push to queue"
+	}
+
+	util.LogInfoDef(
+		util.InfoEntry{
+			RequestUrl:  re.r.URL.String(),
+			Description: fmt.Sprintf("%s New size: %d", str, len(q.entries)),
+		})
+
+	q.mu.Unlock()
+	return resp
+}
+
+func (q *RequestQueue) Pop() *RequestEntry {
+	q.mu.Lock()
+	if len(q.entries) > 0 {
+		res := q.entries[0]
+		q.entries = q.entries[1:]
+		util.LogInfoDef(
+			util.InfoEntry{
+				RequestUrl: res.r.URL.String(),
+				Description: fmt.Sprintf(
+					"Popped from queue. New size: %d",
+					len(q.entries),
+				)})
+		q.mu.Unlock()
+		return &res
+	} else {
+		q.mu.Unlock()
+		return nil
+	}
+}
+
+func (l *Limiter) Capacity() float64 {
+	l.mu.Lock()
+	c := l.limit - l.usage
+	l.mu.Unlock()
+	return c
+}
+
+func (q *RequestQueue) pullEntries(limit float64) []RequestEntry {
+	const eps = 0.1
+	f := 0.0
+	indexed := make([]int, 0)
+	q.mu.Lock()
+	resp := make([]RequestEntry, 0)
+	for i := 0; i < len(q.entries) && f < limit-eps; i++ {
+		curr := q.entries[i]
+		if f+curr.c < limit-eps {
+			resp = append(resp, curr)
+			f += curr.c
+			indexed = append(indexed, i)
+		}
+	}
+	for i := len(indexed) - 1; i >= 0; i-- {
+		q.entries = append(q.entries[:i], q.entries[i+1:]...)
+	}
+
+	if len(indexed) > 0 {
+		util.LogInfoDef(
+			util.InfoEntry{
+				Description: fmt.Sprintf(
+					"Pulled %d entries from queue. New size: %d",
+					len(indexed),
+					len(q.entries),
+				)})
+	}
+	q.mu.Unlock()
+
+	return resp
+}
+
+func (q *RequestQueue) clearQueue() {
+	const maxTime = 15
+	keep := make([]RequestEntry, 0)
+	removed := 0
+	q.mu.Lock()
+	now := time.Now()
+
+	for _, e := range q.entries {
+		if now.After(e.t.Add(15 * time.Second)) {
+			removed++
+			e.w.WriteHeader(http.StatusTooManyRequests)
+			e.w.Write([]byte("Rate limit exceeded. This request cannot be " +
+				"accepted at this moment, please try again later.\n"))
+		} else {
+			keep = append(keep, e)
+		}
+	}
+
+	q.entries = keep
+	if removed > 0 {
+		util.LogInfoDef(
+			util.InfoEntry{
+				Description: fmt.Sprintf(
+					"Cleared %d entries from queue. New size: %d",
+					removed,
+					len(q.entries),
+				)})
+	}
+	q.mu.Unlock()
 }
 
 //go:embed rate_config.json
@@ -267,6 +345,7 @@ func main() {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})
 
+	var handlerChain http.Handler
 	util.SetupLog(logDir)
 	defer util.StopLogging()
 	middlewareLogger := func(next http.Handler) http.Handler {
@@ -343,11 +422,13 @@ func main() {
 
 	userLimiters := SyncMap{ma: make(map[string]*UserLimiter)}
 
+	q := RequestQueue{entries: make([]RequestEntry, 0), maxSize: 100}
 	middlewareLimiter := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rateLimiting := !noRateLimit
 			if rateLimiting {
-				if generalLimiter.Reserve(r, urlLimits) {
+				c := getUrlCost(r, urlLimits)
+				if generalLimiter.Reserve(c) {
 					ip, _, err := net.SplitHostPort(r.RemoteAddr)
 					if err != nil {
 						fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
@@ -364,20 +445,32 @@ func main() {
 					}
 					userLimiters.mu.Unlock()
 
-					allowed := userLimiter.l.Reserve(r, urlLimits)
+					allowed := userLimiter.l.Reserve(c)
 
 					if allowed {
+						printLimiterUsage(r.URL.Path, true, &generalLimiter, &userLimiters)
 						next.ServeHTTP(w, r)
-						generalLimiter.Free(r, urlLimits)
-						userLimiter.l.Free(r, urlLimits)
+						generalLimiter.Free(c)
+						userLimiter.l.Free(c)
+						printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
+						c := generalLimiter.Capacity()
+						entries := q.pullEntries(c)
+						for _, e := range entries {
+							go handlerChain.ServeHTTP(e.w, e.r)
+						}
+
 					} else {
-						w.WriteHeader(http.StatusTooManyRequests)
-						w.Write([]byte("Rate limit exceeded. This request cannot be accepted at this moment, please try again later.\n"))
-						generalLimiter.Free(r, urlLimits)
+						if !q.Push(RequestEntry{r: r, w: w, t: time.Now(), c: c}) {
+							w.WriteHeader(http.StatusTooManyRequests)
+							w.Write([]byte("Rate limit exceeded. This request cannot be " +
+								"accepted at this moment, please try again later.\n"))
+						}
+						generalLimiter.Free(c)
 					}
 				} else {
 					w.WriteHeader(http.StatusServiceUnavailable)
-					w.Write([]byte("Server is busy\n"))
+					w.Write([]byte("Server is busy. This request cannot be accepted at " +
+						"this moment, please try again later.\n"))
 				}
 			} else {
 				next.ServeHTTP(w, r)
@@ -385,6 +478,13 @@ func main() {
 
 		})
 	}
+
+	go func() {
+		for {
+			time.Sleep(15 * time.Second)
+			q.clearQueue()
+		}
+	}()
 
 	go func(ul *SyncMap) {
 		for {
@@ -405,7 +505,7 @@ func main() {
 			"large requests locally.\n")
 	}
 
-	handlerChain :=
+	handlerChain =
 		middlewareLogger(
 			middlewareLimiter(
 				middlewareTimeout(
@@ -523,10 +623,39 @@ func printTree(node UrlNode, depth int) {
 	}
 }
 
+func getUrlCost(r *http.Request, limits UrlNode) float64 {
+	urlCost := 0.0
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	node := limits
+	inTree := true
+	for i := 0; i < len(parts) && inTree; i++ {
+		part := parts[i]
+		var idx int
+		idx, inTree = slices.BinarySearchFunc(
+			node.children,
+			part,
+			func(a UrlNode, b string) int {
+				if a.prefix == "*" {
+					return 0
+				}
+				return strings.Compare(a.prefix, b)
+			})
+		if inTree {
+			node = node.children[idx]
+		}
+	}
+	if inTree {
+		urlCost = node.cpuCost
+	}
+
+	return urlCost
+}
+
 var activeUrls = make(map[string]int)
 
-func updateMap(path string, add bool, generalLimiter *Limiter) {
-	generalLimiter.mu.Lock()
+func printLimiterUsage(path string, add bool, generalLimiter *Limiter, userLimiters *SyncMap) {
+	const liveDebug = false
 	if add {
 		activeUrls[path]++
 	} else {
@@ -535,9 +664,51 @@ func updateMap(path string, add bool, generalLimiter *Limiter) {
 			delete(activeUrls, path)
 		}
 	}
-	fmt.Print("\033[H\033[2J")
+	var sb strings.Builder
+
 	for key := range activeUrls {
-		fmt.Printf("%s: %d\n", key, activeUrls[key])
+		fmt.Fprintf(&sb, "%s: %d | ", key, activeUrls[key])
+		if liveDebug {
+			sb.WriteString("\n")
+		}
 	}
+	if liveDebug {
+		fmt.Fprintln(&sb, "==== Limiters ====")
+	}
+	generalLimiter.mu.Lock()
+	fmt.Fprintf(
+		&sb,
+		"General - usage: %.2f %%, limit: %.2f %% ",
+		generalLimiter.usage,
+		generalLimiter.limit,
+	)
 	generalLimiter.mu.Unlock()
+	if liveDebug {
+		sb.WriteString("\n")
+	}
+
+	userLimiters.mu.Lock()
+	for key := range userLimiters.ma {
+		fmt.Fprintf(
+			&sb,
+			"user lim %s - usage: %.2f %%, limit: %.2f %% ",
+			key,
+			userLimiters.ma[key].l.usage,
+			userLimiters.ma[key].l.limit,
+		)
+		if liveDebug {
+			sb.WriteString("\n")
+		}
+	}
+	userLimiters.mu.Unlock()
+
+	if liveDebug {
+		fmt.Print("\033[H\033[2J" + sb.String())
+	} else {
+		util.LogInfoDef(
+			util.InfoEntry{
+				RequestUrl:  path,
+				Description: sb.String(),
+			})
+	}
 }
