@@ -435,13 +435,10 @@ import (
   \ty{http.Handler}. Each layer adds some processing capabilities. The first
   layer for example is for rate limiting. Another layer is for logging requests
   and responses. We define the functions in the scope of the main function in
-  order to get access to local variables, like paths and limiters. Before 
-  creating any middleware, lets declare the chain, so that we may reference it
-  from inside the middleware layers.
+  order to get access to local variables, like paths and limiters.
 #+end_export
 
 #+begin_src go <<Create middleware, Pr. \ref{pr:main}>>=
-  var handlerChain http.Handler
   //<<Create logger middleware, Pr. \ref{pr:main}>>
   //<<Create limiter middleware, Pr. \ref{pr:main}>>
   //<<Create timeout middleware, Pr. \ref{pr:main}>>
@@ -921,54 +918,58 @@ import (
 
 #+begin_export latex
   First we check whether we are doing rate limiting or not. If we do not limit,
-  we immediately call the next handler. If we do, we first check the general
-  limiter. If the general limiter allows processing we check the user limiter.
+  we immediately call the next handler. If we do, we check the limiters.
   If both limiters allow processing we call the next handler. We write an error
   response if either limiter denies processing and the queue is full.
-  A 503 (Service Unavailable) signifies, that the server is overloading,
-  while 429 (Too Many Requests), says that a client has exceed their limit.
-  We are reserving cpu load in two independent limiters. This means we to free
-  them independently as well. So if the general limiter allows processing, but
-  the user limiter does not, we need to free the reserved load in the general
-  limiter, before sending an error response.
-  If the queue is not full, we enqueue the request. A request needs four 
-  values, when being added to the queue. These are its request struct and 
-  response writer, timestamp and cpu cost.
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
   rateLimiting := !noRateLimit
   if rateLimiting {
     c := getUrlCost(r, urlLimits)
-    if generalLimiter.Reserve(c) {
-      //<<Get user limiter, Pr. \ref{pr:main}>>
-      //<<Check user limiter, Pr. \ref{pr:main}>>
-      if allowed {
+    ul := userLimiters.getOrCreate(r.RemoteAddr)
+    glAllowed, ulAllowed := limit(
+      &generalLimiter,
+      &ul.l,
+      c,
+    )
+    if glAllowed && ulAllowed {
         printLimiterUsage(r.URL.Path, true, &generalLimiter, &userLimiters)
         next.ServeHTTP(w, r)
-        generalLimiter.Free(c)
-        userLimiter.l.Free(c)
+        freeLimiters(&generalLimiter, &ul.l, c)
         printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
         //<<Pop requests from queue, Pr. \ref{pr:main}>>
       } else {
-        generalLimiter.Free(c)
-
-        // In case queue is full
-        if !q.Push(RequestEntry{r: r, w: w, t: time.Now(), c: c}) {
-          w.WriteHeader(http.StatusTooManyRequests)
-          w.Write([]byte("Rate limit exceeded. This request cannot be " +
-          "accepted at this moment, please try again later.\n"))
-        } else {
-          // Keep connection live until entry has gotten out of queue
-        }
+        //<<Act on limiter deny, Pr. \ref{pr:main}>>
       }
     } else {
-        w.WriteHeader(http.StatusServiceUnavailable)
-        w.Write([]byte("Server is busy. This request cannot be accepted at " +
-          "this moment, please try again later.\n"))
+      next.ServeHTTP(w, r)
+  }
+#+end_src
+
+#+begin_export latex
+  Now we still need the actual limiting function. Here we first check the 
+  general limiter. If the general limiter allows processing we check the user
+  limiter. In case the generalLimiter allowed processing, but the user limiter
+  did not, we need to free the general limiter's reserved space. We also log a 
+  new reservation, if both limiters agreed to process the request.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func limit(
+    generalLimiter *Limiter,
+    userLimiter *Limiter,
+    c float64,
+  ) (glAllowed, ulAllowed bool) {
+    glAllowed = generalLimiter.Reserve(c)
+    if glAllowed {
+      ulAllowed = userLimiter.Reserve(c)
+      if !ulAllowed {
+        // Need to free general limiter if user limiter is denying request
+        generalLimiter.Free(c)
+      }
     }
-  } else {
-    next.ServeHTTP(w, r)
+    return
   }
 #+end_src
 
@@ -981,22 +982,26 @@ import (
   first request.
 #+end_export
 
-#+begin_src go <<Get user limiter, Pr. \ref{pr:main}>>=
-  ip, _, err := net.SplitHostPort(r.RemoteAddr)
-  if err != nil {
-    fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
-  }
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (ul *SyncMap) getOrCreate(remoteAddr string) *UserLimiter {
+    ip, _, err := net.SplitHostPort(remoteAddr)
+    if err != nil {
+      fmt.Printf("Couldn't parse remote address %s\n", remoteAddr)
+    }
 
-  userLimiters.mu.Lock()
-  userLimiter, ok := userLimiters.ma[ip]
-  if !ok {
-		userLimiter = new(UserLimiter{
-      l: Limiter {usage: 0.0, limit: 50.0},
-      t: time.Now(),
-    })
-		userLimiters.ma[ip] = userLimiter
+    ul.mu.Lock()
+    userLimiter, ok := ul.ma[ip]
+    if !ok {
+	  	userLimiter = new(UserLimiter{
+        l: Limiter {usage: 0.0, limit: 50.0},
+        t: time.Now(),
+      })
+	  	ul.ma[ip] = userLimiter
+    }
+    ul.mu.Unlock()
+
+    return userLimiter
   }
-  userLimiters.mu.Unlock()
 #+end_src
 
 #+begin_export latex
@@ -1009,54 +1014,40 @@ import (
 #+end_src
 
 #+begin_export latex
-  Calling the Reserve outside the userLimiter critical section, avoids a
-  possible deadlock.
+  Freeing the limiters begins with calling the \ty{Free} method on both 
+  affected limiters. Than we log the freed requests.
 #+end_export
 
-#+begin_src go <<Check user limiter, Pr. \ref{pr:main}>>=
-  allowed := userLimiter.l.Reserve(c)
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func freeLimiters(
+    generalLimiter *Limiter,
+    userLimiter *Limiter,
+    c float64,
+  ) {
+    generalLimiter.Free(c)
+    userLimiter.Free(c)
+  }
 #+end_src
 
 #+begin_export latex
-  The sync map now holds an entry for every ip address that ever requested
-  anything. That's a little ambitious. We should clear the map every now and
-  then, reducing memory build up. Every five minutes we loop through the map
-  and check timestamps. If the timestamp for the user is older than five
-  minutes, we clear their entry.
-#+end_export
-
-#+begin_src go <<Clear limiter map periodically, Pr. \ref{pr:main}>>=
-  go func(ul *SyncMap) {
-    for {
-	    time.Sleep(5 * time.Minute)
-		  userLimiters.mu.Lock()
-      threshold := time.Now().Add(time.Minute * -5)
-	    for k := range userLimiters.ma {
-        if (userLimiters.ma[k].t.Before(threshold)) {
-	    	  delete(userLimiters.ma, k)
-        }
-	    }
-		  userLimiters.mu.Unlock()
-    }
-  }(&userLimiters)
-#+end_src
-
-#+begin_export latex
-  We are still missing the queue, so let's create a struct which handles this.
-  This is going to wrap a slice of http readers and writers, which should be
-  bound by struct as well. A request entry is further enriched by its time of 
-  arrival and its corresponding cpu cost. The queue should not grow forever, so
-  we saving determining a maximum size as well. The request queue is going read 
-  and gets written to by the multiplexed server, so it needs to be threadsafe.
-  Adding yet another mutex, should fix that.
+  Now to pop the requests from the queue, we need to make a big dtour, and 
+  begin by actually implementing the queue. This starts off with two structs.
+  One for a queue entry and one for the queue itself. The queue is going to
+  wrap a slice of http readers and writers, which are considered the entries. A
+  request entry is further enriched by its time of arrival, its corresponding
+  cpu cost and a channel determining its state. The queue should not grow
+  forever, so need to determine a cap on the amount of entries. The request
+  queue is read and gets written to by the multiplexed server, so it needs to
+  be threadsafe. Adding yet another mutex, should fix that.
 #+end_export
 
 #+begin_src go <<Types, Pr. \ref{pr:main}>>=
   type RequestEntry struct {
-    r *http.Request
-    w http.ResponseWriter
-    t time.Time
-    c float64
+    r     *http.Request
+    w     http.ResponseWriter
+    t     time.Time
+    c     float64
+    state chan string
   }
 
   type RequestQueue struct {
@@ -1072,7 +1063,7 @@ import (
 #+end_export
 
 #+begin_src go <<Methods, Pr. \ref{pr:main}>>=
-  func (q *RequestQueue) isFull() bool {
+  func (q *RequestQueue) IsFull() bool {
     return len(q.entries) >= q.maxSize
   }
 
@@ -1080,7 +1071,7 @@ import (
     q.mu.Lock()
     var str string
     var resp = false
-    if (!q.isFull()) {
+    if (!q.IsFull()) {
       q.entries = append(q.entries, re)
       str = "Pushed request to queue"
       resp = true
@@ -1123,17 +1114,12 @@ import (
   With these methods done, we've got everything to work with the queue. Entries 
   exceeding the rate limit are already being add to the queue. Now we need to 
   remove them again, when a request frees up consumption. So when the limiters 
-  are freed, we lock them again to allow first service to a queue entry. We 
-  check for one or more entries fitting in the limiter and run them in a go 
-  process. We are unlocking, once we've begun the subroutine.
+  are freed, we check for one or more entries fitting in the limiter and run
+  them in a go process.
 #+end_export
 
 #+begin_src go <<Pop requests from queue, Pr. \ref{pr:main}>>=
-  c := generalLimiter.Capacity()
-  entries := q.pullEntries(c)
-  for _, e := range entries {
-    go handlerChain.ServeHTTP(e.w, e.r)
-  }
+  go q.activateEntries(&generalLimiter, &userLimiters)
 #+end_src
 
 #+begin_export latex
@@ -1152,40 +1138,38 @@ import (
 #+end_src
 
 #+begin_export latex
-  There is still a method missing, which is call \ty{pullEntries}. In this we 
-  look through the entries, ordered front to back, and pick all of the entries,
-  that, accumulated, do not exceed our limit. We are logging changes in the
-  queue again.
+  Checking the entries and activating them is done in \ty{activateEntries}. In
+  this we look through the entries, ordered front to back, and pick all of the
+  entries, that, accumulated, do not exceed our limit. We are logging changes
+  in the queue again.
 #+end_export
 
 #+begin_src go <<Methods, Pr. \ref{pr:main}>>=
-  func (q *RequestQueue) pullEntries(limit float64) []RequestEntry {
-    const eps = 0.1
-    f := 0.0
+  func (q *RequestQueue) activateEntries(
+    generalLimiter *Limiter,
+    userLimiters *SyncMap,
+  )  {
     indexed := make([]int, 0)
     q.mu.Lock()
-    resp := make([]RequestEntry, 0)
-    for i := 0; i < len(q.entries) && f < limit - eps; i++ {
+    for i := 0; i < len(q.entries) && generalLimiter.Capacity() > 0.1; i++ {
       curr := q.entries[i]
-      if (f + curr.c < limit - eps) {
-        resp = append(resp, curr)
-        f += curr.c
+      ul := userLimiters.getOrCreate(curr.r.RemoteAddr)
+      glAllowed, ulAllowed := limit(
+        generalLimiter,
+        &ul.l,
+        curr.c,
+      )
+
+      if glAllowed && ulAllowed {
+        printLimiterUsage(curr.r.URL.Path, true, generalLimiter, userLimiters)
+        curr.state <- "ready"
         indexed = append(indexed, i) 
       }
     }
-    //<<Remove found entries, Pr. \ref{pr:main}>>
-    if len(indexed) > 0 {
-      util.LogInfoDef(
-        util.InfoEntry{
-          Description: fmt.Sprintf(
-            "Pulled %d entries from queue. New size: %d",
-            len(indexed),
-            len(q.entries),
-      )})
-    }
-    q.mu.Unlock()
 
-    return resp
+    //<<Remove found entries, Pr. \ref{pr:main}>>
+    //<<Log change in queue, Pr. \ref{pr:main}>>
+    q.mu.Unlock()
   }
 #+end_src
 
@@ -1197,6 +1181,23 @@ import (
 #+begin_src go <<Remove found entries, Pr. \ref{pr:main}>>=
   for i := len(indexed) - 1; i >= 0; i-- {
     q.entries = append(q.entries[:i], q.entries[i+1:]...)
+  }
+#+end_src
+
+#+begin_export latex
+  If there has been a change in the size of the queue, we should log it. These
+  statistics are really valueable once the server is running live.
+#+end_export
+
+#+begin_src go <<Log change in queue, Pr. \ref{pr:main}>>=
+  if len(indexed) > 0 {
+    util.LogInfoDef(
+      util.InfoEntry{
+        Description: fmt.Sprintf(
+          "Pulled %d entries from queue. New size: %d",
+          len(indexed),
+          len(q.entries),
+    )})
   }
 #+end_src
 
@@ -1222,9 +1223,7 @@ import (
     for _, e := range q.entries {
       if (now.After(e.t.Add(maxTime * time.Second))) {
         removed++
-        e.w.WriteHeader(http.StatusTooManyRequests)
-        e.w.Write([]byte("Rate limit exceeded. This request cannot be " +
-          "accepted at this moment, please try again later.\n"))
+        e.state <- "abort"
       } else {
         keep = append(keep, e)
       }
@@ -1256,6 +1255,93 @@ import (
       q.clearQueue()
     }
   }()
+#+end_src
+
+#+begin_export latex
+  If one of the limiters block a request, we check whether the queue has 
+  capacity. If it does we add the request and start blocking. If it does not, 
+  we need to send limit responses. A 503 (Service Unavailable) signifies, that 
+  the server is overloading, while 429 (Too Many Requests), says that a client
+  has exceed their limit. If the queue is not full, we enqueue the request. A
+  request needs five values, when being added to the queue. These are its
+  request struct and response writer, timestamp and cpu cost.
+#+end_export
+
+#+begin_src go <<Act on limiter deny, Pr. \ref{pr:main}>>=
+  // In case queue is full
+  reqEntry := RequestEntry{
+    r: r,
+    w: w,
+    t: time.Now(),
+    c: c,
+    state: make(chan string),
+  }
+
+  if q.Push(reqEntry) {
+    //<<Wait for queue signal, Pr. \ref{pr:main}>>
+  } else if !glAllowed {
+    //<<Send server unavailable response, Pr. \ref{pr:main}>>
+  } else if !ulAllowed {
+    w.WriteHeader(http.StatusTooManyRequests)
+    w.Write([]byte("Rate limit exceeded. This request cannot be " +
+    "accepted at this moment, please try again later.\n"))
+  }
+#+end_src
+
+#+begin_export latex
+  If the request is queued, we need to block this routine using a channel. Each
+  queue entry has one of those channels. Once the entry is declared ready, it 
+  is already guaranteed to be limited. If it is aborted, we stop serving. We
+  just need to log and pass it to the next handler. After processing is done,
+  we need to free the space again. As the limiters might have new capacity, we
+  should also pop requests again.
+#+end_export
+
+#+begin_src go <<Wait for queue signal, Pr. \ref{pr:main}>>=
+  s := <-reqEntry.state
+  if s == "ready" {
+  next.ServeHTTP(w, r)
+  freeLimiters(&generalLimiter, &ul.l, c)
+  printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
+  //<<Pop requests from queue, Pr. \ref{pr:main}>>
+  } else if s == "abort" {
+    //<<Send server unavailable response, Pr. \ref{pr:main}>>
+  }
+#+end_src
+
+#+begin_export latex
+  If the request is aborted in queue or the server is overloading, we respond 
+  with a text stating the server is busy.
+#+end_export
+
+#+begin_src go <<Send server unavailable response, Pr. \ref{pr:main}>>=
+  w.WriteHeader(http.StatusServiceUnavailable)
+  w.Write([]byte("Server is busy. This request cannot be accepted at " +
+    "this moment, please try again later.\n"))
+#+end_src
+
+#+begin_export latex
+  The sync map now holds an entry for every ip address that ever requested
+  anything. That's a little ambitious. We should clear the map every now and
+  then, reducing memory build up. Every five minutes we loop through the map
+  and check timestamps. If the timestamp for the user is older than five
+  minutes, we clear their entry.
+#+end_export
+
+#+begin_src go <<Clear limiter map periodically, Pr. \ref{pr:main}>>=
+  go func(ul *SyncMap) {
+    for {
+	    time.Sleep(5 * time.Minute)
+		  ul.mu.Lock()
+      threshold := time.Now().Add(time.Minute * -5)
+	    for k := range ul.ma {
+        if (ul.ma[k].t.Before(threshold)) {
+	    	  delete(ul.ma, k)
+        }
+	    }
+		  ul.mu.Unlock()
+    }
+  }(&userLimiters)
 #+end_src
 
 #+begin_export latex
@@ -1367,7 +1453,7 @@ import (
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
-  handlerChain =
+  handlerChain :=
     middlewareLogger(
 			middlewareLimiter(
 			  middlewareTimeout(

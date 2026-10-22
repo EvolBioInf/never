@@ -88,10 +88,11 @@ type SyncMap struct {
 }
 
 type RequestEntry struct {
-	r *http.Request
-	w http.ResponseWriter
-	t time.Time
-	c float64
+	r     *http.Request
+	w     http.ResponseWriter
+	t     time.Time
+	c     float64
+	state chan string
 }
 
 type RequestQueue struct {
@@ -122,7 +123,27 @@ func (l *Limiter) Free(cpuCost float64) {
 
 }
 
-func (q *RequestQueue) isFull() bool {
+func (ul *SyncMap) getOrCreate(remoteAddr string) *UserLimiter {
+	ip, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		fmt.Printf("Couldn't parse remote address %s\n", remoteAddr)
+	}
+
+	ul.mu.Lock()
+	userLimiter, ok := ul.ma[ip]
+	if !ok {
+		userLimiter = new(UserLimiter{
+			l: Limiter{usage: 0.0, limit: 50.0},
+			t: time.Now(),
+		})
+		ul.ma[ip] = userLimiter
+	}
+	ul.mu.Unlock()
+
+	return userLimiter
+}
+
+func (q *RequestQueue) IsFull() bool {
 	return len(q.entries) >= q.maxSize
 }
 
@@ -130,7 +151,7 @@ func (q *RequestQueue) Push(re RequestEntry) bool {
 	q.mu.Lock()
 	var str string
 	var resp = false
-	if !q.isFull() {
+	if !q.IsFull() {
 		q.entries = append(q.entries, re)
 		str = "Pushed request to queue"
 		resp = true
@@ -175,20 +196,28 @@ func (l *Limiter) Capacity() float64 {
 	return c
 }
 
-func (q *RequestQueue) pullEntries(limit float64) []RequestEntry {
-	const eps = 0.1
-	f := 0.0
+func (q *RequestQueue) activateEntries(
+	generalLimiter *Limiter,
+	userLimiters *SyncMap,
+) {
 	indexed := make([]int, 0)
 	q.mu.Lock()
-	resp := make([]RequestEntry, 0)
-	for i := 0; i < len(q.entries) && f < limit-eps; i++ {
+	for i := 0; i < len(q.entries) && generalLimiter.Capacity() > 0.1; i++ {
 		curr := q.entries[i]
-		if f+curr.c < limit-eps {
-			resp = append(resp, curr)
-			f += curr.c
+		ul := userLimiters.getOrCreate(curr.r.RemoteAddr)
+		glAllowed, ulAllowed := limit(
+			generalLimiter,
+			&ul.l,
+			curr.c,
+		)
+
+		if glAllowed && ulAllowed {
+			printLimiterUsage(curr.r.URL.Path, true, generalLimiter, userLimiters)
+			curr.state <- "ready"
 			indexed = append(indexed, i)
 		}
 	}
+
 	for i := len(indexed) - 1; i >= 0; i-- {
 		q.entries = append(q.entries[:i], q.entries[i+1:]...)
 	}
@@ -202,24 +231,21 @@ func (q *RequestQueue) pullEntries(limit float64) []RequestEntry {
 					len(q.entries),
 				)})
 	}
-	q.mu.Unlock()
 
-	return resp
+	q.mu.Unlock()
 }
 
 func (q *RequestQueue) clearQueue() {
-	const maxTime = 15
+	const maxTime = 45
 	keep := make([]RequestEntry, 0)
 	removed := 0
 	q.mu.Lock()
 	now := time.Now()
 
 	for _, e := range q.entries {
-		if now.After(e.t.Add(15 * time.Second)) {
+		if now.After(e.t.Add(maxTime * time.Second)) {
 			removed++
-			e.w.WriteHeader(http.StatusTooManyRequests)
-			e.w.Write([]byte("Rate limit exceeded. This request cannot be " +
-				"accepted at this moment, please try again later.\n"))
+			e.state <- "abort"
 		} else {
 			keep = append(keep, e)
 		}
@@ -345,7 +371,6 @@ func main() {
 		http.Redirect(w, r, docsV2Pref, http.StatusSeeOther)
 	})
 
-	var handlerChain http.Handler
 	util.SetupLog(logDir)
 	defer util.StopLogging()
 	middlewareLogger := func(next http.Handler) http.Handler {
@@ -428,49 +453,55 @@ func main() {
 			rateLimiting := !noRateLimit
 			if rateLimiting {
 				c := getUrlCost(r, urlLimits)
-				if generalLimiter.Reserve(c) {
-					ip, _, err := net.SplitHostPort(r.RemoteAddr)
-					if err != nil {
-						fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
-					}
+				ul := userLimiters.getOrCreate(r.RemoteAddr)
+				glAllowed, ulAllowed := limit(
+					&generalLimiter,
+					&ul.l,
+					c,
+				)
+				if glAllowed && ulAllowed {
+					printLimiterUsage(r.URL.Path, true, &generalLimiter, &userLimiters)
+					next.ServeHTTP(w, r)
+					freeLimiters(&generalLimiter, &ul.l, c)
+					printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
+					go q.activateEntries(&generalLimiter, &userLimiters)
 
-					userLimiters.mu.Lock()
-					userLimiter, ok := userLimiters.ma[ip]
-					if !ok {
-						userLimiter = new(UserLimiter{
-							l: Limiter{usage: 0.0, limit: 50.0},
-							t: time.Now(),
-						})
-						userLimiters.ma[ip] = userLimiter
-					}
-					userLimiters.mu.Unlock()
-
-					allowed := userLimiter.l.Reserve(c)
-
-					if allowed {
-						printLimiterUsage(r.URL.Path, true, &generalLimiter, &userLimiters)
-						next.ServeHTTP(w, r)
-						generalLimiter.Free(c)
-						userLimiter.l.Free(c)
-						printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
-						c := generalLimiter.Capacity()
-						entries := q.pullEntries(c)
-						for _, e := range entries {
-							go handlerChain.ServeHTTP(e.w, e.r)
-						}
-
-					} else {
-						if !q.Push(RequestEntry{r: r, w: w, t: time.Now(), c: c}) {
-							w.WriteHeader(http.StatusTooManyRequests)
-							w.Write([]byte("Rate limit exceeded. This request cannot be " +
-								"accepted at this moment, please try again later.\n"))
-						}
-						generalLimiter.Free(c)
-					}
 				} else {
-					w.WriteHeader(http.StatusServiceUnavailable)
-					w.Write([]byte("Server is busy. This request cannot be accepted at " +
-						"this moment, please try again later.\n"))
+					// In case queue is full
+					reqEntry := RequestEntry{
+						r:     r,
+						w:     w,
+						t:     time.Now(),
+						c:     c,
+						state: make(chan string),
+					}
+
+					if q.Push(reqEntry) {
+						s := <-reqEntry.state
+						if s == "ready" {
+							next.ServeHTTP(w, r)
+							freeLimiters(&generalLimiter, &ul.l, c)
+							printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
+							go q.activateEntries(&generalLimiter, &userLimiters)
+
+						} else if s == "abort" {
+							w.WriteHeader(http.StatusServiceUnavailable)
+							w.Write([]byte("Server is busy. This request cannot be accepted at " +
+								"this moment, please try again later.\n"))
+
+						}
+
+					} else if !glAllowed {
+						w.WriteHeader(http.StatusServiceUnavailable)
+						w.Write([]byte("Server is busy. This request cannot be accepted at " +
+							"this moment, please try again later.\n"))
+
+					} else if !ulAllowed {
+						w.WriteHeader(http.StatusTooManyRequests)
+						w.Write([]byte("Rate limit exceeded. This request cannot be " +
+							"accepted at this moment, please try again later.\n"))
+					}
+
 				}
 			} else {
 				next.ServeHTTP(w, r)
@@ -489,14 +520,14 @@ func main() {
 	go func(ul *SyncMap) {
 		for {
 			time.Sleep(5 * time.Minute)
-			userLimiters.mu.Lock()
+			ul.mu.Lock()
 			threshold := time.Now().Add(time.Minute * -5)
-			for k := range userLimiters.ma {
-				if userLimiters.ma[k].t.Before(threshold) {
-					delete(userLimiters.ma, k)
+			for k := range ul.ma {
+				if ul.ma[k].t.Before(threshold) {
+					delete(ul.ma, k)
 				}
 			}
-			userLimiters.mu.Unlock()
+			ul.mu.Unlock()
 		}
 	}(&userLimiters)
 
@@ -505,7 +536,7 @@ func main() {
 			"large requests locally.\n")
 	}
 
-	handlerChain =
+	handlerChain :=
 		middlewareLogger(
 			middlewareLimiter(
 				middlewareTimeout(
@@ -650,6 +681,31 @@ func getUrlCost(r *http.Request, limits UrlNode) float64 {
 	}
 
 	return urlCost
+}
+
+func limit(
+	generalLimiter *Limiter,
+	userLimiter *Limiter,
+	c float64,
+) (glAllowed, ulAllowed bool) {
+	glAllowed = generalLimiter.Reserve(c)
+	if glAllowed {
+		ulAllowed = userLimiter.Reserve(c)
+		if !ulAllowed {
+			// Need to free general limiter if user limiter is denying request
+			generalLimiter.Free(c)
+		}
+	}
+	return
+}
+
+func freeLimiters(
+	generalLimiter *Limiter,
+	userLimiter *Limiter,
+	c float64,
+) {
+	generalLimiter.Free(c)
+	userLimiter.Free(c)
 }
 
 var activeUrls = make(map[string]int)
