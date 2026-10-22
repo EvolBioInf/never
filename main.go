@@ -709,9 +709,11 @@ func freeLimiters(
 }
 
 var activeUrls = make(map[string]int)
+var activeUrlsMu sync.Mutex
 
 func printLimiterUsage(path string, add bool, generalLimiter *Limiter, userLimiters *SyncMap) {
 	const liveDebug = false
+	activeUrlsMu.Lock()
 	if add {
 		activeUrls[path]++
 	} else {
@@ -728,6 +730,8 @@ func printLimiterUsage(path string, add bool, generalLimiter *Limiter, userLimit
 			sb.WriteString("\n")
 		}
 	}
+	activeUrlsMu.Unlock()
+
 	if liveDebug {
 		fmt.Fprintln(&sb, "==== Limiters ====")
 	}

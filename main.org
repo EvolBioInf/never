@@ -1349,13 +1349,16 @@ import (
   currently being requested at which rate. For this we need to lock the 
   limiter, and endpoints to a map when requested. We increment on new requests
   and decrement when one is done. Printing to a cleared terminal provides a 
-  nice representation of the current state.
+  nice representation of the current state. The activeUrls themselves are prone
+  concurrent writes and reads as well. We again use a mutex.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
   var activeUrls = make(map[string]int)
+  var activeUrlsMu sync.Mutex
   func printLimiterUsage(path string, add bool, generalLimiter *Limiter, userLimiters *SyncMap) {
     const liveDebug = false
+    activeUrlsMu.Lock()
     if add {
       activeUrls[path]++
     } else {
@@ -1372,6 +1375,8 @@ import (
         sb.WriteString("\n")
       }
     }
+    activeUrlsMu.Unlock()
+
     if liveDebug {
       fmt.Fprintln(&sb, "==== Limiters ====")
     }
