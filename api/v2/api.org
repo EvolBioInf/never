@@ -6,9 +6,10 @@
   resemble neverv1, as the backends don't differ too much.
 
   \subsection*{Implementation}
-  The api backend provides the global RegisterRoutes function just
+  The api's backend provides the global RegisterRoutes function just
   like every standalone package used within neverV2. It takes as arguments
-  a prefix for the routes, the server's address and the databases.
+  a prefix for the routes, the server's address and the databases, as well as a
+  path to the neighbors executables.
   \bpr{api}{pr:api}
 #+end_export
 
@@ -21,7 +22,12 @@
   //<<Methods, Pa. \ref{pa:api}>>
   //<<Variables, Pa. \ref{pa:api}>>
   //<<Content types, Pa. \ref{pa:api}>>
-  func RegisterRoutes(pref, serverAdr string, dbs map[string]Database) {
+  func RegisterRoutes(
+    pref string,
+    serverAdr string,
+    dbs map[string]Database,
+    progDir string,
+  ) {
     //<<Register routes, Pa. \ref{pa:api}>>
   }
   //<<Functions, Pa. \ref{pa:api}>>
@@ -599,7 +605,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progAntsL, programEndpoint, dbs, "ants")
+  makeRoute(&progAntsL, programEndpoint, dbs, "ants", progDir)
 #+end_src
 
 #+begin_export latex
@@ -615,7 +621,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progDreeL, programEndpoint, dbs, "dree")
+  makeRoute(&progDreeL, programEndpoint, dbs, "dree", progDir)
 #+end_src
 
 #+begin_export latex
@@ -627,15 +633,25 @@ type Node struct {
     Links:    make(map[string][]Node),
     Name:     "progFintac",
     BasePath: prefix + "/programs/fintac",
-    Action:   http.MethodPost,
+    Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progFintacL, programEndpoint, dbs, "fintac")
+  makeRoute(&progFintacL, programEndpoint, dbs, "fintac", progDir)
+#+end_src
+
+#+begin_export latex
+  \ty{fintac} uses the new http method QUERY. As of now, the latest version of
+  \ty{net/http} does not provide constants for this method. So we define them
+  ourselves.
+#+end_export
+
+#+begin_src go <<Variables, Pa. \ref{pa:api}>>=
+  const httpMethodQuery = "QUERY"
 #+end_src
 
 #+begin_export latex
   Now we define \ty{neighbors}, which has two actions:
-  GET for requests without a body and POST requests
+  GET for requests without a body and QUERY requests
   containing files.
 #+end_export
 
@@ -647,15 +663,15 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors")
-  progNeighborsPostL := Node{
+  makeRoute(&progNeighborsGetL, programEndpoint, dbs, "neighbors", progDir)
+  progNeighborsQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progNeighbors",
     BasePath: prefix + "/programs/neighbors",
-    Action:   http.MethodPost,
+    Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progNeighborsPostL, programEndpoint, dbs, "neighbors")
+  makeRoute(&progNeighborsQueryL, programEndpoint, dbs, "neighbors", progDir)
 #+end_src
 
 #+begin_export latex
@@ -671,15 +687,15 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks")
-  progRanksPostL := Node{
+  makeRoute(&progRanksGetL, programEndpoint, dbs, "ranks", progDir)
+  progRanksQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progRanks",
     BasePath: prefix + "/programs/ranks",
-    Action:   http.MethodPost,
+    Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progRanksPostL, programEndpoint, dbs, "ranks")
+  makeRoute(&progRanksQueryL, programEndpoint, dbs, "ranks", progDir)
 #+end_src
 
 #+begin_export latex
@@ -694,7 +710,7 @@ type Node struct {
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
-  makeRoute(&progTaxiL, programEndpoint, dbs, "taxi")
+  makeRoute(&progTaxiL, programEndpoint, dbs, "taxi", progDir)
 #+end_src
 
 #+begin_export latex
@@ -763,9 +779,9 @@ type Node struct {
     progDreeL,
     progFintacL,
     progNeighborsGetL,
-    progNeighborsPostL,
+    progNeighborsQueryL,
     progRanksGetL,
-    progRanksPostL,
+    progRanksQueryL,
     progTaxiL,
   )
   accessionsL.Links["service"] = append(
@@ -788,9 +804,9 @@ type Node struct {
     progDreeL,
     progFintacL,
     progNeighborsGetL,
-    progNeighborsPostL,
+    progNeighborsQueryL,
     progRanksGetL,
-    progRanksPostL,
+    progRanksQueryL,
     progTaxiL,
   )
 #+end_src
@@ -1307,7 +1323,7 @@ type Node struct {
   A server error is a response with a 5XX response code.  We send it whenever
   there is an unexpected error on the server side. The user does not gain much
   info out of this, but we might, if we log it. So we should send an entry to
-  the warning log. We may decrease the amount of logging when encountering 
+  the warning log. We may decrease the amount of logging when encountering
   timeouts. Timeouts are expected errors. A stack trace will not be necessary
   for those.
 #+end_export
@@ -1324,7 +1340,7 @@ type Node struct {
       err = errors.New("No error passed")
     } else if err.Error() != "signal: killed" &&
       err.Error() != "context deadline exceeded" {
-      
+
       trace = string(debug.Stack())
     }
      util.LogWarningDef(
@@ -1769,8 +1785,8 @@ type Node struct {
 #+begin_export latex
   Getting the data of a taxon is a frequent problem. This means we write a
   function for this behaviour. \ty{getTaxonData} takes an id, whether the data
-  should be plain, i.e. without links and the composite to create. It also 
-  needs access to the databases and the requests context. 
+  should be plain, i.e. without links and the composite to create. It also
+  needs access to the databases and the requests context.
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
@@ -1973,7 +1989,7 @@ type Node struct {
       w,
       fmt.Sprintf(
         "Error from getTaxonData. Params: %d, %t, %s",
-        id, plain, fieldComposite,  
+        id, plain, fieldComposite,
       ),
       "",
       err,
@@ -2103,7 +2119,7 @@ type Node struct {
       w,
       fmt.Sprintf(
         "Error from getTaxonData. Params: %d, %t, %s",
-        taxId, true, fieldComposite,  
+        taxId, true, fieldComposite,
       ),
       "",
       err,
@@ -2193,7 +2209,7 @@ type Node struct {
       writeServerError(
         w,
         fmt.Sprintf(
-          "fn children - Error while executing neidb.ChildrenContext. " + 
+          "fn children - Error while executing neidb.ChildrenContext. " +
             "Params: %d",
           taxId,
           ),
@@ -2303,7 +2319,7 @@ type Node struct {
       w,
       fmt.Sprintf(
         "fn parent - Error from getTaxonData. Params: %d, %t, %s",
-        parent, true, fieldComposite,  
+        parent, true, fieldComposite,
       ),
       "",
       err,
@@ -2463,7 +2479,7 @@ type Node struct {
 
 #+begin_export latex
   We declare a slice of \ty{TaxonAccession} for storing. We get the accessions
-  for a taxon, then add it's children. We do this as long as there are 
+  for a taxon, then add it's children. We do this as long as there are
   unprocessed taxa without exceeding the page.
 #+end_export
 
@@ -2478,7 +2494,7 @@ type Node struct {
       writeServerError(
         w,
         fmt.Sprintf(
-          "fn taxonAccessions - Error while executing " + 
+          "fn taxonAccessions - Error while executing " +
             "neidb.AccessionsContext. Params: %d",
             taxId,
         ),
@@ -2510,7 +2526,7 @@ type Node struct {
 #+begin_export latex
   We declare a variable of type \ty{TaxonAccession} based on the \ty{taxId} and
   store it in our output slice. Then we complete the taxon's accessions by
-  adding their levels before storing them. If we've not yet reached the 
+  adding their levels before storing them. If we've not yet reached the
   pagination offset, we decrement the offset instead of storing the accession.
 #+end_export
 
@@ -2586,7 +2602,7 @@ type Node struct {
     writeServerError(
       w,
       fmt.Sprintf(
-        "fn taxonAccessions - Error while executing neidb.ChildrenContext. " + 
+        "fn taxonAccessions - Error while executing neidb.ChildrenContext. " +
           "Params: %d",
           taxId,
       ),
@@ -2625,7 +2641,7 @@ type Node struct {
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
   func mrca(
     w http.ResponseWriter,
-    r *http.Request, 
+    r *http.Request,
     selfNode *Node,
     args ...any,
     ) {
@@ -2691,7 +2707,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We call get \ty{getTaxonData}, to get data on our taxon using the correct 
+  We call get \ty{getTaxonData}, to get data on our taxon using the correct
   composite of fields and links.
 #+end_export
 
@@ -2702,7 +2718,7 @@ type Node struct {
       w,
       fmt.Sprintf(
         "Error from getTaxonData. Params: %d, %t, %s",
-        id, plain, fieldComposite,  
+        id, plain, fieldComposite,
       ),
       "",
       err,
@@ -2829,7 +2845,7 @@ type Node struct {
       w,
       fmt.Sprintf(
         "Error from getTaxonData. Params: %d, %t, %s",
-        start, plain, fieldComposite,  
+        start, plain, fieldComposite,
       ),
       "",
       err,
@@ -2930,13 +2946,18 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  The database is given as the first value of \ty{args} and the program name as
-  a second.
+  The database is given as the first value of \ty{args}, the program name as
+  a second and we receive the directory containing the programs as the last 
+  argument. With this we need to make sure, that contains a trailing slash.
 #+end_export
 
 #+begin_src go <<Get dbPath and program name, Pa. \ref{pa:api}>>=
   dbPath := args[0].(Database).Path
   progName := args[1].(string)
+  progDir := args[2].(string)
+  if !strings.HasSuffix(progDir, "/") {
+    progDir += "/"
+  }
 #+end_src
 
 #+begin_export latex
@@ -2998,8 +3019,8 @@ type Node struct {
   don't want files of different users to clash, so each command and thus its
   files are executed within a temporary directory. We use a random text to
   guarantee uniqueness for the directories name as its. The directory and its
-  contents are removed after execution. Handling files entails creating the
-  necessary temporary files and taking care of the data provided via
+  contents are removed after execution. Handling files entails both creating
+  the necessary temporary files and taking care of the data provided via
   \ty{stdin}.
 #+end_export
 
@@ -3013,7 +3034,11 @@ type Node struct {
   defer os.RemoveAll(dir)
   var stdinData string
   //<<Handle files, Pa. \ref{pa:api}>>
-  cmd := exec.CommandContext(ctx, "../prog/"+progName, callArgs...)
+  cmd := exec.CommandContext(
+    ctx,
+    "../" + progDir + progName,
+    callArgs...,
+  )
   //<<Set pipes, Pa. \ref{pa:api}>>
   cmd.Dir = dir
   //<<Log command, Pa. \ref{pa:api}>>
@@ -3040,7 +3065,7 @@ type Node struct {
 #+end_src
 
 #+begin_export latex
-  We define that a \ty{post} request has to have \ty{multipart} as a
+  We define that a \ty{query} request has to have \ty{multipart} as a
   content type. If it does not, the request should have been of type \ty{get}.
   Then we inspect the form data using \ty{parseFormData}, which we need to
   implement in a moment. This returns \ty{stdin}'s content. We may use it as
@@ -3048,7 +3073,7 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Handle files, Pa. \ref{pa:api}>>=
-  if r.Method == http.MethodPost {
+  if r.Method == httpMethodQuery {
     ct, err := contenttype.GetMediaType(r)
     if err != nil {
       writeBadRequestResp(w, "Malformed content type.")
@@ -3056,7 +3081,7 @@ type Node struct {
     }
     if !ct.EqualsMIME(multipartCt) {
       w.WriteHeader(http.StatusUnsupportedMediaType)
-      w.Write([]byte("Use multipart/form-data with POST requests.\n"))
+      w.Write([]byte("Use multipart/form-data with QUERY requests.\n"))
       return
     } else {
       stdinData, err = parseFormData(w, r, dir, callArgs)
@@ -3179,7 +3204,11 @@ type Node struct {
     stdin = string(b)
   } else {
     var tf *os.File
-    tf, err = os.OpenFile(dir+"/"+strconv.Itoa(i), os.O_CREATE|os.O_WRONLY, 0600)
+    tf, err = os.OpenFile(
+      dir+"/"+strconv.Itoa(i),
+      os.O_CREATE|os.O_WRONLY,
+      0644,
+      )
     if err != nil {
       writeServerError(w, "Error while opening temp file", "", err)
       return

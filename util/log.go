@@ -37,8 +37,7 @@ var infoMutex, warningMutex sync.Mutex
 var timer *time.Timer
 var interval time.Duration
 
-func SetupLog() {
-	dir := "logs/"
+func SetupLog(dir string) {
 	interval = 2 * time.Second
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -55,7 +54,7 @@ func SetupLog() {
 }
 
 func handleFileOpen(path string, entry Writable) (*os.File, *csv.Writer) {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0600)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		panic(fmt.Sprintf("Could not open %s for logs: %s\n", path, err))
 	}

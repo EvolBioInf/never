@@ -89,8 +89,14 @@ func urlEncodeSlice(qb *strings.Builder, slc []string, paramName string) {
 	}
 }
 
-// The function SendPostRequest takes as argument an address as a string, program options and extra arguments as a slice of strings, as well as files and stdin. It sends a post request using these values and returns the result.
-func SendPostRequest(address string, options, extraArgs []string, miscArgs map[string]string, files []*os.File, stdin *os.File) string {
+// The function SendQueryRequest takes as argument an address as a string, program options and extra arguments as a slice of strings, as well as files and stdin. It sends a query request using these values and returns the result.
+func SendQueryRequest(
+	address string,
+	options, extraArgs []string,
+	miscArgs map[string]string,
+	files []*os.File,
+	stdin *os.File,
+) string {
 	qb := new(strings.Builder)
 	urlEncodeSlice(qb, options, "options")
 	urlEncodeSlice(qb, extraArgs, "extra")
@@ -119,7 +125,7 @@ func SendPostRequest(address string, options, extraArgs []string, miscArgs map[s
 		Check(err)
 	}
 	w.Close()
-	req, err := http.NewRequest(http.MethodPost, address+qb.String(), &b)
+	req, err := http.NewRequest("QUERY", address+qb.String(), &b)
 	Check(err)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	resp, err := http.DefaultClient.Do(req)

@@ -15,7 +15,8 @@ import (
 )
 
 //<<Types, Pr. \ref{pr:main}>>
-
+//<<Methods, Pr. \ref{pr:main}>>
+//<<Embedded files, Pr. \ref{pr:main}>>
 //<<Functions, Pr. \ref{pr:main}>>
 #+end_src
 
@@ -48,14 +49,28 @@ import (
   we need be able to pass an address and a port for the server to run on. It
   would be nice if we could also define a path for the HTTPS/TLS files i.e. the
   certificate and the private key. Providing extra options for the database
-  directory path, a default among the databases of the directory and the date
-  file results in a more flexible setup. It should be possible to toggle the
-  rate limit for debugging and testing purposes. This results in six strings,
-  an integer and a boolean as a return tuple.
+  directory path, a default among the databases of the directory, the date
+  file, a path for the logs, a path to the vitax files and finally a path to
+  the executable neighbors programs results in a more flexible setup. It
+  should be possible to toggle therate limit for debugging and testing
+  purposes. This results in seven strings, an integer and a boolean as a return
+  tuple.
 #+end_export
 
 #+begin_src go <<Functions, Pr. \ref{pr:main}>>=
-  func ioHandling() (string, string, string, string, string, string, int, bool) {
+  func ioHandling() (
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    int,
+    bool,
+  ) {
     //<<Prepare log, Pr. \ref{pr:main}>>
     //<<Set usage, Pr. \ref{pr:main}>>
     //<<Parse flags, Pr. \ref{pr:main}>>
@@ -131,6 +146,9 @@ import (
     "relative to current working directory")
   kFlag := flag.String("k", "certificates/private_key.pem", "private key")
   oFlag := flag.String("o", "http://localhost", "host address")
+  lFlag := flag.String("l", "logs/", "directory for log storage")
+  vvFlag := flag.String("V", "vitax/", "directory containing vitax files")
+  ppFlag := flag.String("P", "prog/", "directory containing neighbors programs")
   pFlag := flag.Int("p", 8080, "port")
   rFlag := flag.Bool("no-rate-limit", false, "Turn of rate limiting")
   vFlag := flag.Bool("v", false, "print progam info")
@@ -142,7 +160,8 @@ import (
     os.Exit(0)
   }
 
-  return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag, *oFlag, *pFlag, *rFlag
+  return *cFlag, *dFlag, *ddFlag, *uFlag, *kFlag,
+    *oFlag, *lFlag, *vvFlag, *ppFlag, *pFlag, *rFlag
 #+end_src
 
 #+begin_export latex
@@ -157,6 +176,9 @@ import (
   dateFilePath,
   privateKey,
   host,
+  logDir,
+  vitaxDir,
+  progDir,
   port,
   noRateLimit := ioHandling()
 #+end_src
@@ -329,12 +351,13 @@ import (
   which is this server. The first step to ensure that this works is preventing
   url clashes. While the packages should not know of each other they also
   should not register to the same routes. We prevent clashes by passing an url
-  prefix to each of them. Additionally to the prefix apiv2 needs to get
-  the databases. neverv1 receives prefixes both for the api and its
-  documentation. We further pass the path to the latest database and a path to
-  the datefile. docsv2 gets its prefix. It also needs to know whether it
-  is being hosted locally and on what port, so we need to provide data for
-  that. Lastly, we need to provide the directory to the databases.
+  prefix to each of them. Additionally to the prefix apiv2 needs to get the
+  databases and a path to the neighbors executables. neverv1 receives prefixes
+  both for the api and its documentation. We further pass the path to the
+  latest database and a path to the datefile. docsv2 gets its prefix. It also
+  needs to know whether it is being hosted locally and on what port, so we need
+  Lastly, we need to provide the directory to the databases and its latest
+  entry. to provide data for that.
 #+end_export
 
 #+begin_src go <<Register packages, Pr. \ref{pr:main}>>=
@@ -344,10 +367,26 @@ import (
   docsV2Pref := docsPref + apiPref + "/v2"
   isLocal := host == "http://localhost"
 
-  neverv1.RegisterRoutes(apiPref + "/v1", docsV1Pref, dbs["latest"].Path,
-    dateFilePath)
-  apiv2.RegisterRoutes(apiPref + "/v2", host+":"+strconv.Itoa(port), dbs)
-  docsv2.RegisterRoutes(docsV2Pref, isLocal, port, dbDirPath)
+  neverv1.RegisterRoutes(
+    apiPref + "/v1",
+    docsV1Pref,
+    dbs["latest"].Path,
+    dateFilePath,
+  )
+  apiv2.RegisterRoutes(
+    apiPref + "/v2",
+    host+":"+strconv.Itoa(port),
+    dbs,
+    progDir,
+  )
+  docsv2.RegisterRoutes(
+    docsV2Pref,
+    isLocal,
+    port,
+    dbDirPath,
+    dateFilePath,
+    dbs["latest"].Db,
+  )
 #+end_src
 
 #+begin_export latex
@@ -364,12 +403,12 @@ import (
 #+end_src
 
 #+begin_export latex
-  The Vitax files are located in directory \ty{vitax}. We make them
-  available by registering a file server to that directory.
+  We make the Vitax files available by registering a file server to that
+  directory.
 #+end_export
 
 #+begin_src go <<Serve Vitax files, Pr. \ref{pr:main}>>=
-  vitaxFiles := http.FileServer(http.Dir("vitax"))
+  vitaxFiles := http.FileServer(http.Dir(vitaxDir))
   http.Handle("/vitax/", http.StripPrefix("/vitax/", vitaxFiles))
 #+end_src
 
@@ -402,7 +441,6 @@ import (
 #+begin_src go <<Create middleware, Pr. \ref{pr:main}>>=
   //<<Create logger middleware, Pr. \ref{pr:main}>>
   //<<Create limiter middleware, Pr. \ref{pr:main}>>
-  //<<Create caching middleware, Pr. \ref{pr:main}>>
   //<<Create timeout middleware, Pr. \ref{pr:main}>>
 #+end_src
 
@@ -414,19 +452,20 @@ import (
 #+end_export
 
 #+begin_src go <<Create logger middleware, Pr. \ref{pr:main}>>=
-  util.SetupLog()
+  util.SetupLog(logDir)
   defer util.StopLogging();
   //<<Write logger middleware, Pr. \ref{pr:main}>>
 #+end_src
 
 #+begin_export latex
-  We write an outline of the logger middleware and think about how and exactly what
-  to log in the next step. A log entry contains data about the response, specifically
-  it's size, status code and processing time. Measuring the processing time may be done
-  by subtracting a timestamp before passing the request and after getting it's response.
-  Obtaining the the response code and size is a bit trickier, as the writer does not give
-  access to it's response - probably because it's not yet written... We are going to address
-  this in the next step.
+  We write an outline of the logger middleware and think about how and exactly
+  what to log in the next step. A log entry contains data about the response,
+  specifically it's size, status code and processing time. Measuring the
+  processing time may be done by subtracting a timestamp before passing the
+  request and after getting it's response. Obtaining the the response code and
+  size is a bit trickier, as the writer does not give access to it's response
+  - probably because it's not yet written... We are going to address this in
+  the next step.
 #+end_export
 
 #+begin_src go <<Write logger middleware, Pr. \ref{pr:main}>>=
@@ -449,10 +488,10 @@ import (
 #+end_src
 
 #+begin_export latex
-  Back to getting the response data. To obtain this data anyways we wrap the writer,
-  into a custom one. This wrapper just saves the status code and bytes it wrote.
-  We need to define a type for this and redefine the functions \ty{Write} and
-  \ty{WriteHeader}.
+  Back to getting the response data. To obtain this data anyways we wrap the
+  writer, into a custom one. This wrapper just saves the status code and bytes
+  it wrote. We need to define a type for this and redefine the functions
+  \ty{Write} and \ty{WriteHeader}.
 #+end_export
 
 #+begin_src go <<Types, Pr. \ref{pr:main}>>=
@@ -475,8 +514,9 @@ import (
 #+end_src
 
 #+begin_export latex
-  The \ty{CustomResponseWriter} fulfills the \ty{http.ResponseWriter} interface requirements.
-  This means we can pass without changing anything in the lower levels of this server.
+  The \ty{CustomResponseWriter} fulfills the \ty{http.ResponseWriter} interface
+  requirements. This means we can pass without changing anything in the lower
+  levels of this server.
 #+end_export
 
 #+begin_src go <<Pass on request, Pr. \ref{pr:main}>>=
@@ -485,10 +525,11 @@ import (
 #+end_src
 
 #+begin_export latex
-  We don't want to log every single request. Parts of the the server, mostly the frontend,
-  make a lot of consecutive requests, that aren't worth logging. It's interesting to get
-  a log entry, when someone is requesting the docs, but we don't need to log the follow up
-  requests for all the css files etc. This means we need to check the request url.
+  We don't want to log every single request. Parts of the the server, mostly
+  the frontend, make a lot of consecutive requests, that aren't worth logging.
+  It's interesting to get a log entry, when someone is requesting the docs, but
+  we don't need to log the follow up requests for all the css files etc. This
+  means we need to check the request url.
 #+end_export
 
 #+begin_src go <<Log request, Pr. \ref{pr:main}>>=
@@ -500,11 +541,12 @@ import (
 #+end_src
 
 #+begin_export latex
-  Now we know when to write an entry, but not what to write to it. Looking at our log package
-  let's us gain insight on what to log. An \ty{util.InfoEntry} may contain seven properties.
-  They hold information on ip, url, method, code, size, processing time and description.
-  This is the data we need to provide for logging. Most of this may be retrieved from the
-  http.Writer and http.Request objects.
+  Now we know when to write an entry, but not what to write to it. Looking at
+  our log package let's us gain insight on what to log. An \ty{util.InfoEntry}
+  may contain seven properties. They hold information on ip, url, method, code,
+  size, processing time and description. This is the data we need to provide
+  for logging. Most of this may be retrieved from the http.Writer and
+  http.Request objects.
 #+end_export
 
 #+begin_src go <<Write log entry, Pr. \ref{pr:main}>>=
@@ -522,9 +564,9 @@ import (
 #+end_src
 
 #+begin_export latex
-  The remote ip is stored within the request's \ty{RemoteAddr} field. It may be retrieved
-  using the \ty{SplitHostPort} method from the net \ty{package}. We log any errors
-  using \ty{util.log}'s \ty{LogWarningDef} method.
+  The remote ip is stored within the request's \ty{RemoteAddr} field. It may be
+  retrieved using the \ty{SplitHostPort} method from the net \ty{package}. We
+  log any errors using \ty{util.log}'s \ty{LogWarningDef} method.
 #+end_export
 
 #+begin_src go <<Retrieve remote ip, Pr. \ref{pr:main}>>=
@@ -532,53 +574,192 @@ import (
   if err != nil {
     util.LogWarningDef(
       util.WarningEntry{
-        Warning: fmt.Sprintf("Couldn't parse remote address %s during %s request", r.RemoteAddr, r.URL.Path),
+        Warning: fmt.Sprintf(
+          "Couldn't parse remote address %s during %s request",
+          r.RemoteAddr,
+          r.URL.Path,
+        ),
     })
   }
 #+end_src
 
 #+begin_export latex
-  Rate limiting is a technique to restrict the amount of requests a server may handle for a given timeframe.
-  We are going to implement a multilevel rate limit, where the first level is a user based limit and the second
-  handles across user requests. The per user requests should stop single users from sending too many requests, while
-  still allowing other users to work with the api. While the second level hardens against
-  a bot attacks. We use go rate package from the time extension pack for this.
-#+end_export
-
-#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
-  "golang.org/x/time/rate"
-#+end_src
-
-#+begin_export latex
-  We create a new general limiter which follows a token bucket approach. Each token represents a request. Requests are allowed
-  as long as there are tokens in the bucket, new tokens are added every second. This rate limit allows for burst.
-  The middleware checks against the limiter and passes the request to the next layer if the limiter allows it.
-  If the limit is exceeded we write a 429 (too many requests) response stating it's reason.
-  We should exclude the docs from beign limited.
+  Rate limiting is a technique to restrict the amount of requests a server may
+  handle for a given timeframe. We are going to implement a multilevel rate
+  limit, where the first level is a user based limit and the second handles
+  across user requests. The per user requests should stop single users from
+  sending too many requests, while still allowing other users to work with the
+  api. While the second level hardens against a bot attacks. We implement a
+  concurrent limiting technique. For this, each request is valued based on
+  their expected cpu usage. Given the expected cpu load, we limit the number of
+  simultaneous requests to stay below a maximum target load of 85% and per user
+  maximum load of 50%. If an incoming would exceed this limit, we send it to a 
+  queue, if it stays in queue for too long or the queue is full, we respond
+  with a 503 (Service Unavailable) or a 429 (Too Many Requests) http code,
+  depending on the exceeded limit. We get the expected route values from a
+  configuration file, which we need to read on startup.
 #+end_export
 
 #+begin_src go <<Create limiter middleware, Pr. \ref{pr:main}>>=
-  generalLimiter := rate.NewLimiter(rate.Limit(10), 100)
+  //<<Read configuration file, Pr. \ref{pr:main}>>
+  //<<Initialize general limiter, Pr. \ref{pr:main}>>
   //<<Declare per user limiter, Pr. \ref{pr:main}>>
   //<<Write limiter middleware, Pr. \ref{pr:main}>>
+  //<<Clear queue map periodically, Pr. \ref{pr:main}>>
   //<<Clear limiter map periodically, Pr. \ref{pr:main}>>
 #+end_src
 
 #+begin_export latex
-  The per user limiter is actually a map of many limiters. The map has ip adresses as a key
-  for user identification and their respective limiter as a value. As the server runs concurrently,
-  a mutex is required. We wrap both of them in a struct for better handling.
+  We add a small utility function, which eases debugging, when checking the
+  tree's correctness.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func printTree(node UrlNode, depth int) {
+    for range depth {
+      fmt.Print(" ")
+    }
+    fmt.Printf(node.prefix + " | Cost: %.2f\n", node.cpuCost)
+    for _, child := range node.children {
+      printTree(child, depth + 2)
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  The config file is called \ty{rate_config.json}. It needs to be embedded to
+  correctly work in production.
+#+end_export
+
+#+begin_src go <<Embedded files, Pr. \ref{pr:main}>>=
+	//go:embed rate_config.json
+	var rateConfig []byte
+#+end_src
+
+#+begin_export latex
+  We import \ty{embed}.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  _ "embed"
+#+end_src
+
+#+begin_export latex
+  The urls are stored as an array of objects. Each object holds two keys. One
+  is called \ty{url} and the other \ty{cpuCost}. As a first step we declare a
+  type to hold these values.
 #+end_export
 
 #+begin_src go <<Types, Pr. \ref{pr:main}>>=
-  type SyncMap struct {
-    ma map[string]*rate.Limiter
+  type RawUrl struct {
+	  Url     string  `json:"url"`
+	  CpuCost float64 `json:"CpuCost"`
+  }
+#+end_src
+
+#+begin_export latex
+  With this type, we can create a variable, to store the data to.
+#+end_export
+
+#+begin_src go <<Read configuration file, Pr. \ref{pr:main}>>=
+  var rawUrls []RawUrl
+  err = json.Unmarshal(rateConfig, &rawUrls)
+#+end_src
+
+#+begin_export latex
+  We import \ty{encoding/json}.
+#+end_export
+
+#+begin_src go <<Imports, Pr. \ref{pr:main}>>=
+  "encoding/json"
+#+end_src
+
+#+begin_export latex
+  Keeping the urls in this format is suboptimal. For each request, the
+  middleware would need to look up the expected load by iterating through the
+  array. That is slow. Using a map with the urls as keys would be optimal.
+  Sadly at this point in the requests processing, all we've got is access to
+  the actual URI, with filled in parameter. Blindly mapping them is pretty much
+  impossible. Instead we make use of the hierarchical structure of URIs and
+  do a custom URI matching process. For this we a need a tree. Each node in the
+  tree has, a prefix, cpu cost, and children.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type UrlNode struct {
+    prefix string
+    cpuCost float64
+    children []UrlNode
+  }
+#+end_src
+
+#+begin_export latex
+  For assembling the tree we first sort the urls, then we iterate over them.
+  String-sorting the urls guarantees us to build the correct tree, one that
+  represents the url hierarchy as intended the correct cost at every node. The
+  algorithm for building the tree is now as follows. We split each url into its
+  hierarchical parts. We check the children of the current node we are looking
+  at for one that matches the current part of the url. We follow the nodes in
+  the tree until we hit a node, that does not have child with the current url
+  part. We append a node for the missing part of the url. Cpu cost is
+  associated only with the complete url. If the newly appended node does not
+  represent the complete url, then we don't add a cost.
+#+end_export
+
+#+begin_src go <<Read configuration file, Pr. \ref{pr:main}>>=
+  slices.SortFunc(rawUrls, func(a, b RawUrl) int {
+    return strings.Compare(a.Url, b.Url)
+  })
+  urlLimits := UrlNode{}
+  for _, rawUrl := range rawUrls {
+    urlParts := strings.Split(rawUrl.Url, "/")
+    curr := &urlLimits
+		for i := range len(urlParts) {
+			part := urlParts[i]
+      idx, found := slices.BinarySearchFunc(
+        curr.children,
+        part,
+        func(a UrlNode, b string) int {
+          return strings.Compare(a.prefix, b)
+        })
+
+      if found {
+        curr = &curr.children[idx]
+      } else {
+        cost := 0.0
+        if i == len(urlParts) - 1 {
+          cost = rawUrl.CpuCost
+        }
+        node := UrlNode{prefix: part, cpuCost: cost}
+        curr.children = append(curr.children, node)
+        curr = &curr.children[len(curr.children)-1]
+      }
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  Before going deeper into managing actual requests, we create the type for the
+  general limiter. In essence this kind of limiter is a counter. Each url has a
+  cost, which represents its expected cpu usage. When a request against an url
+  is made, we add the cost to the counter. Once the request is done, we remove
+  the cost again. As the name concurrent limiting suggests, there will be
+  multiple requests coming in at the same time. A mutex is going to prevent
+  race conditions and incorrect reads and write. Additionally to the counter
+  and the mutex, we need to define a target maximum. This is going to enforce
+  the limiting.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type Limiter struct {
+    usage float64
+    limit float64
     mu sync.Mutex
   }
 #+end_src
 
 #+begin_export latex
-  The mutex also requires the sync package.
+  We import \ty{sync}
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
@@ -586,21 +767,148 @@ import (
 #+end_src
 
 #+begin_export latex
+  Limiters need methods for requesting a computation and one for
+  freeing the reserved load. Those are based on the cost of a request. A 
+  further function for determining the cost of a request is needed later on 
+  as well.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (l *Limiter) Reserve(cpuCost float64) bool {
+    //<<Implement reserve limit, Pr. \ref{pr:main}>>
+  }
+
+  func (l *Limiter) Free(cpuCost float64) {
+    //<<Implement free limit, Pr. \ref{pr:main}>>
+  }
+#+end_src
+
+#+begin_export latex
+  We begin with the reserve method. We check whether the value exceeds the 
+  limit. If it does we respond with false, if it does not, we add to the limit.
+  Reading and writing to the counter are critical operations and need to be
+  done within the mutex section.
+#+end_export
+
+#+begin_src go <<Implement reserve limit, Pr. \ref{pr:main}>>=
+  resp := false
+  l.mu.Lock()
+  if cpuCost + l.usage < l.limit {
+    l.usage += cpuCost
+    resp = true
+  }
+  l.mu.Unlock()
+  return resp
+#+end_src
+
+#+begin_export latex
+  The free method is similar. We enter the critical section and lock the mutex.
+  Next up we decreasethe usage, but clamp it to zero.
+#+end_export
+
+#+begin_src go <<Implement free limit, Pr. \ref{pr:main}>>=
+  l.mu.Lock()
+  l.usage -= cpuCost
+  if l.usage < 0.0 {
+    l.usage = 0.0
+  }
+  l.mu.Unlock()
+#+end_src
+
+#+begin_export latex
+  As the \ty{Free} and \ty{Reserve} function both require a cost, implementing 
+  a function that determines this cost per endpoint seems sensible.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func getUrlCost(r *http.Request, limits UrlNode) float64 {
+    urlCost := 0.0
+    //<<Lookup url value, Pr. \ref{pr:main}>>
+    return urlCost
+  }
+#+end_src
+
+#+begin_export latex
+  Looking up the url value means we need to walk through the tree until we
+  matched all of the requested url. So we split the requested URL at every
+  slash, match through the tree until we are done, or can't find a match
+  anymore. Asterisks signify a match-all and symbolize a path parameter.
+#+end_export
+
+#+begin_src go <<Lookup url value, Pr. \ref{pr:main}>>=
+  path := r.URL.Path
+  parts := strings.Split(path, "/")
+  node := limits
+  inTree := true
+  for i := 0; i < len(parts) && inTree; i++ {
+  	part := parts[i]
+    var idx int
+    idx, inTree = slices.BinarySearchFunc(
+      node.children,
+      part,
+      func(a UrlNode, b string) int {
+        if a.prefix == "*" {
+          return 0
+        }
+        return strings.Compare(a.prefix, b)
+      })
+    if inTree {
+      node = node.children[idx]
+    }
+  }
+  if inTree {
+    urlCost = node.cpuCost
+  }
+#+end_src
+
+#+begin_export latex
+  We initialize the general limiter with the type we just defined, setting the
+  maximum to 85 and the usage to zero.
+#+end_export
+
+#+begin_src go <<Initialize general limiter, Pr. \ref{pr:main}>>=
+  generalLimiter := Limiter{usage: 0, limit: 85}
+#+end_src
+
+#+begin_export latex
+  The per user limiter is actually a map of many limiters. The map has ip
+  addresses as a key for user identification. The value is an object containing
+  the user's limiter and a timestamp of the last request. As the server runs
+  concurrently, a mutex is required. We wrap both of them in a struct for
+  better handling.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type UserLimiter struct {
+    l Limiter
+    t time.Time
+  }
+
+  type SyncMap struct {
+    ma map[string]*UserLimiter
+    mu sync.Mutex
+  }
+#+end_src
+
+#+begin_export latex
   Declaring the per limiter is now just a matter of creating a variable.
 #+end_export
 
 #+begin_src go <<Declare per user limiter, Pr. \ref{pr:main}>>=
-  userLimiters := SyncMap{ma: make(map[string]*rate.Limiter)}
+  userLimiters := SyncMap{ma: make(map[string]*UserLimiter)}
 #+end_src
 
 #+begin_export latex
-  As already stated the middleware is just a function that gets and
-  returns an \ty{http.Handler}. Inside we check for a certain condition, which includes
-  the requested url and the current limiter state. We either forward the request or
-  return an 429 error code, depending on the result.
+  The middleware is just a function that gets and returns an \ty{http.Handler}.
+  Inside we check for a certain condition, which includes the requested url and
+  the current limiter state. We either forward the request, add it to a queue
+  or return an 429 or 503 error code, depending on the result. We need to 
+  initialize the queue here as well. Lets say that we allow a maximum of 100
+  entries inside the queue.
 #+end_export
 
 #+begin_src go <<Write limiter middleware, Pr. \ref{pr:main}>>=
+  q := RequestQueue{entries: make([]RequestEntry, 0), maxSize: 100}
   middlewareLimiter := func(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
       //<<Check condition, Pr. \ref{pr:main}>>
@@ -609,61 +917,95 @@ import (
 #+end_src
 
 #+begin_export latex
-  First we check whether the requested url is rate limited, i.e. apiv1 or
-  apiv2. We immediately call the next handler, if the url is no rate limited.
-  If it is we check the general and user limiters. We first check the general
-  limiter, as checking the user limiters requires more processing power. If the
-  general limiter allows processing we check the user limiter. If both limiters
-  allow processing we call the next handler. We write an error response if
-  either limiter denies processing.
+  First we check whether we are doing rate limiting or not. If we do not limit,
+  we immediately call the next handler. If we do, we check the limiters.
+  If both limiters allow processing we call the next handler. We write an error
+  response if either limiter denies processing and the queue is full.
 #+end_export
 
 #+begin_src go <<Check condition, Pr. \ref{pr:main}>>=
-  allowed := noRateLimit || !strings.HasPrefix(r.URL.Path, apiPref)
-  if !allowed {
-    if generalLimiter.Allow() {
-      //<<Check user limiter, Pr. \ref{pr:main}>>
-    }
-  }
-
-  if !allowed {
-    w.WriteHeader(http.StatusTooManyRequests)
-    w.Write([]byte("Exceeded rate limit\n"))
-  } else {
-    next.ServeHTTP(w, r)
+  rateLimiting := !noRateLimit
+  if rateLimiting {
+    c := getUrlCost(r, urlLimits)
+    ul := userLimiters.getOrCreate(r.RemoteAddr)
+    glAllowed, ulAllowed := limit(
+      &generalLimiter,
+      &ul.l,
+      c,
+    )
+    if glAllowed && ulAllowed {
+        printLimiterUsage(r.URL.Path, true, &generalLimiter, &userLimiters)
+        next.ServeHTTP(w, r)
+        freeLimiters(&generalLimiter, &ul.l, c)
+        printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
+        //<<Pop requests from queue, Pr. \ref{pr:main}>>
+      } else {
+        //<<Act on limiter deny, Pr. \ref{pr:main}>>
+      }
+    } else {
+      next.ServeHTTP(w, r)
   }
 #+end_src
 
 #+begin_export latex
-  We are working with a custom syncMap - the \ty{sync.Map} advises against it's
-  usage unless encoutering two specific scenarios - which requires locking the
-  mutex when reading or writing. Locking for a write might suffice, but I
-  believe the go spec does not specify whethere a read operation is thread-
-  safe. We'd need to lock the map for the next step anyways, as calling the
-  \ty{Allow} function entails a state change within the limiter, which wouldn't
-  be thread safe. So we lock the mutex get the specific limiter, or add if this
-  is the user's first request, and check it.
+  Now we still need the actual limiting function. Here we first check the 
+  general limiter. If the general limiter allows processing we check the user
+  limiter. In case the generalLimiter allowed processing, but the user limiter
+  did not, we need to free the general limiter's reserved space. We also log a 
+  new reservation, if both limiters agreed to process the request.
 #+end_export
 
-#+begin_src go <<Check user limiter, Pr. \ref{pr:main}>>=
-  ip, _, err := net.SplitHostPort(r.RemoteAddr)
-  if err != nil {
-    fmt.Printf("Couldn't parse remote address %s\n", r.RemoteAddr)
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func limit(
+    generalLimiter *Limiter,
+    userLimiter *Limiter,
+    c float64,
+  ) (glAllowed, ulAllowed bool) {
+    glAllowed = generalLimiter.Reserve(c)
+    if glAllowed {
+      ulAllowed = userLimiter.Reserve(c)
+      if !ulAllowed {
+        // Need to free general limiter if user limiter is denying request
+        generalLimiter.Free(c)
+      }
+    }
+    return
   }
-
-  userLimiters.mu.Lock()
-  lim, ok := userLimiters.ma[ip]
-  if !ok {
-    lim = rate.NewLimiter(rate.Limit(10), 25)
-    userLimiters.ma[ip] = lim
-  }
-
-  allowed = lim.Allow()
-  userLimiters.mu.Unlock()
 #+end_src
 
 #+begin_export latex
-  We need to add the strings and net packages, because of the url comparison.
+  We are working with a custom syncMap, the \ty{sync.Map} advises against its
+  usage unless encoutering two specific scenarios, which requires locking the
+  mutex when reading or writing. Locking for a write might suffice, but I
+  believe the go spec does not specify whether a read operation is threadsafe.
+  So we lock the mutex, get the specific limiter, or add if this is the user's
+  first request.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (ul *SyncMap) getOrCreate(remoteAddr string) *UserLimiter {
+    ip, _, err := net.SplitHostPort(remoteAddr)
+    if err != nil {
+      fmt.Printf("Couldn't parse remote address %s\n", remoteAddr)
+    }
+
+    ul.mu.Lock()
+    userLimiter, ok := ul.ma[ip]
+    if !ok {
+	  	userLimiter = new(UserLimiter{
+        l: Limiter {usage: 0.0, limit: 50.0},
+        t: time.Now(),
+      })
+	  	ul.ma[ip] = userLimiter
+    }
+    ul.mu.Unlock()
+
+    return userLimiter
+  }
+#+end_src
+
+#+begin_export latex
+  We import \ty{strings} \ty{net}.
 #+end_export
 
 #+begin_src go <<Imports, Pr. \ref{pr:main}>>=
@@ -672,22 +1014,409 @@ import (
 #+end_src
 
 #+begin_export latex
+  Freeing the limiters begins with calling the \ty{Free} method on both 
+  affected limiters. Than we log the freed requests.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  func freeLimiters(
+    generalLimiter *Limiter,
+    userLimiter *Limiter,
+    c float64,
+  ) {
+    generalLimiter.Free(c)
+    userLimiter.Free(c)
+  }
+#+end_src
+
+#+begin_export latex
+  Now to pop the requests from the queue, we need to make a big dtour, and 
+  begin by actually implementing the queue. This starts off with two structs.
+  One for a queue entry and one for the queue itself. The queue is going to
+  wrap a slice of http readers and writers, which are considered the entries. A
+  request entry is further enriched by its time of arrival, its corresponding
+  cpu cost and a channel determining its state. The queue should not grow
+  forever, so need to determine a cap on the amount of entries. The request
+  queue is read and gets written to by the multiplexed server, so it needs to
+  be threadsafe. Adding yet another mutex, should fix that.
+#+end_export
+
+#+begin_src go <<Types, Pr. \ref{pr:main}>>=
+  type RequestEntry struct {
+    r     *http.Request
+    w     http.ResponseWriter
+    t     time.Time
+    c     float64
+    state chan string
+  }
+
+  type RequestQueue struct {
+    entries []RequestEntry
+    maxSize int
+    mu sync.Mutex
+  }
+#+end_src
+
+#+begin_export latex
+   We can add some simple push and pop functions to get queue behaviour. Adding
+   some logs about the queue's current state, makes future debugging easier.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (q *RequestQueue) IsFull() bool {
+    return len(q.entries) >= q.maxSize
+  }
+
+  func (q *RequestQueue) Push(re RequestEntry) bool {
+    q.mu.Lock()
+    var str string
+    var resp = false
+    if (!q.IsFull()) {
+      q.entries = append(q.entries, re)
+      str = "Pushed request to queue"
+      resp = true
+    } else {
+      str = "Denied push to queue"
+    }
+    
+    util.LogInfoDef(
+      util.InfoEntry{
+        RequestUrl: re.r.URL.String(),
+        Description: fmt.Sprintf("%s New size: %d", str, len(q.entries)),
+    })
+
+    q.mu.Unlock()
+    return resp
+  }
+
+  func (q *RequestQueue) Pop() *RequestEntry {
+    q.mu.Lock()
+    if (len(q.entries) > 0) {
+      res := q.entries[0]
+      q.entries = q.entries[1:]
+      util.LogInfoDef(
+        util.InfoEntry{
+          RequestUrl: res.r.URL.String(),
+          Description: fmt.Sprintf(
+            "Popped from queue. New size: %d",
+            len(q.entries),
+      )})
+      q.mu.Unlock()
+      return &res
+    } else {
+      q.mu.Unlock()
+      return nil
+    }
+  }
+#+end_src
+
+#+begin_export latex
+  With these methods done, we've got everything to work with the queue. Entries 
+  exceeding the rate limit are already being add to the queue. Now we need to 
+  remove them again, when a request frees up consumption. So when the limiters 
+  are freed, we check for one or more entries fitting in the limiter and run
+  them in a go process.
+#+end_export
+
+#+begin_src go <<Pop requests from queue, Pr. \ref{pr:main}>>=
+  go q.activateEntries(&generalLimiter, &userLimiters)
+#+end_src
+
+#+begin_export latex
+  We are missing the \ty{Capacity} method for the limiters. This just returns
+  the difference of max capacity to current usage, but as it is a read on the 
+  limiters, we need to lock and unlock again.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (l *Limiter) Capacity() float64 {
+    l.mu.Lock()
+    c := l.limit - l.usage
+    l.mu.Unlock()
+    return c
+  }
+#+end_src
+
+#+begin_export latex
+  Checking the entries and activating them is done in \ty{activateEntries}. In
+  this we look through the entries, ordered front to back, and pick all of the
+  entries, that, accumulated, do not exceed our limit. We are logging changes
+  in the queue again.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (q *RequestQueue) activateEntries(
+    generalLimiter *Limiter,
+    userLimiters *SyncMap,
+  )  {
+    indexed := make([]int, 0)
+    q.mu.Lock()
+    for i := 0; i < len(q.entries) && generalLimiter.Capacity() > 0.1; i++ {
+      curr := q.entries[i]
+      ul := userLimiters.getOrCreate(curr.r.RemoteAddr)
+      glAllowed, ulAllowed := limit(
+        generalLimiter,
+        &ul.l,
+        curr.c,
+      )
+
+      if glAllowed && ulAllowed {
+        printLimiterUsage(curr.r.URL.Path, true, generalLimiter, userLimiters)
+        curr.state <- "ready"
+        indexed = append(indexed, i) 
+      }
+    }
+
+    //<<Remove found entries, Pr. \ref{pr:main}>>
+    //<<Log change in queue, Pr. \ref{pr:main}>>
+    q.mu.Unlock()
+  }
+#+end_src
+
+#+begin_export latex
+  When removing entries via their index, we need to iterate back to front over
+  the slice and execute range operations.
+#+end_export
+
+#+begin_src go <<Remove found entries, Pr. \ref{pr:main}>>=
+  for i := len(indexed) - 1; i >= 0; i-- {
+    q.entries = append(q.entries[:i], q.entries[i+1:]...)
+  }
+#+end_src
+
+#+begin_export latex
+  If there has been a change in the size of the queue, we should log it. These
+  statistics are really valueable once the server is running live.
+#+end_export
+
+#+begin_src go <<Log change in queue, Pr. \ref{pr:main}>>=
+  if len(indexed) > 0 {
+    util.LogInfoDef(
+      util.InfoEntry{
+        Description: fmt.Sprintf(
+          "Pulled %d entries from queue. New size: %d",
+          len(indexed),
+          len(q.entries),
+    )})
+  }
+#+end_src
+
+#+begin_export latex
+  One last thing is necessary for the queue's completion, which is a regular
+  clearing of requests. A request should not stay within the queue for more 
+  than 45 seconds. So every 45 seconds we check the entries' timestamps, and 
+  send a 429 limit response, stating that the server is not accepting the 
+  request. As we need to send responses to the removed requests, we need to 
+  partition the queue, rather than just delete old entries. So sadly we can't
+  use the \ty{slices.DeleteFunc}, but need to create our own. This is done by a
+  simple iteration and sorting into two different slices.
+#+end_export
+
+#+begin_src go <<Methods, Pr. \ref{pr:main}>>=
+  func (q *RequestQueue) clearQueue() {
+    const maxTime = 45
+    keep := make([]RequestEntry, 0)
+    removed := 0
+    q.mu.Lock()
+    now := time.Now()
+
+    for _, e := range q.entries {
+      if (now.After(e.t.Add(maxTime * time.Second))) {
+        removed++
+        e.state <- "abort"
+      } else {
+        keep = append(keep, e)
+      }
+    }
+
+    q.entries = keep
+    if removed > 0 {
+      util.LogInfoDef(
+        util.InfoEntry{
+          Description: fmt.Sprintf(
+            "Cleared %d entries from queue. New size: %d",
+            removed,
+            len(q.entries),
+      )})
+    }
+    q.mu.Unlock()
+  }
+#+end_src
+
+#+begin_export latex
+  Having implemented the logic for clearing the queue, all that is left to do
+  is calling it periodically. This is done similarly to clearing the limiter.
+#+end_export
+
+#+begin_src go <<Clear queue map periodically, Pr. \ref{pr:main}>>=
+  go func() {
+    for {
+	    time.Sleep(15 * time.Second)
+      q.clearQueue()
+    }
+  }()
+#+end_src
+
+#+begin_export latex
+  If one of the limiters block a request, we check whether the queue has 
+  capacity. If it does we add the request and start blocking. If it does not, 
+  we need to send limit responses. A 503 (Service Unavailable) signifies, that 
+  the server is overloading, while 429 (Too Many Requests), says that a client
+  has exceed their limit. If the queue is not full, we enqueue the request. A
+  request needs five values, when being added to the queue. These are its
+  request struct and response writer, timestamp and cpu cost.
+#+end_export
+
+#+begin_src go <<Act on limiter deny, Pr. \ref{pr:main}>>=
+  // In case queue is full
+  reqEntry := RequestEntry{
+    r: r,
+    w: w,
+    t: time.Now(),
+    c: c,
+    state: make(chan string),
+  }
+
+  if q.Push(reqEntry) {
+    //<<Wait for queue signal, Pr. \ref{pr:main}>>
+  } else if !glAllowed {
+    //<<Send server unavailable response, Pr. \ref{pr:main}>>
+  } else if !ulAllowed {
+    w.WriteHeader(http.StatusTooManyRequests)
+    w.Write([]byte("Rate limit exceeded. This request cannot be " +
+    "accepted at this moment, please try again later.\n"))
+  }
+#+end_src
+
+#+begin_export latex
+  If the request is queued, we need to block this routine using a channel. Each
+  queue entry has one of those channels. Once the entry is declared ready, it 
+  is already guaranteed to be limited. If it is aborted, we stop serving. We
+  just need to log and pass it to the next handler. After processing is done,
+  we need to free the space again. As the limiters might have new capacity, we
+  should also pop requests again.
+#+end_export
+
+#+begin_src go <<Wait for queue signal, Pr. \ref{pr:main}>>=
+  s := <-reqEntry.state
+  if s == "ready" {
+  next.ServeHTTP(w, r)
+  freeLimiters(&generalLimiter, &ul.l, c)
+  printLimiterUsage(r.URL.Path, false, &generalLimiter, &userLimiters)
+  //<<Pop requests from queue, Pr. \ref{pr:main}>>
+  } else if s == "abort" {
+    //<<Send server unavailable response, Pr. \ref{pr:main}>>
+  }
+#+end_src
+
+#+begin_export latex
+  If the request is aborted in queue or the server is overloading, we respond 
+  with a text stating the server is busy.
+#+end_export
+
+#+begin_src go <<Send server unavailable response, Pr. \ref{pr:main}>>=
+  w.WriteHeader(http.StatusServiceUnavailable)
+  w.Write([]byte("Server is busy. This request cannot be accepted at " +
+    "this moment, please try again later.\n"))
+#+end_src
+
+#+begin_export latex
   The sync map now holds an entry for every ip address that ever requested
   anything. That's a little ambitious. We should clear the map every now and
-  then, reducing memory build up.
+  then, reducing memory build up. Every five minutes we loop through the map
+  and check timestamps. If the timestamp for the user is older than five
+  minutes, we clear their entry.
 #+end_export
 
 #+begin_src go <<Clear limiter map periodically, Pr. \ref{pr:main}>>=
   go func(ul *SyncMap) {
     for {
 	    time.Sleep(5 * time.Minute)
-		  userLimiters.mu.Lock()
-	    for k := range userLimiters.ma {
-	    	delete(userLimiters.ma, k)
+		  ul.mu.Lock()
+      threshold := time.Now().Add(time.Minute * -5)
+	    for k := range ul.ma {
+        if (ul.ma[k].t.Before(threshold)) {
+	    	  delete(ul.ma, k)
+        }
 	    }
-		  userLimiters.mu.Unlock()
+		  ul.mu.Unlock()
     }
   }(&userLimiters)
+#+end_src
+
+#+begin_export latex
+  We also add a function for debugging purposes, showing which endpoints are 
+  currently being requested at which rate. For this we need to lock the 
+  limiter, and endpoints to a map when requested. We increment on new requests
+  and decrement when one is done. Printing to a cleared terminal provides a 
+  nice representation of the current state. The activeUrls themselves are prone
+  concurrent writes and reads as well. We again use a mutex.
+#+end_export
+
+#+begin_src go <<Functions, Pr. \ref{pr:main}>>=
+  var activeUrls = make(map[string]int)
+  var activeUrlsMu sync.Mutex
+  func printLimiterUsage(path string, add bool, generalLimiter *Limiter, userLimiters *SyncMap) {
+    const liveDebug = false
+    activeUrlsMu.Lock()
+    if add {
+      activeUrls[path]++
+    } else {
+      activeUrls[path]--
+      if activeUrls[path] < 1 {
+        delete(activeUrls, path)
+      }
+    }
+    var sb strings.Builder
+    
+    for key := range activeUrls {
+      fmt.Fprintf(&sb, "%s: %d | ", key, activeUrls[key])
+      if liveDebug {
+        sb.WriteString("\n")
+      }
+    }
+    activeUrlsMu.Unlock()
+
+    if liveDebug {
+      fmt.Fprintln(&sb, "==== Limiters ====")
+    }
+    generalLimiter.mu.Lock()
+    fmt.Fprintf(
+      &sb,
+      "General - usage: %.2f %%, limit: %.2f %% ",
+      generalLimiter.usage,
+      generalLimiter.limit,
+    )
+    generalLimiter.mu.Unlock()
+    if liveDebug {
+      sb.WriteString("\n")
+    }
+
+    userLimiters.mu.Lock()
+    for key := range userLimiters.ma {
+      fmt.Fprintf(
+        &sb,
+        "user lim %s - usage: %.2f %%, limit: %.2f %% ",
+        key,
+        userLimiters.ma[key].l.usage,
+        userLimiters.ma[key].l.limit,
+      )
+      if liveDebug {
+        sb.WriteString("\n")
+      }
+    }
+    userLimiters.mu.Unlock()
+
+    if liveDebug {
+      fmt.Print("\033[H\033[2J" + sb.String())      
+    } else {
+      util.LogInfoDef(
+        util.InfoEntry{
+          RequestUrl: path, 
+          Description: sb.String(),
+      })
+    }
+  }
 #+end_src
 
 #+begin_export latex
@@ -700,7 +1429,7 @@ import (
 
 #+begin_src go <<Create timeout middleware, Pr. \ref{pr:main}>>=
 	middlewareTimeout := func(next http.Handler, d time.Duration) http.Handler {
-		return http.TimeoutHandler(next, d, "Request timed out. Please compute " + 
+		return http.TimeoutHandler(next, d, "Request timed out. Please compute " +
       "large requests locally.\n")
 	}
 #+end_src
@@ -720,7 +1449,7 @@ import (
 #+end_src
 
 #+begin_export latex
-  Now lets get into starting the server. Here we need to define the
+  Now lets get into starting the server. Here we need to define the actual
   middleware chain first. By default a request should be limited to 30 seconds.
   Next up is the server object, which needs creating. Running the server is the
   next step. Lastly we need to take care of shutting down the server. This
@@ -729,7 +1458,7 @@ import (
 #+begin_export latex
 
 #+begin_src go <<Start server, Pr. \ref{pr:main}>>=
-  handlerChain := 
+  handlerChain :=
     middlewareLogger(
 			middlewareLimiter(
 			  middlewareTimeout(
@@ -816,7 +1545,10 @@ import (
 
 #+begin_src go <<Pass timed shutdown, Pr. \ref{pr:main}>>=
   fmt.Println("...Stopping server")
-  ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+  ctx, cancel := context.WithTimeout(
+    context.Background(),
+    1500*time.Millisecond,
+  )
   defer cancel()
   err = s.Shutdown(ctx)
 #+end_src
@@ -828,9 +1560,15 @@ import (
 
 #+begin_src go <<Log shutdown, Pr. \ref{pr:main}>>=
   if err != nil {
-    util.LogInfoDef(util.InfoEntry{Description: "Server shutdown with error: " + err.Error()})
+    util.LogInfoDef(
+      util.InfoEntry{
+        Description: "Server shutdown with error: " + err.Error(),
+    })
   } else {
-    util.LogInfoDef(util.InfoEntry{Description: "Server shutdown gracefully"})
+    util.LogInfoDef(
+      util.InfoEntry{
+        Description: "Server shutdown gracefully",
+    })
   }
   fmt.Println("Shutdown complete")
 #+end_src

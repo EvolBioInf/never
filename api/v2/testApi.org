@@ -88,7 +88,7 @@
 #+end_src
 #+begin_export latex
   A query is called by passing a URL to \ty{fetch} that is extended by the name
-  of the service, possible path paramters and or a query string, 
+  of the service, possible path paramters and or a query string,
   \begin{verbatim}
     url/service/?query
   \end{verbatim}
@@ -113,10 +113,10 @@ We import \ty{fmt}.
   "fmt"
 #+end_src
 #+begin_export latex
-  There are two services services in the accessions category. We are also going 
-  to test using different databases once or twice per category. There is a 
-  large database. It holds data on some animals, like cats, dogs, owls and 
-  humans. It contains some Ecoli taxa as well. The smaller database contains 
+  There are two services services in the accessions category. We are also going
+  to test using different databases once or twice per category. There is a
+  large database. It holds data on some animals, like cats, dogs, owls and
+  humans. It contains some Ecoli taxa as well. The smaller database contains
   the (8407) taxa, which is the common frog, plus all it's ancestors.
 #+end_export
 #+begin_src go <<Test accessions category, Pa. \ref{pa:api}>>=
@@ -151,7 +151,7 @@ We import \ty{fmt}.
   exTests = append(exTests, exTest)
 #+end_src
 #+begin_export latex
-  \ty{databases} is just a single endpoint without a category. All it does is 
+  \ty{databases} is just a single endpoint without a category. All it does is
   list the available databases. We query it and test a limit and offset just to
   be sure.
 #+end_export
@@ -368,7 +368,7 @@ We import \ty{fmt}.
 #+end_src
 #+begin_export latex
   \ty{ants} gets all the ancestors of a taxon. Let's look at the ancestors
-  of a crow. Let's also check whether we are handling \ty{-r} and \ty{-D} 
+  of a crow. Let's also check whether we are handling \ty{-r} and \ty{-D}
   options correctly.
 #+end_export
 #+begin_src go <<Test \ty{ants}, Pa. \ref{pa:api}>>=
@@ -430,7 +430,7 @@ We import \ty{fmt}.
   e1, err := os.Open("testing/eco7k.nwk")
   util.Check(err)
   defer e1.Close()
-  libTest := LibTest{t: func() string {return util.SendPostRequest(
+  libTest := LibTest{t: func() string {return util.SendQueryRequest(
 			fu,
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{"testing/eco7k.nwk"},
@@ -443,7 +443,7 @@ We import \ty{fmt}.
   e2, err := os.Open("testing/eco7k.nwk")
   util.Check(err)
   defer e2.Close()
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
+  libTest = LibTest{t: func() string {return util.SendQueryRequest(
 			fu,
 			[]string{"-t", "991910_", "-u", "562_"},
 			[]string{},
@@ -456,7 +456,7 @@ We import \ty{fmt}.
   e3, err := os.Open("testing/eco7k.nwk")
   util.Check(err)
   defer e3.Close()
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
+  libTest = LibTest{t: func() string {return util.SendQueryRequest(
 			fu,
 			[]string{"-t", "991910_"},
 			[]string{},
@@ -466,7 +466,7 @@ We import \ty{fmt}.
 		)},
     r: 19}
   libTests = append(libTests, libTest)
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
+  libTest = LibTest{t: func() string {return util.SendQueryRequest(
 			fu,
 			[]string{},
 			[]string{},
@@ -496,7 +496,7 @@ We import \ty{fmt}.
   t1, err := os.Open("testing/targets.txt")
   util.Check(err)
   defer t1.Close()
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
+  libTest = LibTest{t: func() string {return util.SendQueryRequest(
 			nu,
 			[]string{"-L", "complete"},
 			[]string{"testing/targets.txt"},
@@ -509,7 +509,7 @@ We import \ty{fmt}.
   t2, err := os.Open("testing/targets.txt")
   util.Check(err)
   defer t2.Close()
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
+  libTest = LibTest{t: func() string {return util.SendQueryRequest(
 			nu,
 			[]string{"-L", "complete"},
 			[]string{},
@@ -585,7 +585,7 @@ We import \ty{fmt}.
   g1, err := os.Open("testing/myGenomeList.txt")
   util.Check(err)
   defer g1.Close()
-  libTest = LibTest{t: func() string {return util.SendPostRequest(
+  libTest = LibTest{t: func() string {return util.SendQueryRequest(
 			ru,
 			[]string{"-g", "testing/myGenomeList.txt", "9612"},
 			[]string{},

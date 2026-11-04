@@ -13,9 +13,9 @@
   background-color: color-mix(in srgb, var(--get-color), white 90%);
 }
 
-.endpoint-card-body-post {
-  border: 2px solid var(--post-color);
-  background-color: color-mix(in srgb, var(--post-color), white 90%);
+.endpoint-card-body-query {
+  border: 2px solid var(--query-color);
+  background-color: color-mix(in srgb, var(--query-color), white 90%);
 }
 
 .description {
@@ -76,9 +76,9 @@
   background-color: var(--get-color);
 }
 
-.run-example-post {
-  border: 1px solid var(--post-color);
-  background-color: var(--post-color);
+.run-example-query {
+  border: 1px solid var(--query-color);
+  background-color: var(--query-color);
 }
 
 .run-example-get:hover {
@@ -86,9 +86,9 @@
   background-color: color-mix(in srgb, var(--get-color), white 30%);
 }
 
-.run-example-post:hover {
-  border: 1px solid color-mix(in srgb, var(--post-color), white 30%);
-  background-color: color-mix(in srgb, var(--post-color), white 30%);
+.run-example-query:hover {
+  border: 1px solid color-mix(in srgb, var(--query-color), white 30%);
+  background-color: color-mix(in srgb, var(--query-color), white 30%);
 }
 
 .input-example {

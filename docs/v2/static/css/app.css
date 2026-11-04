@@ -3,6 +3,7 @@
   --secondary-color: #495057;
   --accent-color: #006c66;
   --post-color: #aaaa22;
+  --query-color: #2277aa;
   --get-color: #00aa66;
   color: var(--secondary-color);
   background-color: var(--primary-color);
@@ -85,4 +86,8 @@ section {
 a:link,
 a:visited {
   color: var(--secondary-color);
+}
+
+.intro-text {
+  margin-bottom: 0;
 }

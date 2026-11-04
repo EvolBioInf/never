@@ -11,6 +11,12 @@ import (
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 
+	"github.com/dustin/go-humanize"
+	"github.com/evolbioinf/neighbors/tdb"
+	"github.com/evolbioinf/never/util"
+
+	"os"
+
 	"strconv"
 
 	"encoding/json"
@@ -21,16 +27,18 @@ import (
 )
 
 type Content struct {
-	Version     string
-	Description string
-	ApiVersion  string
-	ServerURL   string
-	Prefix      string
-	DbDirPath   string
-	Title       string
-	Local       bool
-	Tags        []Tag
-	Paths       []Path
+	Version      string
+	Description  string
+	ApiVersion   string
+	ServerURL    string
+	Prefix       string
+	Title        string
+	LastDBUpdate string
+	NumTaxa      string
+	NumGenomes   string
+	Local        bool
+	Tags         []Tag
+	Paths        []Path
 }
 
 type Tag struct {
@@ -88,7 +96,14 @@ var componentsFS embed.FS
 //go:embed static/*
 var staticFS embed.FS
 
-func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
+func RegisterRoutes(
+	prefix string,
+	local bool,
+	port int,
+	dbDirPath string,
+	dateFilePath string,
+	neidb *tdb.TaxonomyDB,
+) {
 	fmt.Println("docsV2: Creating template")
 	tmpl := template.New("app")
 
@@ -120,13 +135,15 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 		"dict": func(args ...any) map[string]any {
 			dict := make(map[string]any)
 			if len(args)%2 != 0 {
-				panic("Cannot create dictionary in template. Number of parameters is odd.\n")
+				panic("Cannot create dictionary in template. " +
+					"Number of parameters is odd.\n")
 			}
 
 			for i := 0; i < len(args); i += 2 {
 				key, ok := args[i].(string)
 				if !ok {
-					panic("Cannot create dictionary in template. Key argument is not a string.\n")
+					panic("Cannot create dictionary in template. " +
+						"Key argument is not a string.\n")
 				}
 
 				dict[key] = args[i+1]
@@ -138,40 +155,61 @@ func RegisterRoutes(prefix string, local bool, port int, dbDirPath string) {
 
 	fmt.Println("docsV2: Reading html files")
 	tmpl = template.Must(tmpl.ParseFS(pagesFS, "pages/*.html"))
-	tmpl = template.Must(tmpl.ParseFS(componentsFS, "components/*.html", "components/*/*.html"))
+	tmpl = template.Must(
+		tmpl.ParseFS(componentsFS, "components/*.html", "components/*/*.html"),
+	)
 
 	content := retrieveData(local, port)
 	content.Prefix = prefix
-	content.DbDirPath = dbDirPath
 	content.Local = local
+	nt, err := neidb.NumTaxa()
+	util.Check(err)
+	content.NumTaxa = humanize.Comma(int64(nt))
+	ng := 0
+	for _, level := range tdb.AssemblyLevels() {
+		n, err := neidb.NumGenomesRec(1, level)
+		util.Check(err)
+		ng += n
+	}
+	content.NumGenomes = humanize.Comma(int64(ng))
+	date, err := os.ReadFile(dateFilePath)
+	util.Check(err)
+	fields := strings.Fields(string(date))
+	content.LastDBUpdate = fmt.Sprintf("%s %s %s at %s %s %s",
+		fields[1],
+		fields[2],
+		fields[6],
+		fields[3],
+		fields[4],
+		fields[5],
+	)
 
 	http.HandleFunc(prefix,
 		func(w http.ResponseWriter, r *http.Request) {
 			defaultHandler(tmpl, &content, w, r)
 		})
 
-	// The route within in FileServer is a local one, from my filesystem. Files may be queried and served.
-	// The path before that are the ones I may use within the browser to ask for these files from the file server.
+	// The route within in FileServer is a local one, from my filesystem. Files
+	// may be queried and served.
+	// The path before that are the ones I may use within the browser to ask for
+	// these files from the file server.
 	http.Handle(prefix+"/static/",
 		http.StripPrefix(prefix, http.FileServer(http.FS(staticFS))))
 
-	p := prefix + "/" + dbDirPath
-	if !strings.HasSuffix(p, "/") {
-		p += "/"
-	}
+	p := "/databases/"
 	http.Handle(p, http.StripPrefix(p, http.FileServer(http.Dir(dbDirPath))))
 }
 
 func retrieveData(local bool, port int) Content {
-	fmt.Println("docsV2: reading api document")
+	fmt.Println("docsV2: Reading api document")
 	spec, _ := staticFS.ReadFile("static/api_spec.json")
-	fmt.Println("docsV2: creating document")
+	fmt.Println("docsV2: Creating document")
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
 		panic(fmt.Sprintf("cannot create new document: %e", err))
 	}
 
-	fmt.Println("docsV2: building model")
+	fmt.Println("docsV2: Building model")
 	docModel, err := document.BuildV3Model()
 	if err != nil {
 		panic(fmt.Sprintf("cannot create v3 model from document: %e", err))
@@ -452,7 +490,8 @@ func parseResponseSchema(t map[string]any) string {
 		for k, v := range dt {
 			pv, ok := v.(map[string]any)
 			if !ok {
-				panic("Error while parsing the schema. Value of nested object property is not a map.")
+				panic("Error while parsing the schema. " +
+					"Value of nested object property is not a map.")
 			}
 
 			res += fmt.Sprintf("\"%s\":%s,", k, parseResponseSchema(pv))
@@ -479,6 +518,11 @@ func marshal(x any) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func defaultHandler(tmpl *template.Template, content *Content, w http.ResponseWriter, _ *http.Request) {
+func defaultHandler(
+	tmpl *template.Template,
+	content *Content,
+	w http.ResponseWriter,
+	_ *http.Request,
+) {
 	tmpl.ExecuteTemplate(w, "app.html", content)
 }
