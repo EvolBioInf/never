@@ -1,25 +1,25 @@
-* [[https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT][never]]
+# [never](https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT)
 
-# Description
+## Description
 Neighbors Server
 
-# Introduction
-[[https://github.com/evolbioinf/neighbors][Neighbors]] is a package for finding the genomes of one or more target
+## Introduction
+[Neighbors](https://github.com/evolbioinf/neighbors) is a package for finding the genomes of one or more target
 organisms and their closest relatives, their /neighbors/. The
-Neighbors server, =never=, provides web access to the facilities of
-the Neighbors package. A live installation can be accessed [[https://neighbors.evolbio.mpg.de/][here]].
+Neighbors server, `never`, provides web access to the facilities of
+the Neighbors package. A live installation can be accessed [here](https://neighbors.evolbio.mpg.de/).
 
-# Author
-[[http://guanine.evolbio.mpg.de/][Bernhard Haubold]],
-=haubold@evolbio.mpg.de=
+## Author
+[Bernhard Haubold](http://guanine.evolbio.mpg.de/),
+`haubold@evolbio.mpg.de`
 
-# Building
+## Building
 
 In case you need to rebuild, run `make` in the top level directory.
 This builds all the needed components as well as the executables called `main` and `bin/never`.
 `main` and `bin/never` are the same files, you may run the server using either of them.
 
-# Execution
+## Execution
 
 When starting the server you need to ensure the existence of a few files.
 1) The date file. It's called `updated.txt` - a different name may be specified, when 
@@ -38,7 +38,7 @@ When starting the server you need to ensure the existence of a few files.
 When not providing any arguments the server runs locally using HTTP at port `8080`.
 See usage for hosting remote.
 
-# Testing
+## Testing
 
 Run `make test` at the top level to execute all the tests. This creates two test databases, if not 
 present and runs a testing server. The testing server runs at `http://localhost:8008` and is shutdown
