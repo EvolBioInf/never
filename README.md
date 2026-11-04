@@ -1,3 +1,18 @@
+* [[https://owncloud.gwdg.de/index.php/s/vI3c7di2YtqXYYT][never]]
+
+# Description
+Neighbors Server
+
+# Introduction
+[[https://github.com/evolbioinf/neighbors][Neighbors]] is a package for finding the genomes of one or more target
+organisms and their closest relatives, their /neighbors/. The
+Neighbors server, =never=, provides web access to the facilities of
+the Neighbors package. A live installation can be accessed [[https://neighbors.evolbio.mpg.de/][here]].
+
+# Author
+[[http://guanine.evolbio.mpg.de/][Bernhard Haubold]],
+=haubold@evolbio.mpg.de=
+
 # Building
 
 In case you need to rebuild, run `make` in the top level directory.
