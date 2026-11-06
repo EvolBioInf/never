@@ -2,12 +2,13 @@ package apiv2
 
 import (
 	"fmt"
-	util "github.com/evolbioinf/never/util"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
+
+	util "github.com/evolbioinf/never/util"
 )
 
 type ExTest struct {
@@ -150,11 +151,11 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?db=small&start_id=8407&end_id=8292&plain_data=true")
 	exTest = ExTest{t: exec.Command(prog, u), r: 50}
 	exTests = append(exTests, exTest)
-	service = "programs"
+	service = "program"
 	u = fmt.Sprintf(tmpl, url, service, "")
 	exTest = ExTest{t: exec.Command(prog, u), r: 15}
 	exTests = append(exTests, exTest)
-	service = "programs/ants"
+	service = "program/ants"
 	u = fmt.Sprintf(tmpl, url, service, "?options=56312")
 	exTest = ExTest{t: exec.Command(prog, u), r: 16}
 	exTests = append(exTests, exTest)
@@ -185,11 +186,11 @@ func TestApi(t *testing.T) {
 	u = fmt.Sprintf(tmpl, url, service, "?options=8407&extra=--D")
 	exTest = ExTest{t: exec.Command(prog, u), r: 53}
 	exTests = append(exTests, exTest)
-	service = "programs/dree"
+	service = "program/dree"
 	u = fmt.Sprintf(tmpl, url, service, "?options=-n&options=3073808")
 	exTest = ExTest{t: exec.Command(prog, u), r: 17}
 	exTests = append(exTests, exTest)
-	service = "programs/fintac"
+	service = "program/fintac"
 	fu := fmt.Sprintf(tmpl, url, service, "")
 	e1, err := os.Open("testing/eco7k.nwk")
 	util.Check(err)
@@ -248,7 +249,7 @@ func TestApi(t *testing.T) {
 	},
 		r: 31}
 	libTests = append(libTests, libTest)
-	service = "programs/neighbors"
+	service = "program/neighbors"
 	nu := fmt.Sprintf(tmpl, url, service, "")
 	libTest = LibTest{t: func() string {
 		return util.SendGetRequest(
@@ -330,7 +331,7 @@ func TestApi(t *testing.T) {
 	},
 		r: 24}
 	libTests = append(libTests, libTest)
-	service = "programs/ranks"
+	service = "program/ranks"
 	ru := fmt.Sprintf(tmpl, url, service, "")
 	libTest = LibTest{t: func() string {
 		return util.SendGetRequest(
@@ -387,7 +388,7 @@ func TestApi(t *testing.T) {
 	},
 		r: 20}
 	libTests = append(libTests, libTest)
-	service = "programs/taxi"
+	service = "program/taxi"
 	tu := fmt.Sprintf(tmpl, url, service, "")
 	libTest = LibTest{t: func() string {
 		return util.SendGetRequest(

@@ -107,7 +107,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/ants",
+      "href": "http://localhost:8008/api/v2/program/ants",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -115,7 +115,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/dree",
+      "href": "http://localhost:8008/api/v2/program/dree",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -123,7 +123,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/fintac",
+      "href": "http://localhost:8008/api/v2/program/fintac",
       "action": "QUERY",
       "types": [
         "text/plain;charset=utf-8"
@@ -131,7 +131,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/neighbors",
+      "href": "http://localhost:8008/api/v2/program/neighbors",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -139,7 +139,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/neighbors",
+      "href": "http://localhost:8008/api/v2/program/neighbors",
       "action": "QUERY",
       "types": [
         "text/plain;charset=utf-8"
@@ -147,7 +147,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/ranks",
+      "href": "http://localhost:8008/api/v2/program/ranks",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"
@@ -155,7 +155,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/ranks",
+      "href": "http://localhost:8008/api/v2/program/ranks",
       "action": "QUERY",
       "types": [
         "text/plain;charset=utf-8"
@@ -163,7 +163,7 @@
     },
     {
       "rel": "service",
-      "href": "http://localhost:8008/api/v2/programs/taxi",
+      "href": "http://localhost:8008/api/v2/program/taxi",
       "action": "GET",
       "types": [
         "text/plain;charset=utf-8"

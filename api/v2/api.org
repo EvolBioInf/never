@@ -574,24 +574,24 @@ type Node struct {
 #+begin_export latex
   This api also provides a slim interface for calling database related
   programs of the \ty{neighbors} package. We register these programs with
-  the url prefix \ty{programs}. For this we first write a link document
-  which is returned when \ty{/programs} is called.
+  the url prefix \ty{program}. For this we first write a link document
+  which is returned when \ty{/program} is called.
 #+end_export
 
 #+begin_src go <<Initialize \ty{programs}, Pa. \ref{pa:api}>>=
-  programsDocL := Node{
+  programDocL := Node{
     Links:    make(map[string][]Node),
-    Name:     "programs",
-    BasePath: prefix + "/programs",
+    Name:     "program",
+    BasePath: prefix + "/program",
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{jsonCt},
   }
-  makeRoute(&programsDocL, programsDoc, nil)
+  makeRoute(&programDocL, programDoc, nil)
 #+end_src
 
 #+begin_export latex
   One of the programs we want to provide is \ty{ants}.
-  We register under \ty{/programs/ants}. All arguments passed
+  We register under \ty{/program/ants}. All arguments passed
   to the url are directly passed to the program when called.
   We are going to execute the same function for all
   program calls and pass different names of programs to call.
@@ -601,7 +601,7 @@ type Node struct {
   progAntsL := Node{
     Links:    make(map[string][]Node),
     Name:     "progAnts",
-    BasePath: prefix + "/programs/ants",
+    BasePath: prefix + "/program/ants",
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -617,7 +617,7 @@ type Node struct {
   progDreeL := Node{
     Links:    make(map[string][]Node),
     Name:     "progDree",
-    BasePath: prefix + "/programs/dree",
+    BasePath: prefix + "/program/dree",
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -632,7 +632,7 @@ type Node struct {
   progFintacL := Node{
     Links:    make(map[string][]Node),
     Name:     "progFintac",
-    BasePath: prefix + "/programs/fintac",
+    BasePath: prefix + "/program/fintac",
     Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -659,7 +659,7 @@ type Node struct {
   progNeighborsGetL := Node{
     Links:    make(map[string][]Node),
     Name:     "progNeighbors",
-    BasePath: prefix + "/programs/neighbors",
+    BasePath: prefix + "/program/neighbors",
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -667,7 +667,7 @@ type Node struct {
   progNeighborsQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progNeighbors",
-    BasePath: prefix + "/programs/neighbors",
+    BasePath: prefix + "/program/neighbors",
     Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -683,7 +683,7 @@ type Node struct {
   progRanksGetL := Node{
     Links:    make(map[string][]Node),
     Name:     "progRanks",
-    BasePath: prefix + "/programs/ranks",
+    BasePath: prefix + "/program/ranks",
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -691,7 +691,7 @@ type Node struct {
   progRanksQueryL := Node{
     Links:    make(map[string][]Node),
     Name:     "progRanks",
-    BasePath: prefix + "/programs/ranks",
+    BasePath: prefix + "/program/ranks",
     Action:   httpMethodQuery,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -706,7 +706,7 @@ type Node struct {
   progTaxiL := Node{
     Links:    make(map[string][]Node),
     Name:     "progTaxi",
-    BasePath: prefix + "/programs/taxi",
+    BasePath: prefix + "/program/taxi",
     Action:   http.MethodGet,
     Types:    []contenttype.MediaType{plainCt},
   }
@@ -756,7 +756,7 @@ type Node struct {
   subservice of \ty{accessions}; \ty{taxon}, \ty{children}, \ty{parent}	and
   \ty{subtree} which are subservices of \ty{taxa}. Lastly \ty{taxonAccessions},
   \ty{mrca} and \ty{path}	are subservices of \ty{taxonomy}. Lastly there are
-  the programs, which are subservices of the \ty{programs} endpoints. These
+  the programs, which are subservices of the \ty{program} endpoints. These
   include \ty{progAnts}, \ty{progDree}, \ty{progFintac}, \ty{progNeighbors},
   \ty{progRanks} and \ty{progTaxi}.
 #+end_export
@@ -799,7 +799,7 @@ type Node struct {
     mrcaL,
     pathL,
   )
-  programsDocL.Links["service"] = append(programsDocL.Links["service"],
+  programDocL.Links["service"] = append(programDocL.Links["service"],
     progAntsL,
     progDreeL,
     progFintacL,
@@ -2858,7 +2858,7 @@ type Node struct {
 
 
 #+begin_export latex
-  The service \ty{programsDoc} provides links for
+  The service \ty{programDoc} provides links for
   all the registered endpoints executing program
   calls.
 
@@ -2873,10 +2873,10 @@ type Node struct {
 #+end_export
 
 #+begin_src go <<Functions, Pa. \ref{pa:api}>>=
-  func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+  func programDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
     out := ResponseBody[*any]{}
     //<<Check content types, Pa. \ref{pa:api}>>
-    //<<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>
+    //<<Write \ty{programDoc}'s links, Pa. \ref{pa:api}>>
     writeJsonOutput(w, out)
   }
 #+end_src
@@ -2886,7 +2886,7 @@ type Node struct {
   \ty{rootDocument} and \ty{taxonomy} do the same.
 #+end_export
 
-#+begin_src go <<Write \ty{programsDoc}'s links, Pa. \ref{pa:api}>>=
+#+begin_src go <<Write \ty{programDoc}'s links, Pa. \ref{pa:api}>>=
   var links []Link
   //<<Add endpoint's self link, Pa. \ref{pa:api}>>
   //<<Add graph links, Pa. \ref{pa:api}>>
@@ -2947,7 +2947,7 @@ type Node struct {
 
 #+begin_export latex
   The database is given as the first value of \ty{args}, the program name as
-  a second and we receive the directory containing the programs as the last 
+  a second and we receive the directory containing the programs as the last
   argument. With this we need to make sure, that contains a trailing slash.
 #+end_export
 
