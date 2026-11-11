@@ -2239,9 +2239,9 @@
         ]
       }
     },
-    "/programs": {
+    "/program": {
       "get": {
-        "summary": "Get programs subservices",
+        "summary": "Get program subservices",
         "responses": {
           "200": {
             "description": "OK",
@@ -2309,16 +2309,16 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "get_programs_endpoints",
+        "operationId": "get_program_endpoints",
         "parameters": [],
-        "description": "Get subservices of the programs path",
+        "description": "Get subservices of the program path",
         "tags": ["Program"]
       },
       "parameters": []
     },
-    "/programs/ants": {
+    "/program/ants": {
       "get": {
-        "summary": "Execute ants program",
+        "summary": "Get a taxon's ancestors",
         "responses": {
           "200": {
             "description": "OK",
@@ -2345,7 +2345,7 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "get_programs_ants",
+        "operationId": "get_program_ants",
         "parameters": [
           {
             "schema": {
@@ -2365,14 +2365,14 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Executes the neighbors program ants remotely",
+        "description": "Get a taxon's ancestors",
         "tags": ["Program"]
       },
       "parameters": []
     },
-    "/programs/dree": {
+    "/program/dree": {
       "get": {
-        "summary": "Execute dree program",
+        "summary": "Get the taxonomy rooted on a specific taxon",
         "responses": {
           "200": {
             "description": "OK",
@@ -2399,7 +2399,7 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "get_programs_dree",
+        "operationId": "get_program_dree",
         "parameters": [
           {
             "schema": {
@@ -2419,15 +2419,15 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Executes the neighbors program dree remotely",
+        "description": "Get the taxonomy rooted on a specific taxon",
         "tags": ["Program"]
       },
       "parameters": []
     },
-    "/programs/fintac": {
+    "/program/fintac": {
       "parameters": [],
       "query": {
-        "summary": "Execute fintac remotely",
+        "summary": "Find target clade for taxa identified by regular expressions in Newick tree",
         "tags": ["Program"],
         "responses": {
           "200": {
@@ -2455,8 +2455,8 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "query-programs-fintac",
-        "description": "Executes the neighbors program fintac remotely",
+        "operationId": "query-program-fintac",
+        "description": "Find target clade for taxa identified by regular expressions in Newick tree",
         "parameters": [
           {
             "schema": {
@@ -2503,9 +2503,9 @@
         }
       }
     },
-    "/programs/neighbors": {
+    "/program/neighbors": {
       "get": {
-        "summary": "Execute neighbors program",
+        "summary": "Find the closest taxonomic neighbors, for a set of target taxon-IDs",
         "responses": {
           "200": {
             "description": "OK",
@@ -2532,7 +2532,7 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "get_programs_neighbors",
+        "operationId": "get_program_neighbors",
         "parameters": [
           {
             "schema": {
@@ -2552,12 +2552,12 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Executes the program neighbors remotely",
+        "description": "Find the closest taxonomic neighbors, for a set of target taxon-IDs",
         "tags": ["Program"]
       },
       "parameters": [],
       "query": {
-        "summary": "Execute neighbors remotely with files",
+        "summary": "Find the closest taxonomic neighbors, for a set of target taxon-IDs provided by files",
         "tags": ["Program"],
         "responses": {
           "200": {
@@ -2585,8 +2585,8 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "query-programs-neighbors",
-        "description": "Executes the program neighbors remotely with one or more files of target taxa",
+        "operationId": "query-program-neighbors",
+        "description": "Find the closest taxonomic neighbors, for a set of target taxon-IDs provided by files",
         "parameters": [
           {
             "schema": {
@@ -2633,9 +2633,9 @@
         }
       }
     },
-    "/programs/ranks": {
+    "/program/ranks": {
       "get": {
-        "summary": "Execute ranks program",
+        "summary": "Get the distribution of genomes among taxonomic ranks",
         "responses": {
           "200": {
             "description": "OK",
@@ -2662,7 +2662,7 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "get_programs_ranks",
+        "operationId": "get_program_ranks",
         "parameters": [
           {
             "schema": {
@@ -2682,12 +2682,12 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Executes the neighbors program ranks remotely",
+        "description": "Get the distribution of genomes among taxonomic ranks",
         "tags": ["Program"]
       },
       "parameters": [],
       "query": {
-        "summary": "Execute ranks remotely with files",
+        "summary": "Get the distribution of genomes, specified in files, among taxonomic ranks",
         "tags": ["Program"],
         "responses": {
           "200": {
@@ -2715,8 +2715,8 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "query-programs-ranks",
-        "description": "Executes the neighbors program ranks remotely with one file of genome accessions",
+        "operationId": "query-program-ranks",
+        "description": "Get the distribution of genomes, specified in files, among taxonomic ranks",
         "parameters": [
           {
             "schema": {
@@ -2749,9 +2749,9 @@
         }
       }
     },
-    "/programs/taxi": {
+    "/program/taxi": {
       "get": {
-        "summary": "Execute taxi program",
+        "summary": "Get basic information on taxa filtered by their name or taxon-ID",
         "responses": {
           "200": {
             "description": "OK",
@@ -2778,7 +2778,7 @@
             "description": "Service Unavailable"
           }
         },
-        "operationId": "get_programs_taxi",
+        "operationId": "get_program_taxi",
         "parameters": [
           {
             "schema": {
@@ -2798,7 +2798,7 @@
             "$ref": "#/components/parameters/db"
           }
         ],
-        "description": "Executes the neighbors program taxi remotely",
+        "description": "Get basic information on taxa filtered by their name or taxon-ID",
         "tags": ["Program"]
       },
       "parameters": []

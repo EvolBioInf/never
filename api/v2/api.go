@@ -273,19 +273,19 @@ func RegisterRoutes(
 	}
 	makeRoute(&pathL, path, dbs) // previously just path
 
-	programsDocL := Node{
+	programDocL := Node{
 		Links:    make(map[string][]Node),
-		Name:     "programs",
-		BasePath: prefix + "/programs",
+		Name:     "program",
+		BasePath: prefix + "/program",
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{jsonCt},
 	}
-	makeRoute(&programsDocL, programsDoc, nil)
+	makeRoute(&programDocL, programDoc, nil)
 
 	progAntsL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progAnts",
-		BasePath: prefix + "/programs/ants",
+		BasePath: prefix + "/program/ants",
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -294,7 +294,7 @@ func RegisterRoutes(
 	progDreeL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progDree",
-		BasePath: prefix + "/programs/dree",
+		BasePath: prefix + "/program/dree",
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -303,7 +303,7 @@ func RegisterRoutes(
 	progFintacL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progFintac",
-		BasePath: prefix + "/programs/fintac",
+		BasePath: prefix + "/program/fintac",
 		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -312,7 +312,7 @@ func RegisterRoutes(
 	progNeighborsGetL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
-		BasePath: prefix + "/programs/neighbors",
+		BasePath: prefix + "/program/neighbors",
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -320,7 +320,7 @@ func RegisterRoutes(
 	progNeighborsQueryL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progNeighbors",
-		BasePath: prefix + "/programs/neighbors",
+		BasePath: prefix + "/program/neighbors",
 		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -329,7 +329,7 @@ func RegisterRoutes(
 	progRanksGetL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
-		BasePath: prefix + "/programs/ranks",
+		BasePath: prefix + "/program/ranks",
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -337,7 +337,7 @@ func RegisterRoutes(
 	progRanksQueryL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progRanks",
-		BasePath: prefix + "/programs/ranks",
+		BasePath: prefix + "/program/ranks",
 		Action:   httpMethodQuery,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -346,7 +346,7 @@ func RegisterRoutes(
 	progTaxiL := Node{
 		Links:    make(map[string][]Node),
 		Name:     "progTaxi",
-		BasePath: prefix + "/programs/taxi",
+		BasePath: prefix + "/program/taxi",
 		Action:   http.MethodGet,
 		Types:    []contenttype.MediaType{plainCt},
 	}
@@ -389,7 +389,7 @@ func RegisterRoutes(
 		mrcaL,
 		pathL,
 	)
-	programsDocL.Links["service"] = append(programsDocL.Links["service"],
+	programDocL.Links["service"] = append(programDocL.Links["service"],
 		progAntsL,
 		progDreeL,
 		progFintacL,
@@ -1762,7 +1762,7 @@ func path(
 
 }
 
-func programsDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
+func programDoc(w http.ResponseWriter, r *http.Request, selfNode *Node, args ...any) {
 	out := ResponseBody[*any]{}
 	_, _, err := contenttype.GetAcceptableMediaType(r, selfNode.Types)
 	if err != nil {
