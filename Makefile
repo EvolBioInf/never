@@ -1,4 +1,4 @@
-SUBDIRS := api/v1/never api/v2 docs/v2 fetch util
+SUBDIRS := api/v1/never api/v2 databases docs/v2 fetch util
 TESTDIRS := api/v1/never api/v2 fetch
 version = $(shell bash scripts/getVersion.sh)
 date = $(shell bash scripts/getDate.sh)
