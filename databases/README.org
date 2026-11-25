@@ -7,6 +7,6 @@ the raw data from which the database was computed as compressed tar
 files with extension =tgz=. Once unpacked, the raw data files serve as
 input for the Neighbors program =makeNeiDb= to compute the database
 files. The raw data itself is taken from the [[https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz][NCBI taxonomy]] and from
-lists of genome assemblies in [[https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_genbank.txt][Genbank]] and [[https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_refseq.txt][Refseq]].
-
-
+lists of genome assemblies in [[https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_genbank.txt][Genbank]] and [[https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_refseq.txt][Refseq]]. Files with prefix
+=temp= are temporary and will be removed after one year. All other
+files are permanent.
