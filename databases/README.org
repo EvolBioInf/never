@@ -1,0 +1,12 @@
+* README for =neighbors.evolbio.mpg.de/databases=
+This directory contains versions of the Neighbors database used by
+many of the programs in the [[http://github.com/evolbioinf/neighbors][Neighbors]] package. The Neighbors database
+is an [[https://www.sqlite.org/][Sqlite]] database, which we supply as binary files with extension
+=db=, except for the latest version, =neidb=. In addition, we supply
+the raw data from which the database was computed as compressed tar
+files with extension =tgz=. Once unpacked, the raw data files serve as
+input for the Neighbors program =makeNeiDb= to compute the database
+files. The raw data itself is taken from the [[https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz][NCBI taxonomy]] and from
+lists of genome assemblies in [[https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_genbank.txt][Genbank]] and [[https://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_refseq.txt][Refseq]].
+
+
